@@ -209,15 +209,25 @@
 
   function renderSimulation(){
     const sorted=[...bids].sort((a,b)=>b.simulation.estimated_margin_percent-a.simulation.estimated_margin_percent);
-    const max=Math.max(...sorted.map(b=>b.simulation.estimated_margin_percent));
-    $('#marginChart').innerHTML=sorted.map(b=>`<div class="margin-col" data-open-bid="${b.bid_no}" title="${esc(b.title)}"><div class="margin-bar g-${gradeClass(b.grade)}" style="height:${Math.max(6,b.simulation.estimated_margin_percent/max*88)}%"></div><b>${b.simulation.estimated_margin_percent.toFixed(1)}%</b><span title="${esc(b.title)}">${esc(b.title)}</span></div>`).join('');
+    const chartBids=sorted.slice(0,15);
+    const max=Math.max(...chartBids.map(b=>b.simulation.estimated_margin_percent));
+    const avg=bids.reduce((s,b)=>s+b.simulation.estimated_margin_percent,0)/bids.length;
+    const totalBudget=bids.reduce((s,b)=>s+(b.budget||0),0);
+    const topCategory=(()=>{const m={};bids.forEach(b=>{const k=b.category||b.business_category||b.field||'기타';m[k]=(m[k]||[]).concat(b.simulation.estimated_margin_percent)});const rows=Object.entries(m).map(([k,v])=>[k,v.reduce((s,n)=>s+n,0)/v.length]);return rows.sort((x,y)=>y[1]-x[1])[0]||['-',0]})();
+    $('#profitKpis').innerHTML=[
+      ['분석 대상 공고',`${bids.length}건`,'현재 대시보드 기준','◎'],
+      ['평균 예상 마진',fmtPct(avg),'가정값 기반 시뮬레이션','◇'],
+      ['분석 예산 총액',fmtBillion(totalBudget),'현재 공고 예산 합계','▥'],
+      ['마진 TOP 분야',esc(topCategory[0]),`평균 ${fmtPct(topCategory[1])}`,'♢']
+    ].map(x=>`<div class="profit-kpi"><span class="profit-kpi-icon">${x[3]}</span><div><small>${x[0]}</small><strong>${x[1]}</strong><em>${x[2]}</em></div></div>`).join('');
+    $('#marginChart').innerHTML=chartBids.map((b,i)=>`<div class="margin-col" data-open-bid="${b.bid_no}" title="${esc(b.title)}"><div class="margin-rank">#${i+1}</div><div class="margin-bar g-${gradeClass(b.grade)}" style="height:${Math.max(8,b.simulation.estimated_margin_percent/max*82)}%"></div><b>${b.simulation.estimated_margin_percent.toFixed(1)}%</b><span title="${esc(b.title)}">${esc(truncate(b.title,8))}</span></div>`).join('');
     $('#marginLegend').innerHTML=[[GRADE_COLOR.recommend,'적극추천'],[GRADE_COLOR.review,'검토'],[GRADE_COLOR.pass,'패스']].map(([c,n])=>`<span class="cl-item"><i class="legend-dot" style="background:${c}"></i>${n}</span>`).join('');
     const sample=sorted[0].simulation.assumptions;
-    $('#assumptionBox').innerHTML=sample.map(a=>{
+    $('#assumptionBox').innerHTML=sample.map((a,i)=>{
       const m=ASSUMPTION_KO[a.key]||{label:a.key,desc:''};
-      return `<div class="assumption-row"><span class="as-label">${m.label}</span><strong class="as-value">${esc(a.value)}</strong>${m.desc?`<small class="as-desc">${m.desc}</small>`:''}</div>`;
+      return `<div class="assumption-row"><span class="assumption-no">${String(i+1).padStart(2,'0')}</span><div><span class="as-label">${m.label}</span><strong class="as-value">${esc(a.value)}</strong>${m.desc?`<small class="as-desc">${m.desc}</small>`:''}</div></div>`;
     }).join('');
-    $('#profitList').innerHTML=sorted.slice(0,8).map(b=>`<article class="profit-item" data-open-bid="${b.bid_no}"><div class="profit-info"><div class="profit-head"><h4>${esc(b.title)}</h4><span class="grade-pill ${gradeClass(b.grade)}">${esc(b.grade)}</span></div><p>${esc(b.agency)} · QA ${b.qa.overall_score.toFixed(1)}</p></div><strong>${fmtPct(b.simulation.estimated_margin_percent)}</strong></article>`).join('');
+    $('#profitList').innerHTML=sorted.slice(0,8).map((b,i)=>`<article class="profit-item" data-open-bid="${b.bid_no}"><span class="profit-rank">${String(i+1).padStart(2,'0')}</span><div class="profit-info"><div class="profit-head"><h4>${esc(b.title)}</h4><span class="grade-pill ${gradeClass(b.grade)}">${esc(b.grade)}</span></div><p>${esc(b.agency)} · QA ${b.qa.overall_score.toFixed(1)}</p></div><strong>${fmtPct(b.simulation.estimated_margin_percent)}</strong></article>`).join('');
   }
 
   function renderQuality(){
