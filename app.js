@@ -178,7 +178,39 @@
     $('#gradeFilter').value=state.grade; $('#riskFilter').value=state.risk;
     const marginCls=v=>v>=15?'m-good':v>=10?'m-mid':'m-low';
     const items=filteredBids();
-    $('#bidTableBody').innerHTML=items.map((b,i)=>`<tr data-open-bid="${b.bid_no}"><td>${i+1}</td><td class="bid-name"><strong>${esc(b.title)}</strong><small>${esc(b.category)} · ${b.bid_no}</small></td><td>${esc(b.agency)}</td><td>${fmtBillion(b.budget)}</td><td><b>${b.score??'-'}</b></td><td><b class="${marginCls(b.simulation.estimated_margin_percent)}">${fmtPct(b.simulation.estimated_margin_percent)}</b></td><td>${dday(b.days_left)}</td><td><span class="grade-pill ${gradeClass(b.grade)}">${esc(b.grade)}</span></td></tr>`).join('') || `<tr><td colspan="8"><div class="empty-state">조건에 맞는 공고가 없습니다.</div></td></tr>`;
+
+    /* 공고 탐색 Hero 요약 — 기존 고정 데이터에서만 계산하는 표시용 지표 */
+    const analysisDate=new Date(summary.analysis_date+'T00:00:00');
+    const sevenDaysAgo=new Date(analysisDate); sevenDaysAgo.setDate(sevenDaysAgo.getDate()-6);
+    const recentCount=bids.filter(b=>{
+      if(!b.announce_date) return false;
+      const d=new Date(b.announce_date+'T00:00:00');
+      return d>=sevenDaysAgo && d<=analysisDate;
+    }).length;
+    const avgBudget=summary.total ? summary.budget_total/summary.total : 0;
+    const heroStats=$('#searchHeroStats');
+    if(heroStats) heroStats.innerHTML=[
+      ['전체 공고',`${summary.total}건`,'현재 데이터 기준'],
+      ['최근 7일 신규',`${recentCount}건`,'분석 기준일 포함'],
+      ['평균 예정 금액',fmtBillion(avgBudget),'공고 평균 예산']
+    ].map(([label,value,note])=>`<div class="search-hero-stat"><span>${label}</span><strong>${value}</strong><small>${note}</small></div>`).join('');
+
+    const maxBudget=Math.max(1,...items.map(b=>b.budget||0));
+    const maxMargin=Math.max(1,...items.map(b=>b.simulation?.estimated_margin_percent||0));
+    $('#bidTableBody').innerHTML=items.map((b,i)=>{
+      const margin=b.simulation.estimated_margin_percent;
+      return `<tr data-open-bid="${b.bid_no}">
+        <td><span class="search-rank r-${Math.min(i+1,7)}">${i+1}</span></td>
+        <td class="bid-name"><strong>${esc(b.title)}</strong><small>${esc(b.category)} · ${b.bid_no}</small></td>
+        <td>${esc(b.agency)}</td>
+        <td><div class="search-metric"><b>${fmtBillion(b.budget)}</b><span class="search-mini-track"><i style="width:${Math.max(4,(b.budget||0)/maxBudget*100)}%"></i></span></div></td>
+        <td><b>${b.score??'-'}</b></td>
+        <td><div class="search-metric"><b class="${marginCls(margin)}">${fmtPct(margin)}</b><span class="search-mini-track margin"><i style="width:${Math.max(4,margin/maxMargin*100)}%"></i></span></div></td>
+        <td><b class="${b.days_left<=8?'search-dday-hot':''}">${dday(b.days_left)}</b></td>
+        <td><span class="grade-pill ${gradeClass(b.grade)}">${esc(b.grade)}</span></td>
+        <td><button class="search-row-open" type="button" aria-label="${esc(b.title)} 상세보기">→</button></td>
+      </tr>`;
+    }).join('') || `<tr><td colspan="9"><div class="empty-state">조건에 맞는 공고가 없습니다.</div></td></tr>`;
     $('#mobileBidList').innerHTML=items.map(b=>`<article class="mobile-bid-card" data-open-bid="${b.bid_no}"><div><span class="grade-pill ${gradeClass(b.grade)}">${esc(b.grade)}</span> <span class="status-pill ${b.days_left<=3?'hot':''}">${dday(b.days_left)}</span></div><h3>${esc(b.title)}</h3><div class="meta">${esc(b.agency)} · ${esc(b.category)} · ${fmtBillion(b.budget)}</div><div class="mobile-stats"><div class="stat-mini"><span>점수</span><b>${b.score??'-'}</b></div><div class="stat-mini"><span>예상 마진</span><b class="${marginCls(b.simulation.estimated_margin_percent)}">${fmtPct(b.simulation.estimated_margin_percent)}</b></div><div class="stat-mini"><span class="qa-hint" title="QA = AI 분석 결과를 LLM Judge가 재검수한 품질 점수">QA ⓘ</span><b>${b.qa.overall_score.toFixed(1)}</b></div></div></article>`).join('') || `<div class="empty-state">조건에 맞는 공고가 없습니다.</div>`;
     syncFilterToggle();
   }
