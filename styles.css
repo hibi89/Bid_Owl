@@ -853,11 +853,10 @@ body.on-landing .mobile-nav{display:none!important}
     bottom:0;
     width:52%;
     height:100%;
-    opacity:.86;
-    background-repeat:no-repeat;
-    background-position:right bottom;
-    background-size:100% 100%;
-    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 720 220'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%23d7a75b' stop-opacity='.10'/%3E%3Cstop offset='1' stop-color='%23815d31' stop-opacity='.34'/%3E%3C/linearGradient%3E%3ClinearGradient id='w' x1='0' y1='0' x2='1' y2='0'%3E%3Cstop stop-color='%23f0c877' stop-opacity='0'/%3E%3Cstop offset='.6' stop-color='%23e5b75e' stop-opacity='.45'/%3E%3Cstop offset='1' stop-color='%23cf9841' stop-opacity='.18'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='720' height='220' fill='url(%23w)' opacity='.22'/%3E%3Cg fill='url(%23g)'%3E%3Crect x='392' y='92' width='15' height='92'/%3E%3Crect x='413' y='67' width='22' height='117'/%3E%3Crect x='441' y='82' width='17' height='102'/%3E%3Crect x='464' y='48' width='27' height='136'/%3E%3Crect x='498' y='72' width='18' height='112'/%3E%3Crect x='522' y='30' width='35' height='154'/%3E%3Crect x='565' y='55' width='24' height='129'/%3E%3Crect x='596' y='24' width='41' height='160'/%3E%3Crect x='645' y='64' width='20' height='120'/%3E%3Crect x='672' y='39' width='32' height='145'/%3E%3C/g%3E%3Cg fill='%23705536' opacity='.12'%3E%3Cpath d='M0 186h720v34H0z'/%3E%3Cpath d='M90 179h220l70 4h340v5H90z'/%3E%3C/g%3E%3Cg fill='none' stroke='%23866b46' stroke-opacity='.25' stroke-width='2'%3E%3Cpath d='M104 177 C180 125 265 124 348 176'/%3E%3Cpath d='M126 177v-29M327 177v-29M126 148h201'/%3E%3Cpath d='M103 177h246'/%3E%3C/g%3E%3Cg stroke='%23c88e2f' stroke-opacity='.55' fill='none'%3E%3Cpath d='M170 98 C330 15 520 30 720 92'/%3E%3Cpath d='M245 127 C390 63 545 69 720 116' stroke-opacity='.28'/%3E%3C/g%3E%3C/svg%3E");
+    opacity:1;\n    background-repeat:no-repeat;
+    background-position:center bottom;
+    background-size:cover;
+    background-image:url("./assets/dashboard-city-bg.svg");
   }
 
   #view-dashboard .hero-row::after{
