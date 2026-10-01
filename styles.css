@@ -1177,3 +1177,203 @@ body.on-landing .mobile-nav{display:none!important}
   }
   #view-dashboard .hero-badges{display:none}
 }
+
+
+/* ============================================================
+   RECOMMENDED BIDS — approved visual reference / 2026-10-01
+   Visual-only override. Existing filters, favorites, data and handlers remain intact.
+   ============================================================ */
+@media (min-width:861px){
+  #view-recommend{
+    position:relative;
+    padding-top:0;
+  }
+  #view-recommend .section-title{
+    position:relative;
+    isolation:isolate;
+    min-height:165px;
+    margin:0 calc(clamp(22px,3.4vw,52px) * -1) 0;
+    padding:28px clamp(22px,3.4vw,52px) 34px;
+    align-items:flex-start;
+    overflow:hidden;
+    background:
+      linear-gradient(90deg,rgba(251,247,239,.99) 0%,rgba(251,247,239,.95) 37%,rgba(251,247,239,.36) 62%,rgba(251,247,239,.03) 100%),
+      url("./assets/recommend-city-bg.svg") center/cover no-repeat;
+    border-bottom:1px solid rgba(49,113,101,.12);
+  }
+  #view-recommend .section-title::after{
+    content:"검증된 데이터가\A 더 나은 수주를 만듭니다.";
+    white-space:pre-line;
+    position:absolute;
+    z-index:2;
+    left:58%;
+    top:72px;
+    padding-left:22px;
+    border-left:2px solid #178c78;
+    color:#087b69;
+    font-size:15px;
+    line-height:1.5;
+    font-weight:850;
+  }
+  #view-recommend .section-title > div:first-child{position:relative;z-index:2}
+  #view-recommend .section-title .eyebrow{
+    color:#b77928;
+    font-size:11px;
+    font-weight:900;
+    letter-spacing:.24em;
+  }
+  #view-recommend .section-title h1{
+    margin:7px 0 8px;
+    font-family:Georgia,"Noto Serif KR",serif;
+    font-size:47px;
+    line-height:1.06;
+    letter-spacing:-.05em;
+    color:#0d2338;
+  }
+  #view-recommend .section-title p{
+    margin:0;
+    font-size:15px;
+    color:#435e70;
+  }
+  #view-recommend .section-actions{
+    position:absolute;
+    z-index:5;
+    right:clamp(22px,3.4vw,52px);
+    bottom:13px;
+  }
+  #view-recommend .sort-ctl{
+    padding:10px 17px;
+    border-color:#d7d0c5;
+    background:rgba(255,255,255,.94);
+    box-shadow:0 4px 14px rgba(35,62,65,.08);
+  }
+
+  #view-recommend .fav-filter{
+    position:relative;
+    z-index:6;
+    width:max-content;
+    max-width:70%;
+    margin:-38px 0 16px;
+    gap:9px;
+  }
+  #view-recommend .fav-filter .filter-chip{
+    min-width:112px;
+    padding:10px 18px;
+    border-color:rgba(215,209,198,.92);
+    background:rgba(255,255,255,.93);
+    box-shadow:0 5px 18px rgba(43,53,48,.055);
+    color:#65727d;
+    font-weight:750;
+  }
+  #view-recommend .fav-filter .filter-chip.active{
+    background:#123246;
+    border-color:#123246;
+    color:#fff;
+  }
+
+  #view-recommend .recommend-cards-grid{
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:14px;
+  }
+  #view-recommend .recommend-card{
+    min-height:286px;
+    padding:15px 16px 14px;
+    border:1px solid #e3ddd3;
+    border-radius:15px;
+    background:rgba(255,255,255,.97);
+    box-shadow:0 7px 22px rgba(50,48,40,.055);
+  }
+  #view-recommend .recommend-card:has(.status-pill.recommend){
+    border-color:#b9ded4;
+    box-shadow:0 8px 23px rgba(21,133,105,.07);
+  }
+  #view-recommend .recommend-card .badge-line{min-height:29px}
+  #view-recommend .recommend-card .status-pill{
+    padding:5px 11px;
+    border-radius:999px;
+    font-size:12.5px;
+    font-weight:850;
+  }
+  #view-recommend .favorite-btn{
+    width:33px;height:33px;
+    font-size:21px;
+  }
+  #view-recommend .recommend-card h3{
+    margin:9px 0 4px;
+    font-size:16px;
+    line-height:1.35;
+    color:#0c2941;
+  }
+  #view-recommend .recommend-card .meta{
+    font-size:11.5px;
+    color:#6b7d8b;
+  }
+  #view-recommend .recommend-card .card-stats{
+    gap:7px;
+    margin:12px 0 10px;
+  }
+  #view-recommend .stat-mini{
+    padding:9px 10px;
+    border-radius:10px;
+    background:#f8f4ed;
+  }
+  #view-recommend .stat-mini span{font-size:11px}
+  #view-recommend .recommend-card .stat-mini b{
+    margin-top:3px;
+    font-size:17px;
+  }
+  #view-recommend .card-reason{
+    position:relative;
+    margin-bottom:10px;
+    padding:8px 10px 8px 35px;
+    min-height:48px;
+    font-size:11.8px;
+    line-height:1.45;
+  }
+  #view-recommend .card-reason::before{
+    content:"♧";
+    position:absolute;
+    left:11px;
+    top:10px;
+    font-size:18px;
+    font-weight:900;
+  }
+  #view-recommend .card-reason.recommend{
+    background:linear-gradient(90deg,#e9f7f2,#f4fbf8);
+    border-color:#b9e0d5;
+  }
+  #view-recommend .card-reason.review{
+    background:linear-gradient(90deg,#fff6e5,#fffaf1);
+    border-color:#ecd39e;
+  }
+  #view-recommend .card-actions{gap:8px}
+  #view-recommend .primary-btn{
+    padding:9px 15px;
+    border-color:#087d6c;
+    background:linear-gradient(90deg,#075b52,#078a75);
+    box-shadow:0 4px 12px rgba(7,115,98,.20);
+    font-size:13px;
+  }
+  #view-recommend .primary-btn:hover{background:linear-gradient(90deg,#064d47,#087d6c)}
+  #view-recommend .secondary-btn{
+    padding:9px 12px;
+    font-size:13px;
+  }
+}
+@media (max-width:1180px) and (min-width:861px){
+  #view-recommend .section-title::after{left:61%;font-size:13px}
+  #view-recommend .recommend-cards-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (max-width:860px){
+  #view-recommend .section-title{
+    margin:-22px -16px 14px;
+    padding:24px 16px 28px;
+    background:
+      linear-gradient(90deg,rgba(251,247,239,.98),rgba(251,247,239,.76)),
+      url("./assets/recommend-city-bg.svg") center/cover no-repeat;
+  }
+  #view-recommend .section-title h1{
+    font-family:Georgia,"Noto Serif KR",serif;
+    font-size:32px;
+  }
+}
