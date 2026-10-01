@@ -1377,3 +1377,71 @@ body.on-landing .mobile-nav{display:none!important}
     font-size:32px;
   }
 }
+
+
+/* ============================================================
+   BID EXPLORER — approved visual reference / 2026-10-01
+   Visual-only override; search filters/table handlers stay intact.
+   ============================================================ */
+@media (min-width:861px){
+  #view-search{padding-top:0}
+  #view-search .section-title{
+    position:relative;isolation:isolate;min-height:205px;
+    margin:0 calc(clamp(22px,3.4vw,52px) * -1);
+    padding:30px clamp(22px,3.4vw,52px) 45px;
+    align-items:flex-start;overflow:hidden;
+    background:
+      linear-gradient(90deg,rgba(248,251,253,.99) 0%,rgba(248,251,253,.94) 34%,rgba(248,251,253,.22) 64%,rgba(248,251,253,.02) 100%),
+      url("./assets/search-city-bg.svg") center/cover no-repeat;
+  }
+  #view-search .section-title > div{position:relative;z-index:2}
+  #view-search .section-title .eyebrow{color:#1264b3;font-size:11px;font-weight:900;letter-spacing:.23em}
+  #view-search .section-title h1{
+    margin:8px 0 10px;font-family:Georgia,"Noto Serif KR",serif;
+    font-size:48px;line-height:1.04;letter-spacing:-.05em;color:#0b2846;
+  }
+  #view-search .section-title p{font-size:16px;color:#35536f;margin:0}
+  #view-search .section-title p::after{
+    content:"데이터가 보여주는 새로운 기회를 발견하세요.";
+    display:block;margin-top:7px;color:#35536f;font-weight:700;
+  }
+
+  #view-search .filter-bar{
+    position:relative;z-index:5;margin:-34px 0 18px;
+    padding:11px 13px;border-radius:15px;
+    background:rgba(255,255,255,.96);border-color:#dfe6eb;
+    box-shadow:0 9px 28px rgba(28,73,108,.10);
+  }
+  #view-search .filter-chip{padding:10px 18px;font-weight:750;border-color:#dce4ea;color:#49647b}
+  #view-search .filter-chip.active{
+    background:linear-gradient(135deg,#0f568e,#1672bd);border-color:#1669aa;color:#fff;
+    box-shadow:0 5px 14px rgba(17,99,164,.18);
+  }
+  #view-search .filter-bar select{padding:10px 14px;border-color:#dce4ea;color:#254967;font-weight:750}
+  #view-search .table-shell{
+    border-color:#e1e8ed;border-radius:16px;
+    box-shadow:0 10px 28px rgba(26,61,89,.065);
+  }
+  #view-search .bid-table th{
+    padding:13px 15px;background:#fbfcfd;color:#315c83;
+    border-bottom-color:#e3e9ee;font-weight:850;
+  }
+  #view-search .bid-table td{padding:13px 15px;border-bottom-color:#e8edf1;color:#24435f}
+  #view-search .bid-table tbody tr:hover{background:#f3f9ff}
+  #view-search .bid-table tbody td:first-child{font-weight:850;color:#315b7e}
+  #view-search .bid-table tbody td:nth-child(2){color:#0d3152}
+  #view-search .bid-table tbody td:nth-child(5),
+  #view-search .bid-table tbody td:nth-child(6){font-weight:850}
+  #view-search .bid-table tbody td:nth-child(7){font-weight:850}
+}
+@media(max-width:860px){
+  #view-search .section-title{
+    margin:-22px -16px 14px;padding:24px 16px 28px;
+    background:
+      linear-gradient(90deg,rgba(248,251,253,.98),rgba(248,251,253,.73)),
+      url("./assets/search-city-bg.svg") center/cover no-repeat;
+  }
+  #view-search .section-title h1{font-family:Georgia,"Noto Serif KR",serif;font-size:32px;color:#0b2846}
+  #view-search .filter-bar{border-color:#dfe6eb}
+  #view-search .filter-chip.active{background:#125d98;border-color:#125d98}
+}
