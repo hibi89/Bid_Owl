@@ -182,9 +182,9 @@
           <div class="profit-hero-copy">
             <span class="eyebrow">PROFITABILITY</span>
             <h1>수익성 분석</h1>
-            <p>교육용 가정값 기반 시뮬레이션입니다. 실제 회계값이 아닙니다.</p>
+            <p><strong class="profit-lead">데이터로 기회를 선별하고 수익으로 연결합니다.</strong><span class="profit-disclaimer">교육용 가정값 기반 시뮬레이션입니다. 실제 회계값이 아닙니다.</span></p>
           </div>
-          <div class="profit-hero-quote">데이터로 기회를 선별하고<br><b>수익으로 연결합니다.</b></div>
+          <div class="profit-hero-quote">정확한 분석이<br><b>더 큰 수익의 시작입니다.</b></div>
           <div class="profit-kpi-strip" id="profitKpis"></div>
         </div>
         <div class="simulation-layout">
@@ -195,10 +195,10 @@
       </section>
 
       <section class="view" id="view-quality">
-        <div class="section-title"><div><span class="eyebrow">QUALITY ASSURANCE</span><h1>품질 검증</h1><p>LLM Judge와 코드 기반 재계산을 분리해 검증합니다.</p></div></div>
+        <div class="section-title"><div><span class="eyebrow">QUALITY ASSURANCE</span><h1>품질 검증</h1><p>LLM Judge와 코드 기반 재계산을 분리해 검증합니다. 데이터·규칙·사람이 함께 만드는 신뢰할 수 있는 검증 체계입니다.</p></div></div>
         <div class="quality-grid">
           <section class="panel quality-score-panel"><span class="panel-kicker">LLM-AS-JUDGE</span><div class="quality-score" id="avgQaScore">97.8</div><div class="quality-caption"><span>평균 자동 품질검수 점수</span><button class="qa-info-btn qa-info-open" aria-label="QA / Judge 품질검수 설명 보기" title="QA / Judge 품질검수란?">ⓘ</button></div><p>정확도 %가 아니라, 파싱·자격판정·스코어링·추천근거·시뮬레이션을 5개 영역으로 평가한 가중 품질점수입니다.</p></section>
-          <section class="panel"><div class="panel-head"><div><h2>코드 자동검증</h2><p>LLM과 별개로 날짜·점수·등급·마진 등 규칙을 코드로 다시 계산합니다 · 20개 공고 × 17개 검증 규칙</p></div><strong class="pass-text">340 / 340 PASS</strong></div><button class="outline-btn" id="showDeterministic">17개 검증항목 보기</button><div id="deterministicList" class="deterministic-list" hidden></div></section>
+          <section class="panel"><div class="panel-head"><div><h2>코드 자동검증</h2><p>LLM과 별개로 날짜·점수·등급·마진 등 규칙을 코드로 다시 계산합니다 · 20개 공고 × 17개 검증 규칙</p></div><strong class="pass-text">340 / 340 PASS</strong></div><div class="det-progress" id="detProgress"><i></i></div><div class="det-status-grid" id="detSummary"></div><button class="outline-btn" id="showDeterministic">17개 검증항목 보기</button><div id="deterministicList" class="deterministic-list" hidden></div></section>
           <section class="panel"><div class="panel-head"><div><h2>Judge 영역 평균 <button class="qa-info-btn qa-info-open" aria-label="QA / Judge 품질검수 설명 보기" title="QA / Judge 품질검수란?">ⓘ</button></h2><p>5개 품질영역 가중 평균</p></div></div><div id="qaAreaBars" class="bar-list"></div></section>
         </div>
         <section class="panel"><div class="panel-head"><div><h2>공고별 QA 결과</h2><p>카드를 누르면 상세 검수 근거를 확인할 수 있습니다.</p></div></div><div id="qaBidGrid" class="qa-bid-grid"></div></section>
