@@ -175,12 +175,20 @@
       </section>
 
       <section class="view" id="view-simulation">
-        <div class="section-title"><div><span class="eyebrow">PROFITABILITY</span><h1>수익성 분석</h1><p>교육용 가정값 기반 시뮬레이션입니다. 실제 회계값이 아닙니다.</p></div></div>
-        <div class="simulation-layout">
-          <section class="panel"><div class="panel-head"><div><h2>공고별 예상 마진</h2><p>막대 색상은 판정 등급 기준 · 가정 기준 추정치</p></div><div class="chart-legend" id="marginLegend" aria-label="차트 범례"></div></div><div id="marginChart" class="margin-chart"></div></section>
-          <section class="panel"><div class="panel-head"><div><h2>시뮬레이션 가정</h2><p>설정값과 계산 구조</p></div></div><div id="assumptionBox" class="assumption-box"></div></section>
+        <div class="profit-hero">
+          <div class="profit-hero-copy">
+            <span class="eyebrow">PROFITABILITY</span>
+            <h1>수익성 분석</h1>
+            <p>교육용 가정값 기반 시뮬레이션입니다. 실제 회계값이 아닙니다.</p>
+          </div>
+          <div class="profit-hero-quote">데이터로 기회를 선별하고<br><b>수익으로 연결합니다.</b></div>
+          <div class="profit-kpi-strip" id="profitKpis"></div>
         </div>
-        <section class="panel"><div class="panel-head"><div><h2>수익성 상위 공고</h2><p>마진만으로 추천하지 않고 자격·리스크와 함께 봅니다.</p></div></div><div id="profitList" class="profit-list"></div></section>
+        <div class="simulation-layout">
+          <section class="panel profit-chart-panel"><div class="panel-head"><div><h2>공고별 예상 마진 <span class="top15-badge">TOP 15</span></h2><p>예상 마진 상위 15개 · 막대 색상은 판정 등급 기준</p></div><div class="chart-legend" id="marginLegend" aria-label="차트 범례"></div></div><div id="marginChart" class="margin-chart"></div></section>
+          <section class="panel assumption-panel"><div class="panel-head"><div><span class="panel-kicker">SIMULATION MODEL</span><h2>시뮬레이션 가정</h2><p>설정값과 계산 구조 · 교육용 가정값</p></div></div><div id="assumptionBox" class="assumption-box"></div></section>
+        </div>
+        <section class="panel profit-ranking-panel"><div class="panel-head"><div><span class="panel-kicker">EXECUTIVE INSIGHT</span><h2>수익성 상위 공고</h2><p>마진만으로 추천하지 않고 자격·리스크와 함께 봅니다.</p></div><span class="profit-rank-note">TOP OPPORTUNITIES</span></div><div id="profitList" class="profit-list"></div></section>
       </section>
 
       <section class="view" id="view-quality">
