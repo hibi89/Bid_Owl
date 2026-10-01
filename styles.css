@@ -815,3 +815,195 @@ button.kpi-card,button.decision-card{appearance:none;text-align:left;width:100%}
 body.on-landing{overflow:hidden}
 body.on-landing .app-shell,
 body.on-landing .mobile-nav{display:none!important}
+
+/* ============================================================
+   DASHBOARD — Executive Opportunity / 2026-10-01 visual refresh
+   Presentation-only override. Existing data, logic and events preserved.
+   ============================================================ */
+@media (min-width:861px){
+  #view-dashboard{
+    position:relative;
+    padding-top:30px;
+  }
+
+  #view-dashboard .hero-row{
+    position:relative;
+    isolation:isolate;
+    min-height:156px;
+    margin:-30px calc(clamp(22px,3.4vw,52px) * -1) 0;
+    padding:30px clamp(22px,3.4vw,52px) 28px;
+    align-items:center;
+    overflow:hidden;
+    border-bottom:1px solid rgba(183,134,61,.16);
+    background:
+      radial-gradient(ellipse at 88% 12%,rgba(235,184,96,.34),transparent 31%),
+      linear-gradient(90deg,#f8f1e5 0%,#f8f1e5 48%,rgba(248,241,229,.90) 62%,rgba(241,218,174,.56) 100%);
+  }
+  #view-dashboard .hero-row::before{
+    content:"";
+    position:absolute;
+    z-index:-1;
+    right:-2%;
+    bottom:-24px;
+    width:54%;
+    height:132px;
+    opacity:.42;
+    background:
+      linear-gradient(158deg,transparent 0 54%,rgba(183,134,61,.32) 54.4% 55%,transparent 55.4%),
+      linear-gradient(171deg,transparent 0 66%,rgba(183,134,61,.22) 66.4% 67%,transparent 67.4%),
+      repeating-linear-gradient(90deg,transparent 0 28px,rgba(13,32,51,.11) 29px 31px,transparent 32px 46px);
+    clip-path:polygon(0 72%,7% 64%,12% 69%,17% 52%,22% 67%,28% 56%,33% 71%,39% 48%,44% 66%,49% 41%,55% 62%,60% 31%,65% 65%,71% 45%,76% 58%,81% 25%,86% 60%,91% 39%,96% 55%,100% 32%,100% 100%,0 100%);
+  }
+  #view-dashboard .hero-row::after{
+    content:"";
+    position:absolute;
+    z-index:-1;
+    right:1%;
+    bottom:30px;
+    width:43%;
+    height:80px;
+    border-top:1px solid rgba(183,134,61,.55);
+    border-radius:50% 50% 0 0;
+    transform:rotate(-4deg);
+    opacity:.65;
+  }
+  #view-dashboard .hero-row h1{
+    font-size:clamp(38px,3vw,52px);
+    letter-spacing:-.045em;
+    margin:8px 0 10px;
+    text-shadow:0 1px 0 rgba(255,255,255,.8);
+  }
+  #view-dashboard .hero-row p{
+    font-size:14px;
+    color:#596979;
+  }
+  #view-dashboard .hero-badges{
+    align-self:center;
+    max-width:440px;
+    gap:8px;
+  }
+  #view-dashboard .hero-badges span{
+    padding:8px 13px;
+    background:rgba(255,253,249,.76);
+    border-color:rgba(183,134,61,.27);
+    box-shadow:0 5px 18px rgba(73,52,26,.05);
+    backdrop-filter:blur(8px);
+  }
+
+  #view-dashboard .kpi-grid{
+    position:relative;
+    z-index:2;
+    margin-top:0;
+    padding-top:0;
+    gap:12px;
+    transform:translateY(-1px);
+  }
+  #view-dashboard .kpi-card{
+    border-radius:0 0 16px 16px;
+    border-top-width:3px;
+    padding:17px 18px 16px;
+    box-shadow:0 8px 22px rgba(62,47,28,.065);
+    background:rgba(255,253,249,.96);
+  }
+  #view-dashboard .kpi-card::before{display:none}
+  #view-dashboard .kpi-card.lead{border-top-color:#15906b}
+  #view-dashboard .kpi-card.amber{border-top-color:#d39a31}
+  #view-dashboard .kpi-card.alert{border-top-color:#d95151}
+  #view-dashboard .kpi-card.gold{border-top-color:#b7863d}
+  #view-dashboard .kpi-card.teal{border-top-color:#1b9a82}
+  #view-dashboard .kpi-top{
+    flex-direction:row-reverse;
+    justify-content:space-between;
+  }
+  #view-dashboard .kpi-label{margin-right:auto;color:#334454}
+  #view-dashboard .kpi-icon{
+    width:32px;height:32px;border-radius:50%;
+  }
+  #view-dashboard .kpi-value{
+    margin:8px 0 4px;
+    font-family:Georgia,"Noto Serif KR",serif;
+    font-size:30px;
+  }
+
+  #view-dashboard .dashboard-grid{
+    gap:16px;
+    grid-template-columns:minmax(0,1.9fr) minmax(330px,.78fr);
+  }
+  #view-dashboard .panel{
+    border-color:#e6dccd;
+    box-shadow:0 12px 34px rgba(62,47,28,.055);
+  }
+  #view-dashboard .recommendation-panel{
+    padding:22px 22px 18px;
+  }
+  #view-dashboard .recommend-row{
+    border-radius:12px;
+    padding:11px 14px;
+    min-height:60px;
+    box-shadow:none;
+  }
+  #view-dashboard .recommend-row.g-recommend{
+    background:linear-gradient(90deg,rgba(226,245,237,.86),#fff 30%);
+  }
+  #view-dashboard .recommend-row.g-review{
+    background:linear-gradient(90deg,rgba(253,243,221,.82),#fff 30%);
+  }
+  #view-dashboard .rank-badge{
+    width:32px;height:32px;
+  }
+  #view-dashboard .side-metrics{
+    top:84px;
+  }
+  #view-dashboard .donut{
+    filter:drop-shadow(0 5px 9px rgba(62,47,28,.08));
+  }
+  #view-dashboard .bar-track{
+    height:9px;
+    background:#eee9e1;
+  }
+  #view-dashboard .bar-fill{
+    background:linear-gradient(90deg,#d3a557 0%,#b88b45 38%,#10283d 100%);
+  }
+
+  /* Keep the secondary decision strip useful but visually subordinate. */
+  #view-dashboard .executive-strip{
+    margin-top:18px;
+    border-radius:18px;
+    background:
+      radial-gradient(circle at 92% 15%,rgba(215,176,108,.15),transparent 30%),
+      linear-gradient(120deg,#0b2033,#153149 70%,#203c50);
+  }
+}
+
+@media (max-width:860px){
+  #view-dashboard .hero-row{
+    position:relative;
+    overflow:hidden;
+    margin:-22px -16px 18px;
+    padding:25px 16px 22px;
+    background:
+      radial-gradient(circle at 90% 8%,rgba(225,177,92,.25),transparent 36%),
+      linear-gradient(135deg,#fbf6ed,#f5ead7);
+    border-bottom:1px solid #e6d8c3;
+  }
+  #view-dashboard .hero-row::after{
+    content:"";
+    position:absolute;
+    right:-40px;bottom:-32px;
+    width:210px;height:110px;
+    border:1px solid rgba(183,134,61,.28);
+    border-radius:50%;
+    transform:rotate(-12deg);
+  }
+  #view-dashboard .hero-row h1{
+    font-size:31px;
+    line-height:1.2;
+  }
+  #view-dashboard .kpi-card{
+    border-top:3px solid transparent;
+    border-radius:16px;
+  }
+  #view-dashboard .kpi-card:nth-child(1){
+    border-top-color:#d7b06c;
+  }
+}
