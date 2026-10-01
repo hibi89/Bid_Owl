@@ -265,6 +265,18 @@
 
   function closeOverlay(id){ const el=$('#'+id); if(el) el.hidden=true; if(!$$('.overlay:not([hidden])').length) document.body.style.overflow=''; }
 
+  function renderNotifications(){
+    const urgent=bids.filter(b=>Number.isFinite(b.days_left)&&b.days_left>=0&&b.days_left<=3).sort((a,b)=>a.days_left-b.days_left);
+    const manual=bids.filter(b=>b.eligibility&&b.eligibility.unknown_count>0).sort((a,b)=>(b.eligibility.unknown_count||0)-(a.eligibility.unknown_count||0));
+    const highRisk=bids.filter(b=>b.risk_high>0).sort((a,b)=>(b.risk_high||0)-(a.risk_high||0));
+    const items=[
+      ...urgent.slice(0,3).map(b=>({kind:'urgent',icon:'!',title:`${dday(b.days_left)} 마감 임박`,body:b.title,bid:b.bid_no})),
+      ...manual.slice(0,2).map(b=>({kind:'check',icon:'?',title:`필수 확인 · 미확인 ${b.eligibility.unknown_count}건`,body:b.title,bid:b.bid_no})),
+      ...highRisk.slice(0,2).map(b=>({kind:'risk',icon:'▲',title:`HIGH 리스크 ${b.risk_high}건`,body:b.title,bid:b.bid_no}))
+    ];
+    $('#notificationContent').innerHTML=items.length?items.map(x=>`<button class="notification-item ${x.kind}" data-open-bid="${esc(x.bid)}"><span class="notification-icon">${x.icon}</span><span><strong>${esc(x.title)}</strong><small>${esc(x.body)}</small></span><b>›</b></button>`).join(''):'<div class="notification-empty">현재 우선 확인할 알림이 없습니다.</div>';
+  }
+
   function renderBrief(){
     const top=[...bids].sort((a,b)=>(b.score??-1)-(a.score??-1)).slice(0,3);
     const urgent=bids.filter(b=>Number.isFinite(b.days_left)&&b.days_left>=0&&b.days_left<=3).sort((a,b)=>a.days_left-b.days_left);
@@ -330,6 +342,11 @@
       const closer=e.target.closest('[data-close-overlay]'); if(closer){closeOverlay(closer.dataset.closeOverlay);return;}
       if(e.target.classList.contains('overlay')) closeOverlay(e.target.id);
     });
+    $('#notificationBtn').addEventListener('click',()=>{
+      renderNotifications();
+      $('#notificationOverlay').hidden=false;
+      document.body.style.overflow='hidden';
+    });
     $('#closeDrawer').addEventListener('click',()=>closeOverlay('detailOverlay'));
     $('#gradeFilter').addEventListener('change',e=>{state.grade=e.target.value;renderSearch();});
     $('#riskFilter').addEventListener('change',e=>{state.risk=e.target.value;renderSearch();});
@@ -356,9 +373,6 @@
   }
 
   function setupPWA(){
-    let deferredPrompt=null;
-    window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;$('#installApp').hidden=false;});
-    $('#installApp').addEventListener('click',async()=>{if(!deferredPrompt)return; deferredPrompt.prompt(); await deferredPrompt.userChoice; deferredPrompt=null; $('#installApp').hidden=true;});
     if('serviceWorker' in navigator) navigator.serviceWorker.register('service-worker.js').catch(()=>{});
   }
 
