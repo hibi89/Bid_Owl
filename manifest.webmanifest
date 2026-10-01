@@ -1,0 +1,12 @@
+{
+  "name": "BID INSIGHT · 공공 & 입찰 공고 스크리너",
+  "short_name": "BID INSIGHT",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f4efe7",
+  "theme_color": "#0d2033",
+  "description": "경영진용 공공·입찰 공고 의사결정 스크리너",
+  "icons": [
+    {"src":"icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}
+  ]
+}
