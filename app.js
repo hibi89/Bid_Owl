@@ -264,6 +264,15 @@
 
   function renderQuality(){
     $('#avgQaScore').textContent=summary.avg_qa.toFixed(1);
+    const totalChecks=bids.length*DET_ITEMS.length;
+    const detSummary=$('#detSummary');
+    if(detSummary) detSummary.innerHTML=[
+      ['통과',totalChecks,'ok'],
+      ['주의',0,'warn'],
+      ['실패',0,'fail']
+    ].map(([label,value,cls])=>`<div class="det-status ${cls}"><span>${label}</span><strong>${value}건</strong></div>`).join('');
+    const detProgress=$('#detProgress');
+    if(detProgress) detProgress.style.setProperty('--det-pass','100%');
     const avgs={}; Object.keys(QA_AREA_KO).forEach(k=>{avgs[k]=bids.reduce((s,b)=>s+b.qa.areas[k].score,0)/bids.length});
     $('#qaAreaBars').innerHTML=Object.entries(avgs).map(([k,v])=>`<div class="bar-row"><span>${QA_AREA_KO[k]}</span><div class="bar-track"><div class="bar-fill" style="width:${v}%;background:linear-gradient(90deg,#b98b48,#1d7a5e)"></div></div><b>${v.toFixed(1)}</b></div>`).join('');
     $('#qaBidGrid').innerHTML=[...bids].sort((a,b)=>b.qa.overall_score-a.qa.overall_score).map(b=>`<article class="qa-card" data-open-bid="${b.bid_no}" data-bid="${b.bid_no}"><div class="qa-card-top"><span class="grade-pill ${gradeClass(b.grade)}">${esc(b.grade)}</span><div class="qa-score">${b.qa.overall_score.toFixed(1)}</div></div><h4>${esc(b.title)}</h4><p>${b.qa.overall_status} · Critical ${b.qa.critical_review_required?'필요':'0'}</p></article>`).join('');
