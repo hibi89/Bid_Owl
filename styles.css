@@ -727,10 +727,10 @@ button.kpi-card,button.decision-card{appearance:none;text-align:left;width:100%}
   box-shadow:0 0 0 6px rgba(13,32,51,.35);
 }
 
-/* 데스크톱 시안 1672×941. viewport를 완전히 덮되 시안 비율은 유지한다. */
+/* 데스크톱 시안 1672×941. 브라우저 UI로 viewport가 넓어져도 시안 전체가 잘리지 않게 표시한다. */
 .landing-stage-desktop{
-  width:max(100vw, calc(100dvh * 1672 / 941));
-  height:max(100dvh, calc(100vw * 941 / 1672));
+  width:min(100vw, calc(100dvh * 1672 / 941));
+  height:min(100dvh, calc(100vw * 941 / 1672));
   left:50%;
   top:50%;
   transform:translate(-50%,-50%);
