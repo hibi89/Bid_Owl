@@ -1662,3 +1662,504 @@ body.on-landing .mobile-nav{display:none!important}
   #view-search .filter-bar{border-color:#dfe6eb}
   #view-search .filter-chip.active{background:#125d98;border-color:#125d98}
 }
+
+
+/* ============================================================
+   REMAINING TABS — supplied reference match / 2026-10-01
+   Risk Control / Profitability / Quality Assurance
+   Presentation only; existing calculations, filters and click handlers remain intact.
+   ============================================================ */
+
+/* ---------------- RISK CONTROL ---------------- */
+@media (min-width:861px){
+  #view-risk{padding-top:0}
+  #view-risk .section-title{
+    position:relative;
+    isolation:isolate;
+    min-height:192px;
+    margin:0 calc(clamp(22px,3.4vw,52px) * -1);
+    padding:30px clamp(22px,3.4vw,52px) 48px;
+    overflow:hidden;
+    align-items:flex-start;
+    background:
+      linear-gradient(90deg,rgba(251,247,239,.99) 0%,rgba(251,247,239,.95) 37%,rgba(251,247,239,.26) 67%,rgba(251,247,239,.04) 100%),
+      url("./assets/risk-city-bg.svg") center/cover no-repeat;
+    border-bottom:1px solid rgba(201,74,74,.10);
+  }
+  #view-risk .section-title>div{position:relative;z-index:3}
+  #view-risk .section-title .eyebrow{
+    color:#c63338;font-size:11px;font-weight:900;letter-spacing:.24em
+  }
+  #view-risk .section-title h1{
+    margin:7px 0 9px;
+    font-family:Georgia,"Noto Serif KR",serif;
+    font-size:48px;line-height:1.03;letter-spacing:-.052em;color:#0d2943
+  }
+  #view-risk .section-title p{margin:0;font-size:16px;color:#294964}
+  #view-risk .section-title::after{
+    content:"잠재 리스크를 사전에 감지하여\A 안정적인 수주 전략을 지원합니다.";
+    white-space:pre-line;
+    position:absolute;
+    z-index:4;
+    left:46%;
+    top:72px;
+    padding-left:22px;
+    border-left:1px solid #d58b45;
+    color:#ad6d2b;
+    font-size:14px;
+    font-weight:800;
+    line-height:1.55;
+  }
+
+  #view-risk .risk-kpi-grid{
+    position:relative;z-index:6;
+    margin-top:-25px;margin-bottom:18px;
+    grid-template-columns:repeat(5,minmax(0,1fr));
+    gap:14px;
+  }
+  #view-risk .risk-kpi{
+    min-height:136px;
+    padding:18px 18px 16px;
+    border-radius:0 0 16px 16px;
+    box-shadow:0 8px 22px rgba(72,42,31,.055);
+  }
+  #view-risk .risk-kpi::after{
+    position:absolute;right:15px;top:17px;
+    width:34px;height:34px;border-radius:50%;
+    display:grid;place-items:center;
+    font-size:16px;font-weight:900;
+  }
+  #view-risk .risk-kpi:nth-child(1)::after{content:"!";color:#c7373d;background:#fde9e9}
+  #view-risk .risk-kpi:nth-child(2)::after{content:"◷";color:#b5780d;background:#fff2d8}
+  #view-risk .risk-kpi:nth-child(3)::after{content:"⊘";color:#c7373d;background:#fde9e9}
+  #view-risk .risk-kpi:nth-child(4)::after{content:"▤";color:#a76909;background:#fff2d8}
+  #view-risk .risk-kpi:nth-child(5)::after{content:"●";color:#176698;background:#e7f4fb}
+  #view-risk .risk-kpi span{font-size:13px;color:#334b5e}
+  #view-risk .risk-kpi strong{
+    margin-top:11px;font-family:Georgia,"Noto Serif KR",serif;font-size:31px
+  }
+  #view-risk .risk-kpi small{font-size:12.5px}
+
+  #view-risk .risk-layout{
+    grid-template-columns:minmax(0,2.08fr) minmax(320px,.95fr);
+    gap:16px;
+  }
+  #view-risk .risk-layout>.panel{
+    padding:20px 20px 18px;
+    border-radius:17px;
+    border-color:#e8ded2;
+    background:#fffdf9;
+    box-shadow:0 9px 26px rgba(62,45,31,.045);
+  }
+  #view-risk .risk-layout>.panel:nth-child(2){
+    position:relative;
+    padding-bottom:92px;
+  }
+  #view-risk .risk-layout>.panel:nth-child(2)::after{
+    content:"리스크 유형을 미리 파악하고\A 대응 전략을 수립하세요.";
+    white-space:pre-line;
+    position:absolute;
+    left:20px;right:20px;bottom:18px;
+    padding:16px 18px 16px 54px;
+    border-radius:13px;
+    background:linear-gradient(90deg,#eef4f8,#f5f8fa);
+    color:#36576f;
+    font-size:12.5px;
+    line-height:1.55;
+    font-weight:700;
+  }
+  #view-risk .risk-layout>.panel:nth-child(2)::before{
+    content:"☼";
+    position:absolute;z-index:2;
+    left:37px;bottom:34px;
+    color:#245b82;font-size:22px;
+  }
+  #view-risk .panel-head h2{font-size:21px;color:#102b43}
+  #view-risk .panel-head p{font-size:13px;color:#657786}
+
+  #view-risk .risk-list{gap:8px}
+  #view-risk .risk-item{
+    position:relative;
+    min-height:63px;
+    padding:9px 48px 9px 12px;
+    grid-template-columns:66px minmax(0,1fr) auto;
+    gap:12px;
+    border-radius:11px;
+    border-color:#e7ded4;
+    box-shadow:none;
+  }
+  #view-risk .risk-item::after{
+    content:"→";
+    position:absolute;right:12px;top:50%;transform:translateY(-50%);
+    width:30px;height:30px;border-radius:9px;
+    display:grid;place-items:center;
+    border:1px solid #e2d9ce;background:#fff;color:#163953;font-weight:850;
+  }
+  #view-risk .risk-dday{font-size:20px}
+  #view-risk .risk-item h4{font-size:14px;margin-bottom:3px}
+  #view-risk .risk-item p{font-size:11.5px}
+  #view-risk .risk-tags{margin-right:6px}
+  #view-risk .risk-pill,#view-risk .grade-pill{font-size:10.5px;padding:4px 9px}
+  #view-risk .bar-list{gap:12px}
+  #view-risk .bar-row{
+    grid-template-columns:minmax(72px,100px) 1fr 28px;
+    font-size:12.5px;
+  }
+  #view-risk .bar-track{height:10px;background:#eee9e4}
+}
+
+/* ---------------- PROFITABILITY ---------------- */
+@media (min-width:861px){
+  #view-simulation{
+    margin:0;
+    padding-bottom:28px;
+    min-height:100vh;
+    background:linear-gradient(180deg,#f6f0e7,#f8f4ed 50%,#f5efe6);
+  }
+  #view-simulation .profit-hero{
+    min-height:350px;
+    padding:37px 34px 20px;
+    border:1px solid rgba(204,166,101,.24);
+    border-radius:17px;
+    background:
+      linear-gradient(90deg,rgba(7,23,38,.98) 0%,rgba(7,23,38,.89) 34%,rgba(7,23,38,.20) 66%,rgba(7,23,38,.03) 100%),
+      url("./assets/profit-hero-bg.svg") center/cover no-repeat;
+    box-shadow:0 10px 28px rgba(17,23,26,.12);
+  }
+  #view-simulation .profit-hero:before,
+  #view-simulation .profit-hero:after{display:none}
+  #view-simulation .profit-hero .eyebrow{
+    color:#f0b348;font-size:11px;font-weight:900;letter-spacing:.24em
+  }
+  #view-simulation .profit-hero h1{
+    margin:8px 0 8px;
+    font-family:Georgia,"Noto Serif KR",serif;
+    font-size:49px;line-height:1.03;letter-spacing:-.05em;color:#fff
+  }
+  #view-simulation .profit-hero-copy p{margin:0}
+  #view-simulation .profit-lead{
+    display:block;
+    color:#f7f8f9;
+    font-size:16px;
+    line-height:1.45;
+    font-weight:750;
+  }
+  #view-simulation .profit-disclaimer{
+    display:block;
+    margin-top:6px;
+    color:#b9c4cc;
+    font-size:12.5px;
+  }
+  #view-simulation .profit-hero-quote{
+    right:4.5%;top:48px;
+    text-align:right;
+    color:#f3ca72;
+    font-family:Georgia,"Noto Serif KR",serif;
+    font-size:17px;line-height:1.55;
+  }
+  #view-simulation .profit-hero-quote b{color:#f1bd50}
+  #view-simulation .profit-hero-quote::after{
+    content:"";
+    display:block;
+    width:36px;height:2px;
+    margin:14px 0 0 auto;
+    background:#e8b44e;
+  }
+
+  #view-simulation .profit-kpi-strip{
+    position:absolute;
+    left:32px;right:32px;bottom:17px;
+    max-width:none;
+    margin:0;
+    grid-template-columns:repeat(4,minmax(0,1fr));
+    gap:14px;
+  }
+  #view-simulation .profit-kpi{
+    min-height:114px;
+    padding:16px 17px;
+    gap:13px;
+    border:1px solid rgba(231,190,114,.58);
+    border-radius:15px;
+    background:linear-gradient(135deg,rgba(9,38,58,.86),rgba(10,29,44,.78));
+    box-shadow:
+      inset 0 1px rgba(255,255,255,.07),
+      0 0 0 1px rgba(224,171,79,.08),
+      0 8px 22px rgba(0,0,0,.18);
+  }
+  #view-simulation .profit-kpi:first-child,
+  #view-simulation .profit-kpi:last-child{
+    box-shadow:
+      inset 0 1px rgba(255,255,255,.08),
+      0 0 14px rgba(231,174,78,.19);
+  }
+  #view-simulation .profit-kpi-icon{
+    width:46px;height:46px;
+    border-color:#cc9b47;color:#f2b64f;
+    background:rgba(201,145,49,.08);
+    font-size:20px;
+  }
+  #view-simulation .profit-kpi small{font-size:11px;color:#bac5cd}
+  #view-simulation .profit-kpi strong{font-size:25px;color:#fff}
+  #view-simulation .profit-kpi em{margin-top:4px;font-size:10.5px;color:#a6b1b9}
+
+  #view-simulation>.simulation-layout,
+  #view-simulation>.profit-ranking-panel{margin-left:0;margin-right:0}
+  #view-simulation .simulation-layout{
+    grid-template-columns:minmax(0,2.02fr) minmax(300px,.78fr);
+    gap:16px;
+    margin-top:16px;margin-bottom:16px;
+  }
+  #view-simulation .panel{
+    border-color:#e7ddd0;
+    border-radius:17px;
+    background:#fffdf9;
+    box-shadow:0 9px 27px rgba(59,43,22,.05);
+  }
+  #view-simulation .profit-chart-panel{min-height:475px;padding:20px 18px}
+  #view-simulation .profit-chart-panel .panel-head{margin-bottom:8px}
+  #view-simulation .panel-head h2{font-size:21px;color:#102b43}
+  #view-simulation .margin-chart{
+    height:355px;
+    gap:7px;
+    padding:33px 4px 10px;
+    background:repeating-linear-gradient(to top,transparent 0,transparent 76px,rgba(79,94,105,.08) 77px);
+    border-bottom-color:#dfd7cc;
+  }
+  #view-simulation .margin-bar{width:68%}
+  #view-simulation .assumption-panel{
+    padding:20px 18px;
+    background:#fffdf9!important;
+  }
+  #view-simulation .assumption-row{
+    grid-template-columns:32px 1fr;
+    padding:12px 12px;
+    border-radius:12px;
+    background:linear-gradient(135deg,#f8f3ea,#f5eee3);
+    border:1px solid #eee2cf;
+  }
+  #view-simulation .assumption-no{background:#fff;border-color:#ebdcc2;color:#a56c14}
+  #view-simulation .as-label{font-size:11.5px}
+  #view-simulation .as-value{font-size:16px;color:#a46710}
+  #view-simulation .as-desc{font-size:10.5px}
+}
+
+/* ---------------- QUALITY ASSURANCE ---------------- */
+@media (min-width:861px){
+  #view-quality{padding-top:0}
+  #view-quality .section-title{
+    position:relative;
+    isolation:isolate;
+    min-height:207px;
+    margin:0 calc(clamp(22px,3.4vw,52px) * -1);
+    padding:31px clamp(22px,3.4vw,52px) 50px;
+    overflow:hidden;
+    align-items:flex-start;
+    background:
+      linear-gradient(90deg,rgba(251,248,241,.99) 0%,rgba(251,248,241,.94) 36%,rgba(251,248,241,.25) 66%,rgba(251,248,241,.03) 100%),
+      url("./assets/quality-hero-bg.svg") center/cover no-repeat;
+    border-bottom:1px solid rgba(52,106,151,.10);
+  }
+  #view-quality .section-title>div{position:relative;z-index:3;max-width:760px}
+  #view-quality .section-title .eyebrow{
+    color:#b87924;font-size:11px;font-weight:900;letter-spacing:.24em
+  }
+  #view-quality .section-title h1{
+    margin:7px 0 9px;
+    font-family:Georgia,"Noto Serif KR",serif;
+    font-size:48px;line-height:1.03;letter-spacing:-.052em;color:#0c2945
+  }
+  #view-quality .section-title p{
+    margin:0;max-width:810px;
+    font-size:14.5px;line-height:1.52;color:#34546e
+  }
+  #view-quality .section-title::after{
+    content:"데이터로 검증하고\A 규칙으로 확인하며\A 사람의 판단으로 완성합니다.";
+    white-space:pre-line;
+    position:absolute;z-index:4;
+    right:3.7%;top:74px;
+    padding-left:20px;
+    border-left:1px solid #4f82b1;
+    color:#28557e;
+    font-size:13.5px;
+    font-weight:800;
+    line-height:1.55;
+    text-align:left;
+  }
+
+  #view-quality .quality-grid{
+    position:relative;z-index:6;
+    grid-template-columns:minmax(270px,.88fr) minmax(350px,1.05fr) minmax(410px,1.3fr);
+    gap:16px;
+    margin-top:-27px;
+    margin-bottom:16px;
+  }
+  #view-quality .quality-grid>.panel{
+    min-height:310px;
+    padding:20px 20px 18px;
+    border-radius:16px;
+    border-color:#e3e0da;
+    box-shadow:0 9px 27px rgba(38,55,68,.055);
+    background:#fff;
+  }
+  #view-quality .quality-score-panel{
+    position:relative;
+    overflow:hidden;
+    color:#fff;
+    background:linear-gradient(145deg,#0b2943,#123b58)!important;
+    border-color:#194b68!important;
+  }
+  #view-quality .quality-score-panel::after{
+    content:"";
+    position:absolute;right:-80px;bottom:-35px;
+    width:280px;height:150px;
+    border-top:1px solid rgba(65,205,187,.22);
+    border-radius:50%;
+    transform:rotate(-10deg);
+    box-shadow:0 -20px 0 -19px rgba(65,205,187,.14),0 -40px 0 -39px rgba(65,205,187,.10);
+  }
+  #view-quality .quality-score-panel .panel-kicker{color:#e5ad4c}
+  #view-quality .quality-score{
+    margin-top:13px;
+    font-size:67px;
+    color:#f0c66f;
+  }
+  #view-quality .quality-caption{color:#7de1d3;font-size:13.5px}
+  #view-quality .quality-score-panel p{
+    position:relative;z-index:2;
+    max-width:360px;
+    font-size:12.5px;line-height:1.65;color:#c8d6df
+  }
+
+  #view-quality .quality-grid>.panel:nth-child(2){
+    border-top:3px solid #17a68e;
+  }
+  #view-quality .quality-grid>.panel:nth-child(2) .panel-head h2::before{
+    content:"</>";
+    display:inline-grid;place-items:center;
+    width:37px;height:37px;margin-right:10px;
+    border-radius:10px;
+    background:#e4f8f4;color:#078d78;
+    font-size:12px;font-family:monospace;
+    vertical-align:middle;
+  }
+  #view-quality .pass-text{
+    color:#078d78;
+    font-size:17px;
+    font-weight:900;
+  }
+  #view-quality .det-progress{
+    width:100%;height:12px;
+    margin:16px 0 12px;
+    overflow:hidden;
+    border-radius:999px;
+    background:#e9f0ef;
+  }
+  #view-quality .det-progress i{
+    display:block;height:100%;
+    width:var(--det-pass,100%);
+    border-radius:inherit;
+    background:linear-gradient(90deg,#128f80,#2ec7a9);
+  }
+  #view-quality .det-status-grid{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:8px;
+    margin-bottom:10px;
+  }
+  #view-quality .det-status{
+    padding:10px 9px;
+    border-radius:10px;
+    text-align:center;
+  }
+  #view-quality .det-status span{display:block;font-size:10.5px;font-weight:750}
+  #view-quality .det-status strong{display:block;margin-top:3px;font-size:14px}
+  #view-quality .det-status.ok{background:#e9f8f4;color:#087c69}
+  #view-quality .det-status.warn{background:#fff6e7;color:#b67a12}
+  #view-quality .det-status.fail{background:#fff0f0;color:#ca3b42}
+  #view-quality .outline-btn{padding:9px 14px;font-size:12.5px}
+
+  #view-quality .quality-grid>.panel:nth-child(3) .bar-list{gap:14px}
+  #view-quality .quality-grid>.panel:nth-child(3) .bar-row{
+    grid-template-columns:minmax(105px,130px) 1fr 42px;
+    gap:10px;
+    font-size:11.7px;
+  }
+  #view-quality .quality-grid>.panel:nth-child(3) .bar-track{height:10px;background:#e8eceb}
+  #view-quality .quality-grid>.panel:nth-child(3) .bar-fill{
+    background:linear-gradient(90deg,#345d85,#24b69c)!important;
+  }
+
+  #view-quality>section.panel{
+    padding:20px 20px 18px;
+    border-radius:17px;
+    border-color:#e6ddd2;
+    box-shadow:0 9px 26px rgba(50,45,37,.045);
+  }
+  #view-quality .qa-bid-grid{
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:10px;
+  }
+  #view-quality .qa-card{
+    min-height:107px;
+    padding:13px 14px;
+    border-radius:12px;
+    border-color:#e6dfd6;
+    box-shadow:none;
+  }
+  #view-quality .qa-card:hover{border-color:#83baa9;box-shadow:0 5px 16px rgba(29,113,91,.06)}
+  #view-quality .qa-card-top{align-items:flex-start}
+  #view-quality .qa-score{font-size:22px;color:#087f6c}
+  #view-quality .qa-card h4{margin:6px 0 3px;font-size:13px;line-height:1.35}
+  #view-quality .qa-card p{font-size:10.8px}
+}
+
+@media(max-width:1180px) and (min-width:861px){
+  #view-risk .section-title::after{left:50%;font-size:12.5px}
+  #view-risk .risk-layout{grid-template-columns:1fr}
+  #view-simulation .profit-kpi-strip{gap:8px}
+  #view-simulation .profit-kpi{padding:13px 12px}
+  #view-simulation .simulation-layout{grid-template-columns:1fr}
+  #view-quality .quality-grid{grid-template-columns:1fr 1fr}
+  #view-quality .quality-grid>.panel:nth-child(3){grid-column:1/-1}
+}
+
+@media(max-width:860px){
+  #view-risk .section-title,
+  #view-quality .section-title{
+    margin:-22px -16px 14px;
+    padding:24px 16px 28px;
+    min-height:auto;
+  }
+  #view-risk .section-title{
+    background:linear-gradient(90deg,rgba(251,247,239,.98),rgba(251,247,239,.76)),url("./assets/risk-city-bg.svg") center/cover no-repeat;
+  }
+  #view-quality .section-title{
+    background:linear-gradient(90deg,rgba(251,248,241,.98),rgba(251,248,241,.76)),url("./assets/quality-hero-bg.svg") center/cover no-repeat;
+  }
+  #view-risk .section-title h1,#view-quality .section-title h1{
+    font-family:Georgia,"Noto Serif KR",serif;font-size:32px
+  }
+  #view-risk .section-title::after,#view-quality .section-title::after{display:none}
+  #view-risk .risk-kpi-grid{margin-top:0}
+  #view-risk .risk-item{padding-right:45px}
+  #view-quality .quality-grid{margin-top:0}
+  #view-quality .det-status-grid{grid-template-columns:repeat(3,1fr)}
+
+  #view-simulation{margin:-22px -16px 0;padding:0 16px 24px}
+  #view-simulation .profit-hero{
+    min-height:auto;
+    margin:0 -16px 16px;
+    padding:26px 16px 22px;
+    border-radius:0;
+    background:linear-gradient(90deg,rgba(7,23,38,.98),rgba(7,23,38,.55)),url("./assets/profit-hero-bg.svg") center/cover no-repeat;
+  }
+  #view-simulation .profit-hero h1{font-size:34px}
+  #view-simulation .profit-hero-quote{display:none}
+  #view-simulation .profit-kpi-strip{
+    position:static;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    margin-top:20px;
+  }
+  #view-simulation .profit-kpi{min-height:0}
+  #view-simulation .simulation-layout{grid-template-columns:1fr}
+}
