@@ -2163,3 +2163,20 @@ body.on-landing .mobile-nav{display:none!important}
   #view-simulation .profit-kpi{min-height:0}
   #view-simulation .simulation-layout{grid-template-columns:1fr}
 }
+
+
+/* dashboard executive strip contrast fix */
+@media (min-width:861px){
+  #view-dashboard .executive-strip{
+    background:linear-gradient(120deg,#0d2033,#172e43 66%,#253c4f);
+    color:#fff;
+    border-color:#1f3d58;
+    box-shadow:0 10px 26px rgba(13,32,51,.14);
+  }
+  #view-dashboard .executive-strip-copy h2{color:#fff}
+  #view-dashboard .executive-strip-copy p{color:#c3d2dd}
+  #view-dashboard .executive-strip .decision-card{
+    color:#fff;
+    border-color:rgba(255,255,255,.14);
+  }
+}
