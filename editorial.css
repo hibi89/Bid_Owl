@@ -407,3 +407,334 @@ button.kpi-card:hover{background:#f4f6f2!important;transform:none}
   text-align:left;
 }
 .recommend-card .stat-mini.stat-qa:hover{background:transparent;border-color:#e7e9e5}
+
+
+/* ============================================================
+   FINAL CASCADE LOCK
+   The legacy stylesheet contains later-era, high-specificity page themes.
+   This block deliberately matches that specificity so the editorial redesign
+   wins without touching application markup or JavaScript behavior.
+   ============================================================ */
+@media (min-width:861px){
+  #view-dashboard{padding-top:28px}
+  #view-dashboard .hero-row{
+    min-height:485px;
+    margin:0;
+    padding:64px;
+    display:flex;
+    grid-template-columns:none;
+    align-items:flex-end;
+    justify-content:space-between;
+    border:0;
+    border-radius:26px;
+    background:
+      linear-gradient(90deg,rgba(8,18,15,.78) 0%,rgba(8,18,15,.54) 38%,rgba(8,18,15,.12) 78%),
+      url("assets/bid-hero.png") center 47%/cover no-repeat;
+  }
+  #view-dashboard .hero-row::before{display:none}
+  #view-dashboard .hero-row::after{
+    content:"01  /  CURATED OPPORTUNITIES";
+    inset:auto 24px 22px auto;
+    width:auto;
+    background:none;
+    color:rgba(255,255,255,.74);
+    font-size:10px;
+    font-weight:700;
+    letter-spacing:.12em;
+  }
+  #view-dashboard .hero-row>div:first-child{max-width:720px;align-self:auto}
+  #view-dashboard .hero-row h1{
+    max-width:720px;
+    margin:12px 0 14px;
+    color:#fff;
+    text-shadow:none;
+    font-family:"Noto Serif KR",serif;
+    font-weight:600;
+    font-size:clamp(38px,5.15vw,66px);
+    line-height:1.28;
+    letter-spacing:-.052em;
+  }
+  #view-dashboard .hero-row p{
+    max-width:590px;
+    color:rgba(255,255,255,.82);
+    font-size:15px;
+    line-height:1.8;
+  }
+  #view-dashboard .eyebrow{color:#d9eee7;font-size:10px;letter-spacing:.16em}
+  #view-dashboard .hero-badges{
+    display:flex;
+    position:relative;
+    align-self:flex-start;
+    justify-self:auto;
+    align-items:flex-end;
+    max-width:none;
+    margin:0;
+    padding:0;
+    border:0;
+    gap:8px;
+  }
+  #view-dashboard .hero-badges::before{display:none}
+  #view-dashboard .hero-badges span{
+    display:block;
+    border:1px solid rgba(255,255,255,.28);
+    border-radius:999px;
+    background:rgba(12,31,25,.2);
+    color:#fff;
+    backdrop-filter:blur(8px);
+    font-size:11px;
+    padding:8px 12px;
+  }
+
+  #view-dashboard .kpi-grid{
+    display:grid;
+    grid-template-columns:repeat(5,minmax(0,1fr));
+    gap:0;
+    margin:24px 0 42px;
+    border:1px solid #e0e2dd;
+    border-radius:18px;
+    overflow:hidden;
+    background:#fff;
+  }
+  #view-dashboard .kpi-card{
+    min-height:132px;
+    padding:20px 20px 18px;
+    border:0;
+    border-right:1px solid #e4e6e1;
+    border-radius:0;
+    background:#fff!important;
+    box-shadow:none;
+  }
+  #view-dashboard .kpi-card:last-child{border-right:0}
+  #view-dashboard .kpi-card::before{display:none}
+  #view-dashboard .kpi-top{display:flex;grid-template-columns:none;justify-content:space-between;gap:10px}
+  #view-dashboard .kpi-icon{order:initial;width:24px;height:24px;font-size:11px;background:#edf2ee;color:var(--green)}
+  #view-dashboard .kpi-label{font-size:11px;font-weight:600;color:var(--muted)}
+  #view-dashboard .kpi-value{
+    margin:0;
+    color:var(--ink)!important;
+    font-family:"Noto Sans KR",sans-serif;
+    font-size:clamp(22px,2vw,29px);
+    font-weight:750;
+  }
+  #view-dashboard .kpi-note{font-size:10px;color:var(--muted)}
+
+  #view-dashboard .dashboard-grid{grid-template-columns:minmax(0,1.75fr) minmax(300px,.65fr);gap:24px}
+  #view-dashboard .panel{border-color:#e0e2dd;border-radius:20px;background:#fff;box-shadow:none}
+  #view-dashboard .recommendation-panel{padding:28px}
+  #view-dashboard .recommendation-panel .panel-head{margin-bottom:22px}
+  #view-dashboard .panel-kicker{color:var(--green);font-size:10px;letter-spacing:.16em}
+  #view-dashboard .panel-head h2{font-size:18px;color:var(--ink)}
+  #view-dashboard .panel-head p{font-size:12px;color:var(--muted)}
+  #view-dashboard .text-btn{border:0;background:transparent;color:var(--ink);padding:8px;font-size:12px}
+  #view-dashboard .recommend-list{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
+  #view-dashboard .recommend-row{
+    position:relative;
+    display:block;
+    min-height:0;
+    padding:0 0 18px;
+    gap:0;
+    border:0;
+    border-radius:16px;
+    background:#fff!important;
+    box-shadow:none;
+  }
+  #view-dashboard .recommend-row:nth-child(n+4){display:none}
+  #view-dashboard .recommend-row::before{
+    content:"";
+    display:block;
+    position:relative;
+    top:auto;bottom:auto;left:auto;right:auto;
+    width:100%;height:auto;
+    aspect-ratio:1.42/1;
+    margin-bottom:14px;
+    border-radius:15px;
+    background-size:cover;
+    background-position:center;
+  }
+  #view-dashboard .recommend-row:nth-child(1)::before{background-image:url("assets/bid-ai.png")}
+  #view-dashboard .recommend-row:nth-child(2)::before{background-image:url("assets/bid-digital.png")}
+  #view-dashboard .recommend-row:nth-child(3)::before{background-image:url("assets/bid-construction.png")}
+  #view-dashboard .rank-badge{
+    position:absolute;top:10px;left:10px;z-index:2;
+    width:auto;height:auto;padding:5px 9px;border:0;border-radius:999px;
+    background:rgba(255,255,255,.9)!important;color:#22302b!important;font-size:10px;
+  }
+  #view-dashboard .recommend-title{min-height:92px;padding:0 2px}
+  #view-dashboard .recommend-title strong{font-size:15px;line-height:1.55;color:var(--ink)}
+  #view-dashboard .recommend-title small{margin-top:8px;font-size:10px;color:var(--muted)}
+  #view-dashboard .metric-cell{display:inline-flex;width:calc(33.333% - 4px);font-size:9px;color:var(--muted)}
+  #view-dashboard .metric-cell b{font-size:11px;color:var(--ink)}
+  #view-dashboard .metric-cell:nth-of-type(4){display:none}
+  #view-dashboard .row-open{position:absolute;right:2px;bottom:17px;width:30px;height:30px;border-radius:50%;background:#fff}
+  #view-dashboard .side-metrics{padding:28px}
+  #view-dashboard .bar-track{background:#eef0ed}
+  #view-dashboard .bar-fill{background:var(--green)}
+
+  #view-recommend{padding-top:34px}
+  #view-recommend .section-title,
+  #view-search .section-title,
+  #view-risk .section-title,
+  #view-quality .section-title{
+    position:relative;
+    min-height:auto;
+    margin:0;
+    padding:30px 0 22px;
+    overflow:visible;
+    background:none;
+    border:0;
+    align-items:flex-end;
+  }
+  #view-recommend .section-title::after,
+  #view-search .section-title::after,
+  #view-risk .section-title::after,
+  #view-quality .section-title::after{display:none}
+  #view-recommend .section-title .eyebrow,
+  #view-search .section-title .eyebrow,
+  #view-risk .section-title .eyebrow,
+  #view-quality .section-title .eyebrow{color:var(--green);font-size:10px;letter-spacing:.16em}
+  #view-recommend .section-title h1,
+  #view-search .section-title h1,
+  #view-risk .section-title h1,
+  #view-quality .section-title h1{
+    margin:4px 0 0;
+    color:var(--ink);
+    font-family:"Noto Serif KR",serif;
+    font-size:clamp(32px,4vw,52px);
+    line-height:1.18;
+  }
+  #view-recommend .section-title p,
+  #view-search .section-title p,
+  #view-risk .section-title p,
+  #view-quality .section-title p{color:var(--muted);font-size:14px}
+  #view-recommend .section-actions{position:static}
+  #view-recommend .fav-filter{position:static;width:auto;max-width:none;margin:0 0 18px}
+  #view-recommend .fav-filter .filter-chip{min-width:0;padding:9px 14px;box-shadow:none}
+  #view-recommend .fav-filter .filter-chip.active{background:#1c2f29;border-color:#1c2f29}
+  #view-recommend .recommend-cards-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:34px 20px}
+  #view-recommend .recommend-card{
+    min-height:0;
+    padding:0 0 16px;
+    border:0;
+    border-radius:0;
+    background:transparent;
+    box-shadow:none;
+  }
+  #view-recommend .recommend-card::before{
+    content:"";
+    display:block;
+    width:100%;
+    aspect-ratio:1.34/1;
+    margin-bottom:14px;
+    border-radius:17px;
+    background-size:cover;
+    background-position:center;
+  }
+  #view-recommend .recommend-card:nth-child(5n+1)::before{background-image:url("assets/bid-digital.png")}
+  #view-recommend .recommend-card:nth-child(5n+2)::before{background-image:url("assets/bid-construction.png")}
+  #view-recommend .recommend-card:nth-child(5n+3)::before{background-image:url("assets/bid-ai.png")}
+  #view-recommend .recommend-card:nth-child(5n+4)::before{background-image:url("assets/bid-smartcity.png")}
+  #view-recommend .recommend-card:nth-child(5n)::before{background-image:url("assets/bid-green.png")}
+  #view-recommend .recommend-card .badge-line{position:absolute;top:10px;left:10px;right:10px;z-index:3}
+  #view-recommend .favorite-btn{width:34px;height:34px;font-size:16px;background:rgba(255,255,255,.9)!important}
+  #view-recommend .recommend-card h3{min-height:52px;margin:0 2px 6px;font-size:16px;line-height:1.55;color:var(--ink)}
+  #view-recommend .recommend-card .meta{margin:0 2px 14px;font-size:10px;color:var(--muted)}
+  #view-recommend .recommend-card .card-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:0;margin:0 2px;padding:12px 0}
+  #view-recommend .stat-mini{padding:0 10px;border:0;border-right:1px solid #e7e9e5;border-radius:0;background:transparent}
+  #view-recommend .stat-mini:first-child{padding-left:0}
+  #view-recommend .stat-mini:last-child{border-right:0}
+  #view-recommend .stat-mini span{font-size:9px}
+  #view-recommend .recommend-card .stat-mini b{font-size:13px}
+  #view-recommend .card-reason{margin:12px 2px 0;padding:0;min-height:50px;background:transparent!important;border:0;color:#69716d!important;font-size:10px}
+  #view-recommend .card-reason::before{display:none}
+  #view-recommend .primary-btn{padding:10px 15px;border-radius:999px;border-color:#1c2f29;background:#1c2f29;box-shadow:none;font-size:11px}
+
+  #view-search{padding-top:34px}
+  #view-search .search-hero-stats{position:static;width:auto;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:0 0 18px}
+  #view-search .search-hero-stat{min-height:90px;padding:14px 16px;border:1px solid #e0e2dd;border-radius:16px;background:#fff;box-shadow:none;color:var(--ink)}
+  #view-search .search-hero-stat span{color:var(--muted);font-size:10px}
+  #view-search .search-hero-stat strong{color:var(--ink);font-family:"Noto Sans KR",sans-serif;font-size:21px}
+  #view-search .search-hero-stat small{color:var(--green);font-size:9px}
+  #view-search .filter-bar{position:relative;margin:0 0 18px;padding:14px;border:1px solid #e0e2dd;border-radius:16px;background:#fff;box-shadow:none}
+  #view-search .filter-chip.active{background:#1c2f29;border-color:#1c2f29;box-shadow:none}
+  #view-search .table-shell{border-color:#e0e2dd;box-shadow:none}
+  #view-search .bid-table th{background:#f3f4f1;color:#6a726e}
+  #view-search .bid-table tbody tr:hover{background:#f5f7f3}
+  #view-search .search-mini-track i,#view-search .search-mini-track.margin i{background:var(--green)}
+
+  #view-risk{padding-top:34px}
+  #view-risk .risk-kpi-grid{margin-top:0}
+  #view-risk .risk-kpi{border-color:#e0e2dd;background:#fff;box-shadow:none}
+  #view-risk .panel{border-color:#e0e2dd;background:#fff;box-shadow:none}
+
+  #view-simulation{margin:0;padding-top:34px;padding-bottom:28px;background:var(--bg)}
+  #view-simulation .profit-hero{
+    min-height:350px;
+    padding:37px 34px 20px;
+    border:0;
+    border-radius:24px;
+    background:linear-gradient(100deg,rgba(13,29,24,.94),rgba(23,53,43,.89)),url("assets/bid-green.png") center/cover;
+    box-shadow:none;
+  }
+  #view-simulation .profit-hero .eyebrow{color:#cfe9df;font-size:10px;letter-spacing:.16em}
+  #view-simulation .profit-hero h1{font-family:"Noto Serif KR",serif;font-size:49px}
+  #view-simulation .profit-kpi{box-shadow:none}
+  #view-simulation .panel{border-color:#e0e2dd;background:#fff;box-shadow:none}
+
+  #view-quality{padding-top:34px}
+  #view-quality .quality-grid{margin-top:0;gap:20px}
+  #view-quality .quality-grid>.panel{border-color:#e0e2dd;box-shadow:none}
+  #view-quality>section.panel{border-color:#e0e2dd;box-shadow:none}
+}
+
+@media (max-width:860px){
+  #view-dashboard .hero-row{
+    min-height:470px;
+    margin:0;
+    padding:34px 26px;
+    display:flex;
+    align-items:flex-end;
+    border:0;
+    border-radius:20px;
+    background:
+      linear-gradient(90deg,rgba(8,18,15,.78),rgba(8,18,15,.18)),
+      url("assets/bid-hero.png") 57% center/cover no-repeat;
+  }
+  #view-dashboard .hero-row::before{display:none}
+  #view-dashboard .hero-row::after{
+    content:"01  /  CURATED";
+    right:18px;bottom:16px;top:auto;left:auto;
+    width:auto;height:auto;
+    border:0;border-radius:0;transform:none;background:none;
+    color:rgba(255,255,255,.72);font-size:8px;
+  }
+  #view-dashboard .hero-row h1{font-size:38px;line-height:1.33;color:#fff;text-shadow:none}
+  #view-dashboard .hero-row p{color:rgba(255,255,255,.82)}
+  #view-dashboard .eyebrow{color:#d9eee7}
+  #view-dashboard .kpi-grid{margin-top:16px}
+  #view-dashboard .recommend-list{display:flex}
+
+  #view-recommend .section-title,
+  #view-search .section-title,
+  #view-risk .section-title,
+  #view-quality .section-title{
+    min-height:auto;
+    margin:0;
+    padding:22px 0 20px;
+    background:none;
+    border:0;
+  }
+  #view-recommend .section-title h1,
+  #view-search .section-title h1,
+  #view-risk .section-title h1,
+  #view-quality .section-title h1{font-family:"Noto Serif KR",serif;font-size:36px;color:var(--ink)}
+  #view-recommend .recommend-cards-grid{display:flex;gap:14px;overflow-x:auto;margin-right:-16px;padding-right:16px}
+  #view-recommend .recommend-card{flex:0 0 84%;padding:0 0 16px;border:0;background:transparent;box-shadow:none}
+  #view-search .search-hero-stats{position:static;display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin:0 0 12px}
+  #view-search .search-hero-stat{min-height:0;padding:10px;border:1px solid #e0e2dd;border-radius:12px;background:#fff;color:var(--ink)}
+  #view-search .search-hero-stat span{color:var(--muted)}
+  #view-search .search-hero-stat strong{color:var(--ink)}
+  #view-search .search-hero-stat small{display:none}
+  #view-simulation{margin:0;padding:18px 0 24px;background:var(--bg)}
+  #view-simulation .profit-hero{margin:0 0 16px;border-radius:20px;background:linear-gradient(90deg,rgba(13,29,24,.96),rgba(23,53,43,.52)),url("assets/bid-green.png") center/cover}
+  #view-quality .quality-grid{margin-top:0}
+}
