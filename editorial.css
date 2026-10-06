@@ -1027,3 +1027,218 @@ button.kpi-card:hover{background:#f4f6f2!important;transform:none}
   .cover-copy p br{display:none}
   .cover-brand b{font-size:11px}
 }
+
+
+/* ============================================================
+   NAVIGATION RETURN + MOBILE TAB TITLE POLISH
+   ============================================================ */
+.view-back-btn{
+  display:inline-flex;
+  align-items:center;
+  gap:7px;
+  margin:0 0 16px;
+  padding:8px 12px;
+  border:1px solid #d9ddd7;
+  border-radius:999px;
+  background:#fff;
+  color:#4d5751;
+  font-size:11px;
+  font-weight:750;
+  line-height:1;
+  box-shadow:none;
+  transition:background .16s ease,border-color .16s ease,color .16s ease,transform .16s ease;
+}
+.view-back-btn span{
+  font-size:14px;
+  line-height:1;
+}
+.view-back-btn:hover{
+  background:#eef2ee;
+  border-color:#c7cec8;
+  color:#17231f;
+  transform:translateX(-1px);
+}
+.view-back-btn-inverse{
+  border-color:rgba(255,255,255,.26);
+  background:rgba(255,255,255,.10);
+  color:#fff;
+  backdrop-filter:blur(8px);
+}
+.view-back-btn-inverse:hover{
+  border-color:rgba(255,255,255,.42);
+  background:rgba(255,255,255,.16);
+  color:#fff;
+}
+
+/* tablet: keep each page title anchored to the same content edge */
+@media (max-width:1100px) and (min-width:861px){
+  #view-recommend .section-title,
+  #view-search .section-title,
+  #view-risk .section-title,
+  #view-quality .section-title{
+    padding-top:26px;
+  }
+}
+
+/* Mobile page header system:
+   every tab starts at the same Y position below the sticky service header. */
+@media (max-width:860px){
+  .main-stage{
+    padding-left:16px;
+    padding-right:16px;
+  }
+
+  .view:not(#view-dashboard){
+    padding-top:10px;
+  }
+
+  #view-recommend .section-title,
+  #view-search .section-title,
+  #view-risk .section-title,
+  #view-quality .section-title{
+    display:flex;
+    min-height:0;
+    margin:0;
+    padding:18px 2px 20px;
+    align-items:flex-start;
+    gap:14px;
+    border:0;
+    background:none;
+  }
+
+  #view-recommend .section-title>div:first-child,
+  #view-search .section-title>div:first-child,
+  #view-risk .section-title>div:first-child,
+  #view-quality .section-title>div:first-child{
+    width:100%;
+    min-width:0;
+  }
+
+  #view-recommend .section-title .eyebrow,
+  #view-search .section-title .eyebrow,
+  #view-risk .section-title .eyebrow,
+  #view-quality .section-title .eyebrow{
+    display:block;
+    margin:0 0 7px;
+    font-size:8px;
+    letter-spacing:.17em;
+  }
+
+  #view-recommend .section-title h1,
+  #view-search .section-title h1,
+  #view-risk .section-title h1,
+  #view-quality .section-title h1{
+    margin:0;
+    font-size:32px;
+    line-height:1.18;
+    letter-spacing:-.045em;
+  }
+
+  #view-recommend .section-title p,
+  #view-search .section-title p,
+  #view-risk .section-title p,
+  #view-quality .section-title p{
+    max-width:34rem;
+    margin:8px 0 0;
+    font-size:12px;
+    line-height:1.55;
+  }
+
+  .view-back-btn{
+    margin:0 0 18px;
+    padding:8px 11px;
+    font-size:10px;
+  }
+
+  /* Recommended-bids controls stop fighting the title row on narrow screens. */
+  #view-recommend .section-title{
+    flex-direction:column;
+  }
+  #view-recommend .section-actions{
+    width:100%;
+    display:flex;
+    justify-content:flex-end;
+    margin-top:-46px;
+    pointer-events:none;
+  }
+  #view-recommend .section-actions .sort-ctl{
+    pointer-events:auto;
+    min-height:36px;
+    padding:8px 11px;
+    border-radius:999px;
+    font-size:10px;
+  }
+  #view-recommend .fav-filter{
+    margin-top:4px;
+    margin-bottom:16px;
+  }
+
+  /* Search title stats become a compact strip below the title, not an overlay. */
+  #view-search .section-title{
+    display:block;
+  }
+  #view-search .search-hero-stats{
+    width:100%;
+    margin:18px 0 0;
+  }
+
+  /* Profitability uses a hero instead of section-title; align its title with the same rhythm. */
+  #view-simulation{
+    padding-top:10px;
+  }
+  #view-simulation .profit-hero{
+    padding-top:24px;
+  }
+  #view-simulation .view-back-btn{
+    margin-bottom:18px;
+  }
+  #view-simulation .profit-hero h1{
+    margin-top:5px;
+  }
+
+  /* Bottom nav gets a calmer, safer mobile hit target. */
+  .mobile-nav{
+    height:68px;
+    padding:6px max(7px,env(safe-area-inset-right)) calc(6px + env(safe-area-inset-bottom)) max(7px,env(safe-area-inset-left));
+    border-top:1px solid rgba(26,36,31,.10);
+    background:rgba(250,250,247,.96);
+    backdrop-filter:blur(16px);
+  }
+  .mobile-nav button{
+    min-width:0;
+    height:52px;
+    margin:0;
+    border-radius:13px;
+    gap:2px;
+  }
+  .mobile-nav button span{
+    font-size:18px;
+    line-height:1;
+  }
+  .mobile-nav button b{
+    font-size:10px;
+    line-height:1;
+    white-space:nowrap;
+  }
+}
+
+@media (max-width:520px){
+  #view-recommend .section-title h1,
+  #view-search .section-title h1,
+  #view-risk .section-title h1,
+  #view-quality .section-title h1{
+    font-size:30px;
+  }
+  #view-recommend .section-actions{
+    margin-top:-43px;
+  }
+  #view-recommend .recommend-card{
+    flex-basis:90%;
+  }
+  #view-search .search-hero-stats{
+    grid-template-columns:1fr 1fr;
+  }
+  #view-search .search-hero-stat:last-child{
+    grid-column:1/-1;
+  }
+}
