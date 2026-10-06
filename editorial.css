@@ -43,7 +43,7 @@ button{cursor:pointer}
 .landing-hotspot:hover{background:rgba(255,255,255,.05);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14)}
 
 /* Horizontal service header */
-.app-shell{display:block!important;min-height:100vh;background:var(--bg)}
+.app-shell[hidden]{display:none!important}\n.app-shell:not([hidden]){display:block!important;min-height:100vh;background:var(--bg)}
 .sidebar{
   position:sticky;top:0;z-index:50;width:100%;height:74px;
   padding:0 max(24px,calc((100vw - 1280px)/2));display:flex;flex-direction:row;
