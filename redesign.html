@@ -1,0 +1,371 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#f6f6f2" />
+  <meta name="description" content="공공·입찰 공고를 자격, 수익성, 리스크, 마감 관점에서 스크리닝하는 경영진용 의사결정 대시보드" />
+  <title>BID INSIGHT · 리디자인 비교본</title>
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="icon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="styles.css?v=20261002-1004" />
+  <link rel="stylesheet" href="editorial.css?v=20261006-3" />
+</head>
+<body>
+
+  <!-- ============ LANDING / START SCREEN ============ -->
+  <section id="landing" aria-label="BID INSIGHT 시작 화면">
+    <div class="editorial-cover">
+      <header class="cover-header">
+        <a class="cover-brand" href="/" aria-label="BID INSIGHT 홈">
+          <span class="cover-brand-mark">◆</span>
+          <span><b>BID INSIGHT</b><small>PUBLIC OPPORTUNITY INTELLIGENCE</small></span>
+        </a>
+        <div class="cover-header-meta">
+          <span>2025.08.10 DATASET</span>
+          <span>20 OPPORTUNITIES</span>
+        </div>
+      </header>
+
+      <div class="cover-hero">
+        <img src="assets/bid-hero.png" alt="" class="cover-image" fetchpriority="high" decoding="async" />
+        <div class="cover-shade"></div>
+
+        <div class="cover-copy">
+          <span class="cover-kicker">CURATED PUBLIC BIDS</span>
+          <h1>공고를 찾는 시간은 줄이고,<br />판단에 집중하세요.</h1>
+          <p>자격·수익성·리스크·마감 기준으로 공공 입찰 기회를 선별하고,
+          의사결정에 필요한 정보만 한 화면에 정리합니다.</p>
+          <button type="button" class="cover-cta" data-go-dashboard>
+            대시보드 시작하기 <span aria-hidden="true">→</span>
+          </button>
+        </div>
+
+        <div class="cover-index">01 / BID INSIGHT</div>
+      </div>
+
+      <div class="cover-metrics" aria-label="핵심 지표">
+        <div class="cover-metric">
+          <span>적극추천</span>
+          <strong id="ldKpiRecommend">-</strong>
+          <small>바로 검토할 핵심 기회</small>
+        </div>
+        <div class="cover-metric">
+          <span>검토 필요</span>
+          <strong id="ldKpiReview">-</strong>
+          <small>사람 확인 또는 보완 필요</small>
+        </div>
+        <div class="cover-metric">
+          <span>마감 임박</span>
+          <strong id="ldKpiUrgent">-</strong>
+          <small>3일 이내 우선 확인</small>
+        </div>
+        <div class="cover-metric">
+          <span>평균 예상 마진</span>
+          <strong id="ldKpiMargin">-</strong>
+          <small>교육용 가정값 기반</small>
+        </div>
+      </div>
+
+      <div class="cover-footer">
+        <p>데이터로 후보를 줄이고, 사람이 최종 판단합니다.</p>
+        <div class="cover-mini-bars" id="ldMiniBars"></div>
+        <div class="cover-strip-values" aria-hidden="true">
+          <span id="ldStripRecommend"></span>
+          <span id="ldStripReview"></span>
+          <span id="ldStripUrgent"></span>
+          <span id="ldStripMargin"></span>
+        </div>
+      </div>
+    </div>
+  </section>
+  <!-- ============ /LANDING ============ -->
+
+  <div class="app-shell" id="appRoot" hidden>
+    <aside class="sidebar" aria-label="주 메뉴">
+      <div class="brand-block">
+        <div class="brand-mark" aria-hidden="true">◆</div>
+        <div>
+          <div class="brand-name">BID INSIGHT</div>
+          <div class="brand-sub">공공 & 입찰 공고 스크리너</div>
+        </div>
+      </div>
+
+      <nav class="side-nav">
+        <button class="nav-item active" data-view="dashboard"><span>⌂</span><b>대시보드</b></button>
+        <button class="nav-item" data-view="recommend"><span>★</span><b>추천 공고</b><em id="navRecommendCount">0</em></button>
+        <button class="nav-item" data-view="search"><span>⌕</span><b>공고 탐색</b></button>
+        <button class="nav-item" data-view="risk"><span>!</span><b>리스크 관제</b><em id="navRiskCount">0</em></button>
+        <button class="nav-item" data-view="simulation"><span>◫</span><b>수익성 분석</b></button>
+        <button class="nav-item" data-view="quality"><span>✓</span><b>품질 검증</b></button>
+      </nav>
+
+      <div class="side-spacer"></div>
+      <div class="side-insight">
+        <span class="side-insight-icon">◇</span>
+        <strong>좋은 기회가<br/>더 큰 성장을 만듭니다.</strong>
+        <p>데이터로 후보를 줄이고,<br/>사람이 최종 판단합니다.</p>
+      </div>
+      <button class="side-utility" id="openExtensions"><span>＋</span> 데이터 확장 로드맵</button>
+    </aside>
+
+    <main class="main-stage">
+      <header class="topbar">
+        <div class="mobile-brand">
+          <div class="brand-mark small">◆</div>
+          <div><b>BID INSIGHT</b><small>공공 & 입찰 공고 스크리너</small></div>
+        </div>
+        <div class="search-wrap">
+          <span class="search-icon" aria-hidden="true"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-4-4"></path></svg></span>
+          <input id="globalSearch" type="search" placeholder="공고명, 발주기관, 분야로 검색하세요" autocomplete="off" />
+        </div>
+        <div class="top-actions">
+          <button class="icon-btn" data-go-landing title="처음 화면으로" aria-label="처음 화면으로">
+            <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 11.5 12 4l9 7.5"></path>
+              <path d="M5.5 10.5V20h13v-9.5"></path>
+              <path d="M9.5 20v-6h5v6"></path>
+            </svg>
+          </button>
+          <button class="ghost-btn" id="openBrief">경영진 브리핑</button>
+          <button class="icon-btn" id="notificationBtn" title="알림">●<span class="notif-dot"></span></button>
+          <div class="dataset-chip" title="교육용 고정 데이터">2025-08-10 기준</div><div class="profile-chip"><span>EX</span><div><b>경영진</b><small>의사결정자</small></div></div>
+        </div>
+      </header>
+
+      <section class="view active" id="view-dashboard">
+        <div class="hero-row">
+          <div>
+            <div class="eyebrow">PUBLIC OPPORTUNITY INTELLIGENCE</div>
+            <h1>지금 검토할 기회가 먼저 보입니다</h1>
+            <p>자격·수익성·리스크·마감 기준으로 걸러낸 오늘의 기회 20건.</p>
+          </div>
+          <div class="hero-badges">
+            <span>선별된 고품질 기회</span>
+            <span>데이터 기반 사업성 분석</span>
+            <span>사람 중심 최종 판단</span>
+          </div>
+        </div>
+
+        <div class="kpi-grid" id="kpiGrid"></div>
+
+        <div class="dashboard-grid">
+          <section class="panel recommendation-panel">
+            <div class="panel-head">
+              <div><span class="panel-kicker">EXECUTIVE PRIORITY</span><h2>TOP 추천 공고</h2><p>점수, 수익성, 마감, 리스크를 함께 본 우선 검토 목록입니다.</p></div>
+              <button class="text-btn" data-view-jump="recommend">전체보기 →</button>
+            </div>
+            <div id="topRecommendations" class="recommend-list"></div>
+          </section>
+
+          <section class="panel side-metrics">
+            <div class="panel-head compact"><div><h2>추천 등급 비중</h2><p>현재 20건 기준</p></div></div>
+            <div class="donut-wrap">
+              <div class="donut" id="gradeDonut"><div><strong id="donutTotal">20</strong><span>전체 공고</span></div></div>
+              <div id="gradeLegend" class="legend-list"></div>
+            </div>
+            <div class="divider"></div>
+            <div class="panel-head compact"><div><h2>분야별 예산 규모</h2><p>현재 데이터의 공고예산 합계</p></div></div>
+            <div id="categoryBars" class="bar-list"></div>
+          </section>
+        </div>
+
+        <section class="panel executive-strip">
+          <div class="executive-strip-copy">
+            <span class="panel-kicker">TODAY'S DECISION</span>
+            <h2>오늘 바로 확인할 포인트</h2>
+            <p id="executiveSummaryText"></p>
+          </div>
+          <div class="decision-cards" id="decisionCards"></div>
+        </section>
+
+        <section class="panel principles-strip" aria-label="서비스 원칙">
+          <div class="panel-head compact"><div><h2>서비스 원칙</h2><p>데이터로 후보를 줄이고, 사람이 최종 판단합니다.</p></div></div>
+          <div class="principles-grid">
+            <div class="principle-item"><span>선별된 고품질 기회</span><small>자격·수익성·리스크 기준을 통과한 공고만 보여줍니다</small></div>
+            <div class="principle-item"><span>데이터 기반 사업성 분석</span><small>점수·마진·마감을 한 화면에서 비교합니다</small></div>
+            <div class="principle-item"><span>사람 중심 최종 판단</span><small>미확인 조건과 차단 사유는 숨기지 않습니다</small></div>
+          </div>
+        </section>
+      </section>
+
+      <section class="view" id="view-recommend">
+        <div class="section-title">
+          <div><span class="eyebrow">RECOMMENDED BIDS</span><h1>추천 공고</h1><p>의사결정 우선순위가 높은 공고를 한눈에 비교합니다.</p></div>
+          <div class="section-actions"><button class="sort-ctl" id="recommendSort" title="정렬 기준 변경">⇅&nbsp;점수 높은순</button></div>
+        </div>
+        <div class="fav-filter" id="favFilter" role="group" aria-label="추천 공고 보기 필터">
+          <button class="filter-chip active" data-fav-filter="all">전체</button>
+          <button class="filter-chip" data-fav-filter="fav" id="favFilterChip">관심 공고 0</button>
+        </div>
+        <div class="recommend-cards-grid" id="recommendCardsGrid"></div>
+      </section>
+
+      <section class="view" id="view-search">
+        <div class="section-title">
+          <div><span class="eyebrow">BID EXPLORER</span><h1>공고 탐색</h1><p>분야·등급·리스크·키워드로 전체 공고를 탐색합니다.</p></div>
+          <div class="search-hero-stats" id="searchHeroStats" aria-label="공고 탐색 요약 지표"></div>
+        </div>
+        <div class="filter-bar">
+          <div class="filter-group" id="categoryFilters"></div>
+          <div class="filter-adv" id="filterAdv">
+            <select id="gradeFilter"><option value="all">전체 등급</option><option>적극추천</option><option>검토</option><option>패스</option></select>
+            <select id="riskFilter"><option value="all">전체 리스크</option><option value="high">HIGH 있음</option><option value="urgent">마감 3일 이내</option><option value="blocker">즉시 제외 사유</option><option value="unknown">담당자 확인 필요</option></select>
+          </div>
+          <button type="button" class="filter-toggle" id="filterToggle" aria-expanded="false" aria-controls="filterAdv">필터 ▾</button>
+          <div class="filter-badges" id="filterBadges" aria-label="적용된 필터"></div>
+        </div>
+        <div class="table-shell">
+          <table class="bid-table">
+            <thead><tr><th>우선</th><th>공고명 / 분야</th><th>발주기관</th><th>예산</th><th>점수</th><th>예상 마진</th><th>마감</th><th>상태</th><th aria-label="바로가기"></th></tr></thead>
+            <tbody id="bidTableBody"></tbody>
+          </table>
+        </div>
+        <div id="mobileBidList" class="mobile-bid-list"></div>
+      </section>
+
+      <section class="view" id="view-risk">
+        <div class="section-title"><div><span class="eyebrow">RISK CONTROL</span><h1>리스크 관제</h1><p>기회를 놓치지 않되, 위험은 먼저 봅니다.</p></div></div>
+        <div class="risk-kpi-grid" id="riskKpis"></div>
+        <div class="risk-layout">
+          <section class="panel"><div class="panel-head"><div><h2>마감 임박 / 조치 필요</h2><p>D-Day와 사람 확인 항목을 우선 표시합니다.</p></div></div><div id="riskList" class="risk-list"></div></section>
+          <section class="panel"><div class="panel-head"><div><h2>리스크 유형 분포</h2><p>원문에서 구조화된 HIGH / MEDIUM 리스크</p></div></div><div id="riskTypeBars" class="bar-list"></div></section>
+        </div>
+      </section>
+
+      <section class="view" id="view-simulation">
+        <div class="profit-hero">
+          <div class="profit-hero-copy">
+            <span class="eyebrow">PROFITABILITY</span>
+            <h1>수익성 분석</h1>
+            <p><strong class="profit-lead">데이터로 기회를 선별하고 수익으로 연결합니다.</strong><span class="profit-disclaimer">교육용 가정값 기반 시뮬레이션입니다. 실제 회계값이 아닙니다.</span></p>
+          </div>
+          <div class="profit-hero-quote">정확한 분석이<br><b>더 큰 수익의 시작입니다.</b></div>
+          <div class="profit-kpi-strip" id="profitKpis"></div>
+        </div>
+        <div class="simulation-layout">
+          <section class="panel profit-chart-panel"><div class="panel-head"><div><h2>공고별 예상 마진 <span class="top15-badge">TOP 15</span></h2><p>예상 마진 상위 15개 · 막대 색상은 판정 등급 기준</p></div><div class="chart-legend" id="marginLegend" aria-label="차트 범례"></div></div><div id="marginChart" class="margin-chart"></div></section>
+          <section class="panel assumption-panel"><div class="panel-head"><div><span class="panel-kicker">SIMULATION MODEL</span><h2>시뮬레이션 가정</h2><p>설정값과 계산 구조 · 교육용 가정값</p></div></div><div id="assumptionBox" class="assumption-box"></div></section>
+        </div>
+        <section class="panel profit-ranking-panel"><div class="panel-head"><div><span class="panel-kicker">EXECUTIVE INSIGHT</span><h2>수익성 상위 공고</h2><p>마진만으로 추천하지 않고 자격·리스크와 함께 봅니다.</p></div><span class="profit-rank-note">TOP OPPORTUNITIES</span></div><div id="profitList" class="profit-list"></div></section>
+      </section>
+
+      <section class="view" id="view-quality">
+        <div class="section-title"><div><span class="eyebrow">QUALITY ASSURANCE</span><h1>품질 검증</h1><p>LLM Judge와 코드 기반 재계산을 분리해 검증합니다. 데이터·규칙·사람이 함께 만드는 신뢰할 수 있는 검증 체계입니다.</p></div></div>
+        <div class="quality-grid">
+          <section class="panel quality-score-panel"><span class="panel-kicker">LLM-AS-JUDGE</span><div class="quality-score" id="avgQaScore">97.8</div><div class="quality-caption"><span>평균 자동 품질검수 점수</span><button class="qa-info-btn qa-info-open" aria-label="QA / Judge 품질검수 설명 보기" title="QA / Judge 품질검수란?">ⓘ</button></div><p>정확도 %가 아니라, 파싱·자격판정·스코어링·추천근거·시뮬레이션을 5개 영역으로 평가한 가중 품질점수입니다.</p></section>
+          <section class="panel"><div class="panel-head"><div><h2>코드 자동검증</h2><p>LLM과 별개로 날짜·점수·등급·마진 등 규칙을 코드로 다시 계산합니다 · 20개 공고 × 17개 검증 규칙</p></div><strong class="pass-text">340 / 340 PASS</strong></div><div class="det-progress" id="detProgress"><i></i></div><div class="det-status-grid" id="detSummary"></div><button class="outline-btn" id="showDeterministic">17개 검증항목 보기</button><div id="deterministicList" class="deterministic-list" hidden></div></section>
+          <section class="panel"><div class="panel-head"><div><h2>Judge 영역 평균 <button class="qa-info-btn qa-info-open" aria-label="QA / Judge 품질검수 설명 보기" title="QA / Judge 품질검수란?">ⓘ</button></h2><p>5개 품질영역 가중 평균</p></div></div><div id="qaAreaBars" class="bar-list"></div></section>
+        </div>
+        <section class="panel"><div class="panel-head"><div><h2>공고별 QA 결과</h2><p>카드를 누르면 상세 검수 근거를 확인할 수 있습니다.</p></div></div><div id="qaBidGrid" class="qa-bid-grid"></div></section>
+      </section>
+    </main>
+  </div>
+
+  <nav class="mobile-nav" aria-label="모바일 하단 메뉴">
+    <button class="active" data-view="dashboard"><span>⌂</span><b>홈</b></button>
+    <button data-view="recommend"><span>★</span><b>추천</b></button>
+    <button data-view="search"><span>⌕</span><b>공고</b></button>
+    <button data-view="risk"><span>!</span><b>리스크</b></button>
+    <button data-view="quality"><span>✓</span><b>품질</b></button>
+  </nav>
+
+  <div class="overlay" id="detailOverlay" hidden>
+    <div class="drawer" role="dialog" aria-modal="true" aria-labelledby="drawerTitle">
+      <button class="drawer-close" id="closeDrawer" aria-label="닫기">×</button>
+      <div id="drawerContent"></div>
+    </div>
+  </div>
+
+  <div class="overlay center" id="notificationOverlay" hidden>
+    <div class="modal-card notification-card" role="dialog" aria-modal="true" aria-labelledby="notificationTitle">
+      <button class="drawer-close" data-close-overlay="notificationOverlay" aria-label="닫기">×</button>
+      <span class="panel-kicker">NOTIFICATIONS</span>
+      <h2 id="notificationTitle">오늘의 알림</h2>
+      <p class="modal-lead">마감 임박·필수 확인·주요 리스크를 기준으로 우선 확인할 항목을 모았습니다.</p>
+      <div id="notificationContent" class="notification-list"></div>
+    </div>
+  </div>
+
+  <div class="overlay center" id="briefOverlay" hidden>
+    <div class="modal-card" role="dialog" aria-modal="true">
+      <button class="drawer-close" data-close-overlay="briefOverlay" aria-label="닫기">×</button>
+      <span class="panel-kicker">EXECUTIVE BRIEF</span>
+      <h2>경영진 브리핑</h2>
+      <div id="briefContent" class="brief-content"></div>
+    </div>
+  </div>
+
+  <div class="overlay center" id="qaInfoOverlay" hidden>
+    <div class="modal-card qa-info-card" role="dialog" aria-modal="true" aria-labelledby="qaInfoTitle">
+      <button class="drawer-close" data-close-overlay="qaInfoOverlay" aria-label="닫기">×</button>
+      <span class="panel-kicker">QA / JUDGE</span>
+      <h2 id="qaInfoTitle">QA / Judge 품질검수란?</h2>
+      <p class="modal-lead">QA 점수는 통계적 정확도(%)가 아니라, 각 공고의 AI 분석 결과를 LLM Judge가 다시 검수한 품질점수입니다.</p>
+      <ol class="qa-area-weight-list">
+        <li><span>원문 파싱 충실도</span><b>25%</b></li>
+        <li><span>자격 판정 논리</span><b>25%</b></li>
+        <li><span>스크리닝·스코어링</span><b>20%</b></li>
+        <li><span>추천 근거의 타당성</span><b>20%</b></li>
+        <li><span>시뮬레이션 일관성</span><b>10%</b></li>
+      </ol>
+      <p class="modal-lead">이 다섯 영역을 가중평균하여 공고별 QA 점수를 계산합니다.</p>
+      <div class="qa-note-box">
+        <strong>주의</strong>
+        <p>QA 99.2는 정확도 99.2%라는 의미가 아닙니다. 숫자 계산과 규칙 적용은 Judge와 별도로 코드 자동검증으로 다시 확인합니다.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="overlay center" id="extensionOverlay" hidden>
+    <div class="modal-card wide" role="dialog" aria-modal="true">
+      <button class="drawer-close" data-close-overlay="extensionOverlay" aria-label="닫기">×</button>
+      <span class="panel-kicker">DATA ROADMAP</span>
+      <h2>추가 데이터가 들어오면 바로 확장 가능한 영역</h2>
+      <p class="modal-lead">현재 데이터로 구현된 핵심 엔진은 유지하고, 아래 데이터만 연동하면 기능을 확장할 수 있습니다.</p>
+      <div id="extensionGrid" class="extension-grid"></div>
+    </div>
+  </div>
+
+  <script src="data.js?v=20261002-1004"></script>
+  <script src="app.js?v=20261002-1004"></script>
+  <script>
+  (function(){
+    var landing=document.getElementById('landing');
+    var appRoot=document.getElementById('appRoot');
+    function currentRoute(){
+      if(/\/dashboard\/?$/.test(location.pathname)) return 'dashboard';
+      if(location.hash==='#dashboard'||location.hash==='#/dashboard') return 'dashboard';
+      return 'landing';
+    }
+    function applyRoute(){
+      var dash=currentRoute()==='dashboard';
+      landing.hidden=dash; appRoot.hidden=!dash;
+      document.body.classList.toggle('on-landing',!dash);
+      window.scrollTo(0,0);
+    }
+    document.addEventListener('click',function(e){
+      var home=e.target.closest('[data-go-landing]');
+      if(home){
+        try{ history.pushState(null,'','/'); }
+        catch(err){ location.href='/'; return; }
+        applyRoute(); return;
+      }
+      var go=e.target.closest('[data-go-dashboard]');
+      if(go){
+        try{ history.pushState(null,'','/dashboard'); }
+        catch(err){ location.href='/dashboard'; return; }
+        applyRoute(); return;
+      }
+      var sc=e.target.closest('[data-ld-scroll]');
+      if(sc){
+        var t=document.getElementById(sc.dataset.ldScroll);
+        if(t) t.scrollIntoView({behavior:'smooth'});
+      }
+    });
+    window.addEventListener('popstate',applyRoute);
+    applyRoute();
+  })();
+  </script>
+</body>
+</html>
