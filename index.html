@@ -9,19 +9,74 @@
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" href="icon.svg" type="image/svg+xml" />
   <link rel="stylesheet" href="styles.css?v=20261002-1004" />
-  <link rel="stylesheet" href="editorial.css?v=20261006-2" />
+  <link rel="stylesheet" href="editorial.css?v=20261006-3" />
 </head>
 <body>
 
   <!-- ============ LANDING / START SCREEN ============ -->
   <section id="landing" aria-label="BID INSIGHT 시작 화면">
-    <div class="landing-stage landing-stage-desktop">
-      <img class="landing-art" src="landing-desktop.png" alt="" fetchpriority="high" decoding="async" />
-      <button type="button" class="landing-hotspot" data-go-dashboard aria-label="사이트 들어가기"></button>
-    </div>
-    <div class="landing-stage landing-stage-mobile">
-      <img class="landing-art" src="landing-mobile.png" alt="" fetchpriority="high" decoding="async" />
-      <button type="button" class="landing-hotspot" data-go-dashboard aria-label="앱 들어가기"></button>
+    <div class="editorial-cover">
+      <header class="cover-header">
+        <a class="cover-brand" href="/" aria-label="BID INSIGHT 홈">
+          <span class="cover-brand-mark">◆</span>
+          <span><b>BID INSIGHT</b><small>PUBLIC OPPORTUNITY INTELLIGENCE</small></span>
+        </a>
+        <div class="cover-header-meta">
+          <span>2025.08.10 DATASET</span>
+          <span>20 OPPORTUNITIES</span>
+        </div>
+      </header>
+
+      <div class="cover-hero">
+        <img src="assets/bid-hero.png" alt="" class="cover-image" fetchpriority="high" decoding="async" />
+        <div class="cover-shade"></div>
+
+        <div class="cover-copy">
+          <span class="cover-kicker">CURATED PUBLIC BIDS</span>
+          <h1>공고를 찾는 시간은 줄이고,<br />판단에 집중하세요.</h1>
+          <p>자격·수익성·리스크·마감 기준으로 공공 입찰 기회를 선별하고,
+          의사결정에 필요한 정보만 한 화면에 정리합니다.</p>
+          <button type="button" class="cover-cta" data-go-dashboard>
+            대시보드 시작하기 <span aria-hidden="true">→</span>
+          </button>
+        </div>
+
+        <div class="cover-index">01 / BID INSIGHT</div>
+      </div>
+
+      <div class="cover-metrics" aria-label="핵심 지표">
+        <div class="cover-metric">
+          <span>적극추천</span>
+          <strong id="ldKpiRecommend">-</strong>
+          <small>바로 검토할 핵심 기회</small>
+        </div>
+        <div class="cover-metric">
+          <span>검토 필요</span>
+          <strong id="ldKpiReview">-</strong>
+          <small>사람 확인 또는 보완 필요</small>
+        </div>
+        <div class="cover-metric">
+          <span>마감 임박</span>
+          <strong id="ldKpiUrgent">-</strong>
+          <small>3일 이내 우선 확인</small>
+        </div>
+        <div class="cover-metric">
+          <span>평균 예상 마진</span>
+          <strong id="ldKpiMargin">-</strong>
+          <small>교육용 가정값 기반</small>
+        </div>
+      </div>
+
+      <div class="cover-footer">
+        <p>데이터로 후보를 줄이고, 사람이 최종 판단합니다.</p>
+        <div class="cover-mini-bars" id="ldMiniBars"></div>
+        <div class="cover-strip-values" aria-hidden="true">
+          <span id="ldStripRecommend"></span>
+          <span id="ldStripReview"></span>
+          <span id="ldStripUrgent"></span>
+          <span id="ldStripMargin"></span>
+        </div>
+      </div>
     </div>
   </section>
   <!-- ============ /LANDING ============ -->
