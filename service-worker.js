@@ -1,5 +1,5 @@
-const CACHE='bid-insight-v11';
-const CORE=['./','index.html','styles.css','app.js','data.js','manifest.webmanifest','icon.svg'];
+const CACHE='bid-insight-v12-editorial';
+const CORE=['./','index.html','styles.css','editorial.css','app.js','data.js','manifest.webmanifest','icon.svg','assets/bid-hero.png','assets/bid-smartcity.png','assets/bid-digital.png','assets/bid-green.png','assets/bid-construction.png','assets/bid-ai.png','assets/bid-safety.png'];
 
 self.addEventListener('install',e=>{
   e.waitUntil(
