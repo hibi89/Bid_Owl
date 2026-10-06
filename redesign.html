@@ -9,7 +9,7 @@
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" href="icon.svg" type="image/svg+xml" />
   <link rel="stylesheet" href="styles.css?v=20261002-1004" />
-  <link rel="stylesheet" href="editorial.css?v=20261006-3" />
+  <link rel="stylesheet" href="editorial.css?v=20261006-4" />
 </head>
 <body>
 
@@ -191,7 +191,7 @@
 
       <section class="view" id="view-recommend">
         <div class="section-title">
-          <div><span class="eyebrow">RECOMMENDED BIDS</span><h1>추천 공고</h1><p>의사결정 우선순위가 높은 공고를 한눈에 비교합니다.</p></div>
+          <div><button type="button" class="view-back-btn" data-view-jump="dashboard" aria-label="대시보드로 돌아가기"><span aria-hidden="true">←</span> 대시보드</button><span class="eyebrow">RECOMMENDED BIDS</span><h1>추천 공고</h1><p>의사결정 우선순위가 높은 공고를 한눈에 비교합니다.</p></div>
           <div class="section-actions"><button class="sort-ctl" id="recommendSort" title="정렬 기준 변경">⇅&nbsp;점수 높은순</button></div>
         </div>
         <div class="fav-filter" id="favFilter" role="group" aria-label="추천 공고 보기 필터">
@@ -203,7 +203,7 @@
 
       <section class="view" id="view-search">
         <div class="section-title">
-          <div><span class="eyebrow">BID EXPLORER</span><h1>공고 탐색</h1><p>분야·등급·리스크·키워드로 전체 공고를 탐색합니다.</p></div>
+          <div><button type="button" class="view-back-btn" data-view-jump="dashboard" aria-label="대시보드로 돌아가기"><span aria-hidden="true">←</span> 대시보드</button><span class="eyebrow">BID EXPLORER</span><h1>공고 탐색</h1><p>분야·등급·리스크·키워드로 전체 공고를 탐색합니다.</p></div>
           <div class="search-hero-stats" id="searchHeroStats" aria-label="공고 탐색 요약 지표"></div>
         </div>
         <div class="filter-bar">
@@ -225,7 +225,7 @@
       </section>
 
       <section class="view" id="view-risk">
-        <div class="section-title"><div><span class="eyebrow">RISK CONTROL</span><h1>리스크 관제</h1><p>기회를 놓치지 않되, 위험은 먼저 봅니다.</p></div></div>
+        <div class="section-title"><div><button type="button" class="view-back-btn" data-view-jump="dashboard" aria-label="대시보드로 돌아가기"><span aria-hidden="true">←</span> 대시보드</button><span class="eyebrow">RISK CONTROL</span><h1>리스크 관제</h1><p>기회를 놓치지 않되, 위험은 먼저 봅니다.</p></div></div>
         <div class="risk-kpi-grid" id="riskKpis"></div>
         <div class="risk-layout">
           <section class="panel"><div class="panel-head"><div><h2>마감 임박 / 조치 필요</h2><p>D-Day와 사람 확인 항목을 우선 표시합니다.</p></div></div><div id="riskList" class="risk-list"></div></section>
@@ -236,6 +236,7 @@
       <section class="view" id="view-simulation">
         <div class="profit-hero">
           <div class="profit-hero-copy">
+            <button type="button" class="view-back-btn view-back-btn-inverse" data-view-jump="dashboard" aria-label="대시보드로 돌아가기"><span aria-hidden="true">←</span> 대시보드</button>
             <span class="eyebrow">PROFITABILITY</span>
             <h1>수익성 분석</h1>
             <p><strong class="profit-lead">데이터로 기회를 선별하고 수익으로 연결합니다.</strong><span class="profit-disclaimer">교육용 가정값 기반 시뮬레이션입니다. 실제 회계값이 아닙니다.</span></p>
@@ -251,7 +252,7 @@
       </section>
 
       <section class="view" id="view-quality">
-        <div class="section-title"><div><span class="eyebrow">QUALITY ASSURANCE</span><h1>품질 검증</h1><p>LLM Judge와 코드 기반 재계산을 분리해 검증합니다. 데이터·규칙·사람이 함께 만드는 신뢰할 수 있는 검증 체계입니다.</p></div></div>
+        <div class="section-title"><div><button type="button" class="view-back-btn" data-view-jump="dashboard" aria-label="대시보드로 돌아가기"><span aria-hidden="true">←</span> 대시보드</button><span class="eyebrow">QUALITY ASSURANCE</span><h1>품질 검증</h1><p>LLM Judge와 코드 기반 재계산을 분리해 검증합니다. 데이터·규칙·사람이 함께 만드는 신뢰할 수 있는 검증 체계입니다.</p></div></div>
         <div class="quality-grid">
           <section class="panel quality-score-panel"><span class="panel-kicker">LLM-AS-JUDGE</span><div class="quality-score" id="avgQaScore">97.8</div><div class="quality-caption"><span>평균 자동 품질검수 점수</span><button class="qa-info-btn qa-info-open" aria-label="QA / Judge 품질검수 설명 보기" title="QA / Judge 품질검수란?">ⓘ</button></div><p>정확도 %가 아니라, 파싱·자격판정·스코어링·추천근거·시뮬레이션을 5개 영역으로 평가한 가중 품질점수입니다.</p></section>
           <section class="panel"><div class="panel-head"><div><h2>코드 자동검증</h2><p>LLM과 별개로 날짜·점수·등급·마진 등 규칙을 코드로 다시 계산합니다 · 20개 공고 × 17개 검증 규칙</p></div><strong class="pass-text">340 / 340 PASS</strong></div><div class="det-progress" id="detProgress"><i></i></div><div class="det-status-grid" id="detSummary"></div><button class="outline-btn" id="showDeterministic">17개 검증항목 보기</button><div id="deterministicList" class="deterministic-list" hidden></div></section>
