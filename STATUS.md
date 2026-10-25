@@ -1,24 +1,27 @@
 # BID OWL — STATUS (2026-10-26 KST)
 
-## Source and checkpoints
-Repo: **hibi89/Bid_Owl**, private, ID 1399359397 (renamed from project08-bid-insight).
-Protected existing main: **c888c795bef72734f3f7016e54013b82453f11d8** (unchanged).
-Working branch: **feature/bid-owl-v1-basic-mvp**; P1-02 code commit **fa2ed6aea6c634490d1f467bc1a3c3788df6adb1**; docs-only commit afterward, query live branch SHA.
-Legacy rollback source SHA: 2807a93a3e0deba98840712401fdd6025e6f5610.
+## Repository/branches
+- Private GitHub: hibi89/Bid_Owl, repository ID 1399359397 (old name project08-bid-insight).
+- Existing main HEAD c888c795bef72734f3f7016e54013b82453f11d8 **unchanged**; legacy snapshot rollback 2807a93a3e0deba98840712401fdd6025e6f5610.
+- Active branch feature/bid-owl-v1-basic-mvp. P1-03 source commit **e1f3befafe1590570a99879812f678a5a60b99a1**. Subsequent docs commit becomes branch HEAD (look it up).
 
-## Implemented
-- P1-01: CSV input schema/validation and error-reporting, synthetic fixtures, 21 unit tests previously run (21 PASS/0 FAIL).
-- P1-02: immutable CompanyProfile with strict input checks and explicit missing values; evaluate_bid handles region_any/category_any/license_all/staff_min/experience_total_min_krw; per-rule PASS/FAIL/UNKNOWN; provenance, reason codes, checked_at, is_expired, data_as_of; missing evidence, unknown kinds, missing profile values => UNKNOWN. Any FAIL outranks UNKNOWN in aggregate while unresolved rules still signal human review. Final manual approval required on every result.
-- Files added: backend/bidowl/profile.py, eligibility.py, backend/tests/test_eligibility.py; existing __init__.py extended without removing importer exports.
+## P1 BASIC progress
+- P1-01 CSV importer (schema validation, UTF-8/SIG, ISO date, budget/JSON, whole-batch rejection, synthetic sample): code exists; previous reported 21 tests PASS.
+- P1-02 immutable company profile and per-condition PASS/FAIL/UNKNOWN with source evidence and manual review: code exists; previous reported 27 tests PASS.
+- **P1-03 SQLite implementation COMPLETE at module scope**: bidowl/store.py, tests/test_store.py, __init__.py exports, backend/.gitignore, backend/README.md. SQLite v1 schema, profile versions, bid snapshots keyed source_id+bid_no, content-digest idempotency, append revisions, import audit log, immutable assessments/rule provenance, default local storage path, atomic rollback, consistent non-overwriting SQLite backup. Unknown schema is refused; auto-migration and official amendment number parsing not implemented.
 
-## Verification
-New 27 P1-02 unittest cases run locally in Linux CPython 3.13.5: **27 PASS, 0 FAIL, 0 SKIP**. Test cases include boundary counts, profile validation, exact region matching, multiple decision priorities, expired separately from eligibility, missing source, unknown rule, profile edits.
-Local test used an equivalent limited schema contract stub (Bid/Requirement and is_expired) to avoid assuming private GitHub checkout access; P1-02 production code and test file **GitHub blob SHAs match local tested source exactly**. Full previous importer/P1-01 test suite was NOT rerun in the same current environment; integration regression is UNVERIFIED. P1-01 previous result: 21 PASS/0 FAIL from prior turn, not additional tests run now.
-Real source CSV, Windows, legal qualification, full end-to-end local run, PDF/Excel, Vercel/browser and public API are NOT VERIFIED.
+## Actual tests in this work turn
+- Linux CPython 3.13.5, from backend: python -m unittest discover -s tests -v (only new test_store.py installed in local recreated project).
+- P1-03 **28 tests PASS / 0 FAIL / 0 SKIP** including SQL injection-shaped identifiers, insert failure rollback, profile/bid old revisions, import errors, restart, backup integrity and assessment source.
+- Local test environment contained manually reconstructed prior module surfaces for P1-01/P1-02; it is not a byte-for-byte checkout of every earlier file. New store.py, test_store.py, __init__.py match GitHub blob SHA exactly. **Full combined 76 test execution against exact GitHub checkout is NOT VERIFIED**; next step requires that.
+- Official bid sources, Windows 11 recovery/installation, unexpected power loss and public qualification law remain unverified.
 
-## Next / pending
-P1-03 transactional SQLite with idempotence, revisioned bids and audit; P1-04 CLI/PDF/Excel; BASIC UI/7 themes; PRO official API; PREMIUM optional AI; Windows install/QA/sales. No customer data or external keys copied.
+## Pending
+P1-04 minimal CLI/report (PDF & Excel actual file validation, Korean rendering, timestamps, evidence), BASIC UI/7 themes; PRO government API (official correction number), PREMIUM optional AI, Windows packaging, external integration/real production QA, brand/KIPRIS and sales gate.
+No actual personal/company data or API keys uploaded.
 
-## Deployment/approval gate
-Legacy Vercel project project08-bid-insight (prj_YcrN7OdOjKl6M457HelGIItLeeXZ) only previously READY metadata, actual Production SHA/HTTP/UI behavior NOT VERIFIED. Feature branch Python only: **Vercel production deployment NOT APPLICABLE**, no settings modified.
-BID OWL brand license/KIPRIS/BiddingOwl conflict unresolved; public sales held.
+## Production
+Legacy Vercel project project08-bid-insight (prj_YcrN7OdOjKl6M457HelGIItLeeXZ) had historical READY metadata only. Production URL/SHA, Git-rename connection and actual UI/browser are NOT VERIFIED. Current Python feature is not applied to Vercel. No change to production/configuration/domain/permissions.
+
+## Immediate resume
+Read HANDOFF.md → STATUS.md → AGENTS.md → REQUIREMENTS.md → NEXT_TASK.md and latest source; user ㄱ advances P1-04. Re-test full checkout before describing entire BASIC MVP as functional.

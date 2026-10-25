@@ -1,0 +1,19 @@
+# Local user data, private procurement inputs, generated reports, caches, secrets
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+.env
+.env.*
+*.sqlite
+*.sqlite3
+*.db
+*.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm
+*.db-wal
+*.db-shm
+customer_data/
+reports/
+backups/
