@@ -28,3 +28,17 @@
 - https://bidinsight.co.kr/content/terms
 - https://bidinsight.com/
 - https://www.kipris.or.kr/
+
+## 2026-10-26 변경: 사용자 선택 신규 이름
+- 선택: **비드아카이브 / BID ARCHIVE**. 이 이름을 제품 설계·개발 내부 작업명으로 사용한다.
+- 국내 웹 공개 검색에서 정확 일치하는 한국어 독립 서비스는 이번 조사에서 뚜렷하게 확인되지 않았지만, '검색 미발견'은 사용 가능성 증명이 아니다.
+- **확인된 영문 동명 사용**: https://bidarchive.io/ 는 'Bidarchive' 명칭으로 북미 차량 경매 정보·재고/거래 서비스를 표시함. 우리 공공입찰 소프트웨어와 대상은 다르지만 'bid/auction' 인접 영역에서 명칭이 겹침.
+- 'Bid Archive'는 입찰 파일/내역 보관을 뜻하는 일반 기능명으로도 사용되므로 독점 식별력이 강하다고 단정할 수 없음.
+- 21라인 입찰정보 앱은 'Bid Archive'를 기능 항목의 영어 번역으로 사용함: https://play.google.com/store/apps/details?id=com.mobile.a21line.a21line .
+- 상표 9류·42류 외 관련 35류 서비스 영역도 확인. KIPRIS에서 비드아카이브 / 비드 아카이브 / BID ARCHIVE / BIDARCHIVE / 유사 발음, 상표 상태 및 지정상품 검색 필요.
+- 조회 가이드: https://www.kipris.or.kr/khome/board/help/searchByRights.do?tab=trademark
+- 도메인 소유/사업자 상호 조회, 차별적 로고 제작, 대외 사업자/상표/판매명 등록은 검증 이후. 사용자는 이름 선택을 승인했지만 권리 충돌 위험을 수용했다고 해석하지 않는다.
+- 기존 GitHub repo 이름/정적 교육용 UI는 보존. 새로운 제품용 UI 카피에는 작업명 사용 가능하나 판매 공개·상표 로고 고정은 별도 검증 후.
+
+## 신규 작업명 잠정 판정
+**내부 제품명 채택 / 국내외 상표 사용 가능성 미검증 / 공개 출시 보류**.
