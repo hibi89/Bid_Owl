@@ -1,27 +1,28 @@
-# BID OWL BASIC engine — P1-01 CSV input
+# BID OWL BASIC — offline engine (P1-01 + P1-02)
 
-Python 3.13.5 / standard library. This branch provides CSV import validation, not eligibility/SQLite/PDF/Excel/UI/Windows/API.
+Development modules only. CSV import validation + company profile + evidence-gated 3-state eligibility implemented. SQLite/PDF/Excel/CLI/UI/Windows and real API are NOT IMPLEMENTED.
 
-## Contract
-Required header: bid_no,title,agency,category,bid_deadline,budget,requirements
-Optional header: source_ref,data_as_of
+## CSV input contract
+- Required: bid_no,title,agency,category,bid_deadline,budget,requirements; optional source_ref,data_as_of.
+- UTF-8 or UTF-8-SIG; budget positive integer KRW; timestamps ISO 8601 with seconds and explicit timezone.
+- requirements: JSON array of objects with id/kind/value/source. Source is a dictionary with both text and locator. Missing evidence is parsed but yields UNKNOWN on evaluation.
+- Supported kinds: region_any, category_any, license_all (array of nonempty strings); staff_min, experience_total_min_krw (nonnegative integer).
+- Unknown kinds are retained but their verdict is UNKNOWN. Missing/empty requirements -> UNKNOWN. Expired bid is an independent status, not CSV validation failure.
+- Limit 10 MiB/10k rows/100 rules per bid. Any validation issue rejects the whole import batch. No remote data calls.
 
-- UTF-8 and UTF-8-SIG input.
-- Budget: positive integer KRW, max 20 digits, no commas.
-- Deadline/data_as_of: ISO8601 with seconds AND timezone (e.g. 2027-11-01T17:00:00+09:00).
-- requirements: JSON array with id, kind, value and optional source: {text,locator}.
-- Kind: region_any/category_any/license_all require nonempty arrays of strings; staff_min/experience_total_min_krw require nonnegative integers. Unknown kinds and missing evidence are retained for UNKNOWN evaluation in P1-02.
-- Empty requirements are not a PASS. Expired bid is a separate state, not a schema error.
-- Limit: 10 MiB CSV / 10,000 rows / 100 requirements per bid.
-- Any validation issue rejects the ENTIRE batch. No network calls.
+## Company profile (in-memory, persistence upcoming in P1-03)
+Fields: profile_id (required), region, categories, licenses, staff_count, experience_total_krw. None = missing, empty categories/licenses tuple = explicitly no registered values. Nonnegative integer staff/experience; strict input field checks.
 
-## Run tests and sample
-From repository root:
+Example from repository root:
 
     cd backend
     python -m unittest discover -s tests -v
-    python -c "from bidowl import load_csv; print(len(load_csv('fixtures/sample_bids.csv')))"
 
-Sample CSV includes two synthetic bids only; never treat as real procurement data.
+    python -c "from bidowl import load_csv, CompanyProfile, evaluate_bid; bids=load_csv('fixtures/sample_bids.csv'); company=CompanyProfile.from_mapping({'profile_id':'DEMO', 'region':'부산광역시', 'licenses':['소프트웨어사업자'], 'staff_count':3}); print([(b.bid_no,evaluate_bid(b,company).status) for b in bids])"
 
-2026-10-26: Local Python 3.13.5 Linux: 21 PASS, 0 FAIL. GitHub Python code/tests blob hashes matched local tested files. GitHub fixture saved UTF-8 (local generated fixture UTF-8-SIG), direct remote fixture runtime verification not performed. Windows and real input testing pending.
+Sample fixture is SYNTHETIC, not actual public tender data. Conditions are interpreted as literal exact values, not geographic synonyms or government qualification law; final human approval is always required. UNKNOWN sources/rules/profile missing must be reviewed. Evidence text and location surfaced with reason codes.
+
+## Test evidence
+- Prior P1-01 run: 21 PASS/0 FAIL (separate previous run).
+- P1-02 new suite: 27 PASS/0 FAIL on Linux CPython 3.13.5 against local copied schema interface, new GitHub code/test Git blob SHA exactly matched.
+- **Combined 48-case execution not yet conducted** on a full GitHub checkout; no Windows or real public data tests. Tests assert synthetic rules, not actual legal validity.

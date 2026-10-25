@@ -1,21 +1,24 @@
 # BID OWL — STATUS (2026-10-26 KST)
 
-## Repository/version
-GitHub private: hibi89/Bid_Owl, id 1399359397 (renamed from project08-bid-insight).
-main = c888c795bef72734f3f7016e54013b82453f11d8 (unchanged 2025 educational static app).
-Development branch = feature/bid-owl-v1-basic-mvp.
-P1-01 source commit = 3e4faa759693ea4343dd73ae0d7ac6053eb0e30b; docs-only followup commit is the newer HEAD. Legacy rollback SHA 2807a93a3e0deba98840712401fdd6025e6f5610.
+## Source and checkpoints
+Repo: **hibi89/Bid_Owl**, private, ID 1399359397 (renamed from project08-bid-insight).
+Protected existing main: **c888c795bef72734f3f7016e54013b82453f11d8** (unchanged).
+Working branch: **feature/bid-owl-v1-basic-mvp**; P1-02 code commit **fa2ed6aea6c634490d1f467bc1a3c3788df6adb1**; docs-only commit afterward, query live branch SHA.
+Legacy rollback source SHA: 2807a93a3e0deba98840712401fdd6025e6f5610.
 
-## Done — P1-01
-New source: backend/bidowl/schema.py, importer.py, __init__.py; synthetic fixtures/sample_bids.csv; tests/test_importer.py; backend/README.md.
-CSV import validates header, UTF8/SIG, ISO date timezones, KRW budget, requirement JSON provenance, duplicate bid/rule IDs and limits; all-or-nothing rejection. Expired deadline calculated dynamically, not precomputed 2025 days_left.
-Test executed locally (Linux CPython 3.13.5): python -m unittest discover -s tests -v from backend, 21 PASS / 0 FAIL / 0 SKIP. Sample fixture two synthetic records, one expired. Remote and local Git blob SHAs match for four Python files. The GitHub CSV is UTF-8 without BOM, local fixture UTF-8-SIG; remote fixture not independently executed. Commit Author and Committer mapped to hibi89.
+## Implemented
+- P1-01: CSV input schema/validation and error-reporting, synthetic fixtures, 21 unit tests previously run (21 PASS/0 FAIL).
+- P1-02: immutable CompanyProfile with strict input checks and explicit missing values; evaluate_bid handles region_any/category_any/license_all/staff_min/experience_total_min_krw; per-rule PASS/FAIL/UNKNOWN; provenance, reason codes, checked_at, is_expired, data_as_of; missing evidence, unknown kinds, missing profile values => UNKNOWN. Any FAIL outranks UNKNOWN in aggregate while unresolved rules still signal human review. Final manual approval required on every result.
+- Files added: backend/bidowl/profile.py, eligibility.py, backend/tests/test_eligibility.py; existing __init__.py extended without removing importer exports.
 
-## Incomplete
-P1-02 company profile/rule decision, P1-03 SQLite, P1-04 Excel/PDF/CLI, UI/7 themes, PRO official procurement API, PREMIUM optional AI, Windows installer/security, real data QA and sales: NOT IMPLEMENTED.
-No real source documents or credentials. No actual user data imported.
+## Verification
+New 27 P1-02 unittest cases run locally in Linux CPython 3.13.5: **27 PASS, 0 FAIL, 0 SKIP**. Test cases include boundary counts, profile validation, exact region matching, multiple decision priorities, expired separately from eligibility, missing source, unknown rule, profile edits.
+Local test used an equivalent limited schema contract stub (Bid/Requirement and is_expired) to avoid assuming private GitHub checkout access; P1-02 production code and test file **GitHub blob SHAs match local tested source exactly**. Full previous importer/P1-01 test suite was NOT rerun in the same current environment; integration regression is UNVERIFIED. P1-01 previous result: 21 PASS/0 FAIL from prior turn, not additional tests run now.
+Real source CSV, Windows, legal qualification, full end-to-end local run, PDF/Excel, Vercel/browser and public API are NOT VERIFIED.
 
-## Production and dependencies
-Current branch is local Python development, not a Vercel deployment target. Existing Vercel project project08-bid-insight / prj_YcrN7OdOjKl6M457HelGIItLeeXZ had READY metadata in prior check; rename Git-link/Production SHA/browser functionality NOT VERIFIED. No Production/configuration changes.
-BID OWL brand chosen but KIPRIS and similar BiddingOwl rights NOT VERIFIED; public launch held. Windows 11 and official procurement API NOT VERIFIED.
-Next command ㄱ => implement P1-02 on same feature branch. Follow HANDOFF.md -> STATUS.md -> AGENTS.md -> REQUIREMENTS.md -> NEXT_TASK.md.
+## Next / pending
+P1-03 transactional SQLite with idempotence, revisioned bids and audit; P1-04 CLI/PDF/Excel; BASIC UI/7 themes; PRO official API; PREMIUM optional AI; Windows install/QA/sales. No customer data or external keys copied.
+
+## Deployment/approval gate
+Legacy Vercel project project08-bid-insight (prj_YcrN7OdOjKl6M457HelGIItLeeXZ) only previously READY metadata, actual Production SHA/HTTP/UI behavior NOT VERIFIED. Feature branch Python only: **Vercel production deployment NOT APPLICABLE**, no settings modified.
+BID OWL brand license/KIPRIS/BiddingOwl conflict unresolved; public sales held.
