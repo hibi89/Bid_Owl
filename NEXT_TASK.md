@@ -1,21 +1,23 @@
-# BID OWL — NEXT_TASK (2026-10-26 KST)
+# BID OWL NEXT_TASK — 2026-10-26 KST
 
-Repo: hibi89/Bid_Owl private, active branch feature/bid-owl-v1-basic-mvp. main/static legacy and Vercel production must stay untouched without explicit approval.
+Repo hibi89/Bid_Owl private; feature branch feature/bid-owl-v1-basic-mvp. main at c888c795bef72734f3f7016e54013b82453f11d8 preserved. User ㄱ advances to the first incomplete task.
 
-## Completed
-- [x] P1-00 repository/branch recovery and original main protection (main c888c795bef72734f3f7016e54013b82453f11d8).
-- [x] P1-01 strict offline CSV contract and parser, code commit 3e4faa759693ea4343dd73ae0d7ac6053eb0e30b, previous 21 tests PASS.
-- [x] P1-02 profile and source-gated 3-state evaluator, code commit fa2ed6aea6c634490d1f467bc1a3c3788df6adb1, previous 27 tests PASS.
-- [x] P1-03 SQLite persistence at module scope, code commit e1f3befafe1590570a99879812f678a5a60b99a1, 28 local tests PASS in this turn, new files' Git blobs match local bytes. See STATUS/HANDOFF for exact test boundary.
-- [ ] **Full exact GitHub P1-01+P1-02+P1-03 combined 76-test run is pending.** Prior local environment recreated upstream contracts and did not contain previous two test suites.
+## Completed verified stages
+P1-01: CSV validation and import, 21 tests.
+P1-02: profile and 3-state evidence-gated evaluator, 27 tests.
+P1-03: local SQLite versioning/rollback/audit/backup, 28 tests.
+P1-04: real local CLI flow + PDF/XLSX files + user source evidence, 20 tests.
+Full locally reconstructed code suite was compared with GitHub exact blob SHA and run together: 96 PASS / 0 FAIL. Synthetic CSV 2 rows generated PDF 2 / XLSX 2. Korean font rendered, XLSX OOXML parsed and imported. See STATUS and HANDOFF for verification scope.
+Pending: actual Windows device, Microsoft Excel native opening, official procurement input, installed Windows product, external API, Production web app, legal review.
 
-## NEXT P1-04 — reports + CLI
-1. Confirm HEAD and obtain actual GitHub source checkout if possible; execute all existing test suites together (report exact pass/fail) without assumptions. If not possible, clearly report unverified.
-2. Build backend/cli.py: validate CSV and safe profile JSON input, choose explicitly local SQLite path, import -> assess -> output selected bids with evidence and checked_at. Fail closed, no secrets, flag synthetic fixtures.
-3. Report module: export true, independently inspectable Excel (.xlsx) and Korean PDF; choose permissive dependency/library/fonts after licensing and rendering checks. Explicit customer-data privacy and no external API.
-4. Report fields: profile ID, source/actual data timestamp, current deadline, original source snippets and locations, rules PASS/FAIL/UNKNOWN, expired status, human-review warning. No actual legal qualification guarantee.
-5. Unit/integration tests: bad file no writes, PDF file opens and Korean glyphs render, xlsx strings/cells readable, no prompt injection from CSV content, escape potentially dangerous Excel formula prefixes. For unavailable fonts/licensing, label report portion incomplete rather than faking PASS.
-6. Commit only to feature, source SHA verify, update STATUS.md/HANDOFF.md. Keep main untouched.
+## NEXT: P2 BASIC usable UI, localhost bridge, 7 themes
+1. Confirm current feature HEAD and docs. Keep old static educational main unchanged. Do not display old 2025 precomputed result or 340/340 as live status.
+2. Build safe localhost-only Python read bridge for SQLite-derived bids, company profiles and current assessments. Avoid unrestricted filesystem paths or network exposure; keep customer data local and requests read-only.
+3. Search by bid title/agency/no, field/category, deadline, evaluation status. Show data timestamp, per-rule evidence, UNKNOWN review status, favorites and deadline risk.
+4. Seven theme tokens: cloud, obsidian, midnight, graphite, emerald, sand, iris per DESIGN_SYSTEM.md. Mobile responsive.
+5. Test supported backend and JS; actual browser where possible. No production deploy without approval.
+6. Windows smoke test using Python/ReportLab/local TTF/native Excel and SQLite reopen/backup before commercial readiness.
 
-## Later
-P2 BASIC search+UI+7 themes, P3 PRO official procurement APIs/amendment identifiers/quotas and alerts, P4 PREMIUM opt-in customer AI, P5 Windows install/security, P6 brand check + Kmong. No production/cost/external transmission without approval.
+Future: P3 official procurement API amendments/quotas, P4 opt-in AI, P5 Windows installer/security, P6 trademark/Kmong launch gate.
+
+A storage commit and separate report generation are not cross-resource atomic. If PDF/Excel fails after DB save, explain partial output; do not present it as fully recovered. No real customer data or API secrets ever enter GitHub.

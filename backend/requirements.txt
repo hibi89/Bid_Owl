@@ -1,0 +1,2 @@
+# PDF export only. XLSX uses Python standard library.
+reportlab>=4.2,<5
