@@ -34,3 +34,6 @@
 - BID OWL이 최신 사용자 선정안이고 다른 이름들은 문맥 추적을 위한 과거 기록이다.
 
 상표 검색: https://www.kipris.or.kr/
+
+## GitHub 이름 변경 (2026-10-26)
+- 실제 주소: https://github.com/hibi89/Bid_Owl. 이전 project08-bid-insight와 동일 GitHub repo ID(1399359397). 이름 변경은 상표권 확보가 아님.
