@@ -2,7 +2,7 @@
 
 확정일: 2026-10-26 01:29 KST
 내부 저장소: hibi89/project08-bid-insight
-사용자 선택 제품명: **비드아카이브 (BID ARCHIVE)** — 내부 작업명으로 채택, 상표 사용 가능성 미검증; 외부 출시 전 KIPRIS 확인 (BRAND_RESEARCH.md)
+사용자 선택 제품명: **BID OWL (비드아울)** — 상용 브랜드 개발 기준으로 채택, 상표 사용 가능성 미검증; 외부 출시 전 KIPRIS 확인 (BRAND_RESEARCH.md)
 단계: 설계 확정, 기능 개발 미착수
 
 ## 목적·고객
