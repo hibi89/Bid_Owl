@@ -1,3 +1,5 @@
+> **2026-10-27 — DISCLOSURE LIGHTNING TRANSFORMATION NEXT:** User explicitly selected "공시를 번개처럼 가져오는" **Disclosure Lightning** (NOT "Lightening") and one separate universal preprocessor. Read [DISCLOSURE_LIGHTNING_BLUEPRINT.md](DISCLOSURE_LIGHTNING_BLUEPRINT.md) first. This file's BID OWL P2-24 instructions are now **HISTORICAL FOR THIS BRANCH**; do not resume procurement backend tasks on `feature/disclosure-lightning`. Next: source-first SEC EDGAR safe connector P0 with offline fixtures -> filing index/versioned SQLite schemas -> provenance and incremental sync -> export contract for separate Preprocessor -> KIC ProofInvest adapter. Never claim SEC live fetch without real authorized request; respect current SEC fair access <=10 aggregate requests/sec. Preserve main and `feature/bid-owl-v1-basic-mvp`, historical code, customer data. No unrequested repo create/rename, paid API, live credential use or public release.
+
 # P2-23 완료 / 다음 P2-24 (2026-10-27 KST)
 
 사용자 지시: **백엔드 우선, 프론트엔드 디자인 보류**. ㄱ = 묻지 않고 다음 작업 진행. 개인/고객 데이터 업로드 금지, 유료 CI 금지, main/Vercel 변경 금지. 작업 브랜치 feature/bid-owl-v1-basic-mvp 유지.
