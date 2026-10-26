@@ -95,6 +95,23 @@ class ReportTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             write_xlsx(report,self.root/'huge.xlsx')
 
+    def test_failed_xlsx_writer_removes_its_own_partial_file(self):
+        from bidowl import report as report_module
+        target = self.root/'incomplete.xlsx'
+        original = report_module._sheet_xml
+        calls = 0
+        def fail_second_sheet(rows):
+            nonlocal calls
+            calls += 1
+            if calls == 2:
+                raise RuntimeError('synthetic final worksheet failure')
+            return original(rows)
+        with patch.object(report_module, '_sheet_xml', side_effect=fail_second_sheet):
+            with self.assertRaisesRegex(RuntimeError,'synthetic final worksheet failure'):
+                write_xlsx(self.report,target)
+        self.assertFalse(target.exists())
+        self.assertEqual(calls,2)
+
     def test_never_overwrite_existing_xlsx(self):
         path=self.root/'report.xlsx'
         path.write_bytes(b'do not replace')
