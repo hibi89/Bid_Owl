@@ -1,3 +1,35 @@
+# BID OWL HANDOFF — P2-13 local synthetic demo, 2026-10-27 KST
+
+## 1. User goal / permissions / product specification
+Private local-first BID OWL, SME public-procurement eligibility screening product: BASIC planned KRW 59,000 (validated CSV, company profile, versioned local SQLite, PASS/FAIL/UNKNOWN with source evidence and human confirmation, local web UI/seven themes, Excel/PDF); PRO official government procurement API using customer's key, planned 149k; PREMIUM optional AI/profitability, planned 299k. Prices and brand clearance unvalidated. The user wants AI to handle development, GitHub commits, tests and docs autonomously, **not repeatedly require user ZIP downloads/PowerShell QA**. Never claim real-world legal authority or real tender data for a synthetic demo.
+
+## 2. New P2-13 code / files
+- `backend/demo_local.py`: new Python 3.11+ offline disposable localhost demo. `create_demo_database(path)` requires previously nonexistent destination, reads only packaged `backend/fixtures/sample_bids.csv` and `sample_profile.json`, checks every bid ID starts `DEMO-` and provenance `DEMO_ONLY`, company ID starts `SYNTHETIC-` **before** making DB; stores 2 synthetic bids, profile and eligibility snapshots under source ID `BIDOWL_SYNTHETIC_DEMO`. `serve_demo(port=0, open_browser=True)` uses `tempfile.TemporaryDirectory`, existing `viewer.make_server` binding exclusively 127.0.0.1, ephemeral port, optional default browser; `--no-browser` and `--port` developer flags. Normal Ctrl+C closes HTTP server, temp DB cleaned; abnormal termination may leave OS temporary files. No default customer DB or external API/AI, no ReportLab/font needed just to view. Never overwrites existing file.
+- `backend/START_DEMO.cmd` and root `START_BID_OWL_DEMO.cmd`: Windows double-click from repo top level; `py -3` if available else `python`; keeps error visible if startup fails.
+- `backend/ui/index.html`, `backend/ui/ui.js`, `backend/ui/ui.css`: synthetic warning banner (hidden by default for real user DB; revealed if `BIDOWL_SYNTHETIC_DEMO` source appears in loaded list); seven-theme CSS token-compatible; no new writable HTTP endpoints and no user HTML injection.
+- `backend/tests/test_demo_local.py`: 8 fresh isolated methods, real SQLite contents, input/provenance refusal before writes, root launcher, read-only localhost HTTP, fake server + TemporaryDirectory cleanup, invalid ports. 12 test files now define **152** Python test methods total. This is source/test-count, not execution PASS.
+- `backend/DEMO.md`: full user safety, execution and source/QA limits.
+- root `README.md`: new product vs old 2025 BID INSIGHT static demo disambiguation; `backend/README.md`: quickstart. `START_HERE.md`: current stage not stale P1. `STATUS.md`, `NEXT_TASK.md`, `HANDOFF.md` refresh.
+
+## 3. Verification / evidence boundary / failure history
+Authenticated GitHub source fetched. V8 `new Function(exact ui.js)` verified **JS syntax PASS** after adding banner, not browser rendering/behavior. Source inspected for synthetic marker, existing-file guard, tempfile context, local read-only make_server route, 8 test method declarations. Full Python 152-case suite **NOT executed** in assistant environment, and Windows double-click not run. Do not claim 152 PASS, native Excel/PDF, demo server integration pass or 10k timings. Earlier user's actual P2-10 Windows CPython3.11/ReportLab4.5.1 run: 137 tests, 119 without error, **18 WinError32 file-handle cleanup ERROR, 0 assertion FAIL**; JS syntax PASS; dependent smoke/benchmark SKIP. P2-11 fixed observed source-level leaked SQLite connections; P2-12 added source-level AST guard and QA independent stages, but no new authentic Windows test after those fixes. Current private repository cannot be mounted in model Python container due previous auth/DNS; do not run a partial stand-in and call it full suite. The demo uses only local generated synthetic fixtures and does not access customer DB; browser is still read-only.
+
+## 4. GitHub branch, commits and protected originals
+Repo private `hibi89/Bid_Owl` ID 1399359397; branch `feature/bid-owl-v1-basic-mvp` started at `6a7d1369c255936c01eaf6f1e51eed4720635c2a`. Source commits include `7a8f982765360b5ef73e6b699f5874066c8708a0` demo_local.py; `a34fd12b44d6026d8b8673be2a9b114a9c56530d` backend launcher; `52b78b964c6a573a6db5eb9218d4cbb532a33a60` HTML; `fb2ccb6894896e49b04dca935dd4c02d0b39eb6c` JS; `63670c0fd7754d03bf473bbc9cfe0d7f8c275154` CSS; `01826bc81eb5e6e831b4abb4ae469efadf553efe` 8 tests; `0defe140556525ece28aef09c59486ab1c69d733` root launcher; `466ef719efaaf37e3df1d9bf185aec5a7e15d486` test root path; `5cc6554c4cb3bbcccca6a5ef3f1402e3b7b177ba` DEMO.md. Docs commits follow; final feature HEAD after HANDOFF must be fetched, main must remain `c888c795bef72734f3f7016e54013b82453f11d8` with school static/Vercel untouched, author/committer hibi89.
+No customer SQLite/CSV/report/PDF/XLSX/.env/keys/fonts uploaded, no fee/API/deployment or permission changes.
+
+## 5. Launch and production state
+New Python product **not publicly deployed**. From full authorized developer checkout on Windows user can double-click `START_BID_OWL_DEMO.cmd` in top-level branch folder, or run `python demo_local.py` from backend; URL auto localhost `http://127.0.0.1:<random_port>/`. Ctrl+C for normal shutdown; temporary DB is demo-only. Browser banner states fictional bids and no real data. Existing separate real SQLite viewer `python viewer.py --db <explicit-file> --port 8765` is read-only and CLI import/report/profile remains explicit. Former school Vercel project project08-bid-insight ID prj_YcrN7OdOjKl6M457HelGIItLeeXZ untouched and not used by this Python product. No browser/native Windows visual test completed.
+
+## 6. Completion and next work
+Previous subjective estimate entire BASIC+PRO+PREMIUM+packaging ~35%; no formally measured recalculation. BASIC one-click temporary demo improves exposure, but **real** customer CSV import, profile editing and PDF remain CLI-assisted and installer/security/final Windows QA pending; not sellable yet.
+P2-14: autonomous source implementation of safe real BASIC first-run (offline explicit customer CSV/profile path selection and import/preflight, never write without backup/CAS, never mix demo DB). Avoid exposing write endpoints in local HTTP without threat modeling, CSRF/Origin/Host and approval. Add isolated tests; keep fail-closed UNKNOWN and immutable evidence. P3 PRO user-key official API, P4 PREMIUM opt-in AI, packaging/name KIPRIS/sales only later. Do not request routine user QA/download on ㄱ.
+ 
+## 7. Last instructions
+This turn: GitHub changes plus V8 JavaScript syntax check; **152 declared / no 152 execution**. After HANDOFF write check main/feature and committer identity, changed paths. Next chat `[Bid_Owl 깃헙 레포지토리 보고 작업이어가셈]` or `ㄱ` continues P2-14. Earlier detailed P2-12/11 handoff appended below for history.
+
+---
+
 # BID OWL HANDOFF — P2-12 autonomous source hardening (2026-10-27 KST)
 
 ## 1. User intent and current product
