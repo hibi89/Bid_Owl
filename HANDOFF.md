@@ -1,45 +1,49 @@
-# BID OWL HANDOFF — 2026-10-27 KST (P2-02)
+# BID OWL HANDOFF — 2026-10-27 KST, P2-03
 
-## 1. Goal, final requirements, architecture
-BID OWL local-first procurement screening tool for Windows 11 small businesses. BASIC planned KRW 59,000 one-time CSV/profile/evidence-backed PASS/FAIL/UNKNOWN/Excel/PDF/local web UI; PRO KRW 149,000 optional user-key official procurement incremental API and PC-on alerts; PREMIUM KRW 299,000 opt-in user-model AI and cost scenarios. No paid required monthly subscription target, pricing not proven. Not a legal qualification/award guarantee. Python 3.11+ stdlib and ReportLab, SQLite revisioned snapshots, existing static HTML/JS/CSS parts, seven themes. Old 2025 educational demo values/340/340 not product QA.
+## 1. Goal, purpose, confirmed requirements and technologies
+Private local-first Windows 11 procurement assessment product, BID OWL / 비드아울. BASIC (planned one-time KRW 59,000) validated CSV, editable company profile, 3-state evidence-carrying rule screening, local SQLite, Excel/PDF, seven-theme web app. PRO planned KRW 149,000 official Korean procurement API user-key updates only while PC on; PREMIUM planned KRW 299,000 opt-in user-model AI and profitability inputs. Pricing not validated. Never claim qualification/award guarantee. Python 3.11+, SQLite v1, ReportLab, stdlib XLSX, HTML/CSS/JS, no mandatory server/subscription.
 
-## 2. Completed functions, changed files and design reasons
-P1-01 CSV strict input, P1-02 conservative rules/evidence, P1-03 versioned SQLite/backup, P1-04 local CLI PDF/XLSX completed earlier. P2-01 local viewer: readonly SQLite / GET APIs / responsive UI seven themes, search filters/evidence, browser favorites. P2-02 this session:
-- backend/viewer.py: query_bids accepts optional favorite_keys, global filtering happens BEFORE paging; new query_favorites validates 1,000 favorite pairs and only whitelist filter keys; POST /api/bids/favorites is **strictly read-only** with exact Host/Origin, JSON-only, 1 MiB cap, SQLite mode=ro. No DB migration/write/mutation.
-- backend/ui/ui.js: when only-favorites mode, sends JSON pairs and filters; server returns globally accurate total/page and query; auto-correct page if final favorite deleted; max 1,000 saved IDs; existing localStorage only. HTML and seven themes unchanged.
-- backend/tests/test_viewer.py: 2 new tests for global multi-page results, combined status filter, malformed input, body/origin/host content-type limits, no DB writes.
-- backend/README.md, NEXT_TASK.md, STATUS.md, HANDOFF.md refreshed.
-Alternative 1 client fetch every page: high number of requests; rejected. Alternative 2 SQLite mutable favorites table: durable but schema migration, backup and new mutation CSRF risks; postponed. Chosen browser-local + read-only bulk lookup reduces cost and intrusion.
+## 2. Completed implementation, changes and decision reasons
+Earlier P1-01 strict importer, P1-02 PASS/FAIL/UNKNOWN rules/provenance, P1-03 immutable SQLite profile/bid/assessment versions with non-overwriting backup, P1-04 CLI/PDF/XLSX. P2-01 local readonly SQLite GET server, responsive seven-theme browser list/details and date/condition filters. P2-02 globally paginated browser-local favorites through bounded same-origin JSON POST that **does not write**. New P2-03:
+- backend/profile_workflow.py: dry run by default; validate profile JSON before writable DB; explicit --apply + existing version match + mandatory newly created backup before modification; --create optional; --reassess optional, up to 10k saved bids. Old profiles and assessment versions persist. Multi-bid progress is sequential; partial writes are reported with retained backup, no false full rollback.
+- backend/viewer.py: GET /api/profile read from SQLite current profile_versions.
+- backend/ui/index.html, ui.js, ui.css: human can edit current profile fields in a form and download JSON; browser itself CANNOT apply to DB. Local CLI preview/apply is explicit. Null vs [] remains distinct; no HTML insertion of user data; no external uploads.
+- backend/tests/test_profile_workflow.py eight unit test methods, backend/tests/test_viewer.py one additional method; README, STATUS, NEXT_TASK and HANDOFF updated.
+Design comparison: browser writable endpoint would improve convenience but add CSRF/access control/backup transaction risk; CLI editing has some user friction but preserves existing readonly HTTP security, chosen for current phase. Full commercial one-click interface remains unfinished.
 
-## 3. Test commands, pass/fail and verification gaps
-Full repo commands:
-  cd backend
-  python -m unittest discover -s tests -v
-  node --check ui/ui.js
-  python cli.py --csv fixtures/sample_bids.csv --profile fixtures/sample_profile.json --source-id SYNTHETIC-CSV --db ./demo.sqlite3 --output ./reports --format both
-  python viewer.py --db ./demo.sqlite3 --port 8765
-Previously P1: 96 PASS / 0 FAIL / 0 SKIP with Linux CPython 3.13.5; 2 synthetic PDFs + 2 XLSX generated. Previous P2-01: isolated 5 PASS / 0 FAIL. This P2-02 session: added two test methods, not executed. Expected total 96+7=103 but **103 PASS is NOT claimed**. Actual GitHub JS content parsed successfully with Function compiler; new Python helper snippet locally ast.parse PASS (not exact full module). GitHub blob fetch confirms changed files. Full actual branch checkout test, Python runtime, POST HTTP new regression, browser rendering, Windows 11, native Excel, official data and legal interpretation remain UNVERIFIED.
+## 3. Test command, pass/fail, verified/unverified
+Run after authenticated full repo checkout:
+    cd backend
+    python -m unittest discover -s tests -v
+    node --check ui/ui.js
+    python cli.py --csv fixtures/sample_bids.csv --profile fixtures/sample_profile.json --source-id SYNTHETIC-CSV --db ./demo.sqlite3 --output ./reports --format both
+    python viewer.py --db ./demo.sqlite3 --port 8765
+    python profile_workflow.py --db ./demo.sqlite3 --profile-file ./edited-profile.json --expected-version 1 --reassess
+    python profile_workflow.py --db ./demo.sqlite3 --profile-file ./edited-profile.json --expected-version 1 --reassess --apply --backup ./new-backup.sqlite3
 
-## 4. Status, in progress, pending, blocked and stop location
-Source P1 completed; P2-01 partially verified; P2-02 code+tests committed but integrated execution pending. P2-03 next: verify full 103 expected tests, synthetic CLI-to-UI smoke and safe company-profile editor/assessment workflow; responsive/a11y/7-theme real browser and Windows smoke. P3 official procurement API, P4 AI, P5 installer/security, P6 brand/sales later. Public launch blocked pending KIPRIS/trademark and real-product tests. Stop after documentation update/feature HEAD check.
+Previously P1 actual Linux: 96 PASS/0 FAIL; P2-01 isolated 5 PASS/0 FAIL. Current combined expected test count 112 (96 + 8 viewer + 8 workflow), **FULL 112 NOT EXECUTED**, so no pass claim. This turn independently verified Github exact profile_workflow.py bytes match git blob SHA a8ac6a204edcbf8afde904391d4f51c53f12876f, Python ast parse PASS, **seven isolated mock SQLite-store smoke tests PASS/0 FAIL** against the same code. This is not real BidOwlStore test. Exact remote ui.js syntax parse PASS through V8 Function constructor. New committed unittest cases NOT EXECUTED; actual browser DOM, Windows and real official data NOT VERIFIED.
 
-## 5. Failures/evidence/cause/attempts/do-not-repeat/alternatives
-Old repo checkout attempt failed GitHub access/DNS/auth in this restricted sandbox. Current improved single-file private signed raw download attempted via curl with GitHub-generated link; failed `curl: (6) Could not resolve host: raw.githubusercontent.com`. No benefit repeating same environment. GitHub connected API succeeds read/write; use a permitted authenticated checkout on another environment to execute full test suite. Prior real Chromium local URL and alternate host both blocked by ERR_BLOCKED_BY_ADMINISTRATOR; cannot infer app runtime failure. Avoid more identical attempts; Windows local browser or approved browser environment is practical path. SQLite assessment commit vs PDF filesystem export is not atomic; failures can leave stored assessment with missing report. No unverified success assertion.
+## 4. Stage completion, progress, pending, blocker/stop
+P1 backend source complete, P2 source implementation progressing, P2-03 source committed and mock verified only. Need P2-04 full integrated tests, real SQLite backups/assessment preservation, browser desktop/mobile 7 themes, CLI UX and Windows. Later P3 API, P4 AI, P5 installer/security, P6 brand/sales. Current stop after this GitHub HANDOFF and final SHA checks. User ㄱ means continue P2-04 automatically.
 
-## 6. Repository, branches, commit SHA and paths
-Private https://github.com/hibi89/Bid_Owl, repo ID 1399359397; feature/bid-owl-v1-basic-mvp. Starting HEAD 1cfb8f54304a47f3604010ed4e4c86b2eeb505f1. P2-02 code SHAs 016ab8c251f92628e17ccd6e102b374284d20608 (viewer), 823edf48d31ed0077cdd0c700f20594f59b44b68 (JS), cd05d6d56daf6613c7f7ebe11c558a60f3cfe7d9 (tests). Documentation followed; last pre-handoff STATUS commit 648f83dda7192da2ef8b967e4a2a76631e685353. Final feature HEAD will be this handoff update; re-read GitHub for actual SHA. Main baseline c888c795bef72734f3f7016e54013b82453f11d8, legacy rollback 2807a93a3e0deba98840712401fdd6025e6f5610. Paths backend/viewer.py, backend/ui/ui.js, backend/tests/test_viewer.py, backend/bidowl/*.py, backend/cli.py and docs.
+## 5. Errors, causes, attempts, forbidden retries, alternatives
+Private repo clone and later signed raw.githubusercontent.com download failed DNS/auth resolution in previous sessions. GitHub connected API READ/WRITE works; don't repeat same private download command with identical environment. Full Python integration currently blocked; use permitted authenticated checkout and execute full suite. Previously Chromium local + routed host blocked with ERR_BLOCKED_BY_ADMINISTRATOR; don't infer product defect, test on user Windows/local authorized browser. UI Blob download CSP and local CLI process not browser tested. SQLite commits assessment one-by-one after a consistent backup; if failure, manual review/restore required; automatic rollback unsafe. Avoid claiming atomicity, browser proof or real customer qualification.
 
-## 7. Production URL, Vercel status, run commands and environment
-New Python local viewer not deployed; deployment N/A. Existing legacy Vercel project project08-bid-insight, ID prj_YcrN7OdOjKl6M457HelGIItLeeXZ, unchanged. Existing Production URL/SHA/status/HTTP browser not re-verified. Local-only run from backend: `python viewer.py --db ./demo.sqlite3 --port 8765`, browse http://127.0.0.1:8765; Ctrl+C stops. Python 3.11+ target; validated P1 on Linux 3.13.5 previously, Windows not validated. No external API server or customer-key requirement for BASIC.
+## 6. Repository, branch, SHA, paths
+Private https://github.com/hibi89/Bid_Owl, repo id 1399359397. Feature branch feature/bid-owl-v1-basic-mvp. P2-03 main source commits: 6d631fcb9db441a94a6c14dacc10737758e516df (profile_workflow.py); f1c186ea94c43a73f615f0042ac9a043cb1ac595 (tests); 0c24e5b28a8990d42e3cba127a908c5898f63944 (readonly endpoint); b259367de2e81a5555a12e6cd7ecbb4107d1f2e2 (HTML); f787968ee9fa4904fb0709b8e5ba793bac191cd1 (JS); 5beaaddcbdd016fce953f1c7d82b246399ffea22 (CSS); 07be1bff2e60776bfd76390c77f2f2c0e752c993 (viewer test). Latest pre-handoff STATUS commit 54844ec5f591722f464f4e16f3094cca3db73f0c; confirm final HEAD after writing. Main previously at c888c795bef72734f3f7016e54013b82453f11d8, untouched this session; rollback legacy original 2807a93a3e0deba98840712401fdd6025e6f5610. Paths backend/profile_workflow.py, backend/viewer.py, backend/ui/{index.html,ui.js,ui.css}, backend/tests/{test_profile_workflow.py,test_viewer.py}, backend/bidowl/store.py, backend/cli.py.
 
-## 8. Source locations, backup, secrets, do-not-modify scope
-Original legacy static education code still on main; preserve unchanged and rollback references. SQLite in user local application data, backup_to creates a consistent new backup and refuses overwrite. Customer bids/DB, documents, .env, API keys, reports, system fonts must never be uploaded to GitHub. Github linked writer hibi89; check commit identity and final SHAs. No force push/history alteration; no new paid services, permissions, production deployments, domain, user file edits or external data transmission without approval.
+## 7. Production URL, Vercel, run commands and environment
+Legacy Vercel project project08-bid-insight ID prj_YcrN7OdOjKl6M457HelGIItLeeXZ. Existing production URL/SHA/live HTTP/React browser NOT checked; no changes to legacy Vercel. New feature Python localhost application NOT deployed (N/A). Run Python viewer from backend on Windows: python viewer.py --db ./demo.sqlite3 --port 8765 then http://127.0.0.1:8765. Run profile_workflow CLI locally with explicit --backup for apply; actual Windows 11 and native Excel not tested. Local 127.0.0.1 only; API user data never transmitted.
 
-## 9. Next priority, procedure, success criteria, approvals
-1) Reconfirm latest HEAD and docs, then full private checkout in permitted runner and run expected 103 tests (actual count/results must be reported); inspect failed new POST tests, UI JS, synthetic CLI->HTTP->favorites. Recheck both branch SHA and commit identity.
-2) Plan/implement approved local company profile editing with safe input validation, explicit user actions, backup/revisioning, CSRF and no external transmission; preserve P1 historical assessment snapshots and add tests. Compare CLI extension vs new UI mutation surface before code changes.
-3) Real Windows 11 Edge/Chrome, responsive PC/mobile keyboard/7 themes, reports open with Excel/PDF, error/no-profile, stale/expired, large-record performance, local-only network exposure. Verify actual, do not infer from code.
-4) Update STATUS/HANDOFF after next major work; no main/Vercel/public release changes without approval. P3 keys/external operations/paid AI require approval.
+## 8. Originals, backup, authentication and prohibited modifications
+Original static school demo remains on main; old QA 340/340 and 2025 metrics are NOT new product proof. Local user DB and generated report inputs are private; no DB, PDF, Excel, font files, credentials, secrets, .env, tokens pushed. Backup CLI creates a new independent SQLite snapshot via existing backup_to and refuses overwrite. User must inspect partial failure before manual restore; historical snapshots preserved by existing store. GitHub writer connected hibi89; final commit author/committer must be checked. Do not change main, Vercel, permissions, production, domains, billing, customer file, or launch without approval. Brand KIPRIS/BiddingOwl similarity not legally cleared.
 
-## 10. Updated time, evidence range, and documentation source commit
-Updated 2026-10-27 KST. GitHub actual source P2-02 commits listed in section 6; final HANDOFF commit and author to be re-queried immediately after saving. Prior 96+5 test evidence belongs to earlier sessions, only actual JS syntax and new helper isolated ast.parse were measured this time. No full current integration/browser/Windows/official API verification. Resume with ㄱ and NEXT_TASK.md.
+## 9. Next actions, order, success criteria, approval needs
+Next P2-04:
+1) Fetch verified fresh feature/main SHA and source, run full **112 expected** repository Python tests, Node check, synthetic CSV -> SQLite -> real PDF/XLSX, HTTP/JSON/favorites/profile endpoint and profile backup/apply/reassessment through actual store. Determine actual PASS/FAIL count and address bugs first.
+2) Test user profile JSON form download + commands; verify no unintended HTTP mutation/egress, stale results UNKNOWN, historical evidence and backup restoration, SQL injection, same-origin, 1MiB limits.
+3) Run Windows 11 Edge/Chrome, mobile responsive/keyboard/7 theme visibility and PDF/Excel, 10k-bid performance, crash/resume.
+4) Decide after review whether to implement optional authenticated one-click local edit UI; this extends write surface and needs security/backup/CSRF approval. No production deploy, API key use, paid external service, brand/public sale without approval. Record STATUS/HANDOFF after milestone.
+
+## 10. KST updated/checked, validation scope and source baseline
+Updated 2026-10-27 KST, prior session source baseline feature SHA 148d51eec12002c491e19862b27e364be2c7fd51. Final HANDOFF commit is the next GitHub write, query actual HEAD and author after. Only byte-matched CLI Python syntax/7 mock tests and JS syntax verified this session; full 112 in private repo, browser, official external data, Windows/Production and legal clearance remain UNVERIFIED.
