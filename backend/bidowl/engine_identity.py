@@ -12,7 +12,7 @@ from __future__ import annotations
 import hashlib
 from pathlib import Path
 
-POLICY_FILES = ("eligibility.py", "schema.py", "profile.py")
+POLICY_FILES = ("eligibility.py", "schema.py", "profile.py", "store.py")
 POLICY_NAMESPACE = b"BIDOWL-ELIGIBILITY-POLICY-v1\0"
 
 
