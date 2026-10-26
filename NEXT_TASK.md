@@ -1,3 +1,15 @@
+# P2-23 완료 / 다음 P2-24 (2026-10-27 KST)
+
+사용자 지시: **백엔드 우선, 프론트엔드 디자인 보류**. ㄱ = 묻지 않고 다음 작업 진행. 개인/고객 데이터 업로드 금지, 유료 CI 금지, main/Vercel 변경 금지. 작업 브랜치 feature/bid-owl-v1-basic-mvp 유지.
+
+**이번 발견/수정:** 기존 viewer는 공고/프로필 버전과 엔진 지문만 확인해 과거 PASS/FAIL을 최신으로 표시할 수 있었다. 공고가 평가 후 마감됐거나 기한이 연장된 상황에서 이는 잘못이다. `viewer._latest_rows`와 `_status_for_candidate_keys` 모두 `assessments.is_expired`(DB v1 실제 컬럼)를 현재 마감 상태와 비교하며, 다르면 과거 `snapshot_status`는 보존하고 현재 상태는 UNKNOWN, 재판정 필요로 표시한다. 목록·상태 필터·상세에 동일 적용.
+
+`backend/tests/test_viewer.py`: 실 DB 스키마에 맞춰 is_expired 추가 및 4곳 저장 예시 수정, 3개 마감 변동 회귀 테스트 정의. 전체 GitHub 원격 **248개 Python 테스트 함수/16개 파일**, 실제 전체 실행 PASS 아님. 별도 임시 sqlite3 실험에서 마감 전 PASS 유지 / 마감 후 UNKNOWN / 기존 만료 FAIL 유지 / 연장 후 UNKNOWN / 미평가 UNKNOWN **5/5 검사 통과**. 연결된 비공개 저장소는 로컬 실행 환경에서 다운로드/클론되지 않아 실제 테스트 248개는 실행하지 못했다. 과거 Windows 137개 중 WinError32 18개 문제의 수정 여부 미검증.
+
+다음 P2-24: 백엔드 실제 테스트 실행 경로·오류 수정, 마감 동등 시각/시간대/손상된 날짜 처리, 사용자 반복 ZIP/PowerShell 테스트 요구 금지. UI 디자인 계속 보류. 전체 제품 추정치 기존 약 42%를 임의 상향하지 말 것.
+
+---
+
 # BID OWL NEXT — P2-22 status-filter backend query optimization (2026-10-27 KST)
 
 **Next ㄱ => P2-23 BACKEND ONLY.** User explicitly rejects visual UI design and prefers backend work. Do not modify UI CSS/mockups until explicitly asked. User dislikes repeated ZIP downloads and routine manual Windows PowerShell QA; implement in connected private GitHub feature. Preserve main/Vercel, no paid CI, customer data, secrets, or public product release.
