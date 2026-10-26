@@ -85,9 +85,88 @@ class LocalImportTests(unittest.TestCase):
         self.assertNotEqual(backup.resolve(), self.db.resolve())
         with BidOwlStore(backup) as old:
             self.assertEqual(old.db.execute("SELECT COUNT(*) FROM assessments").fetchone()[0], 2)
+        self.assertEqual(second["assessments_saved"], 0)
+        self.assertEqual(second["assessments_reused"], 2)
         with BidOwlStore(self.db) as current:
-            self.assertEqual(current.db.execute("SELECT COUNT(*) FROM assessments").fetchone()[0], 4)
+            self.assertEqual(current.db.execute("SELECT COUNT(*) FROM assessments").fetchone()[0], 2)
         self.assertEqual(self.csv.read_bytes().count(b"SYNTHETIC_TEST"), 2)
+
+    def test_noop_reimport_preserves_immutable_assessment_ids(self):
+        first = apply_import(self.prepare())
+        with BidOwlStore(self.db) as store:
+            before = tuple(row[0] for row in store.db.execute(
+                "SELECT id FROM assessments ORDER BY id"
+            ))
+        second = apply_import(self.prepare())
+        self.assertEqual(first["eligibility_counts"], second["eligibility_counts"])
+        self.assertEqual(second["assessments_saved"], 0)
+        self.assertEqual(second["assessments_reused"], 2)
+        self.assertTrue(second["backup"])
+        with BidOwlStore(self.db) as store:
+            self.assertEqual(before, tuple(row[0] for row in store.db.execute(
+                "SELECT id FROM assessments ORDER BY id"
+            )))
+
+    def test_revised_bid_only_reassesses_its_own_snapshot(self):
+        apply_import(self.prepare())
+        data = self.csv.read_bytes()
+        self.assertIn(b"120000000", data)
+        self.csv.write_bytes(data.replace(b"120000000", b"120000001", 1))
+        outcome = apply_import(self.prepare())
+        self.assertEqual(outcome["import"]["revised"], 1)
+        self.assertEqual(outcome["import"]["unchanged"], 1)
+        self.assertEqual(outcome["assessments_saved"], 1)
+        self.assertEqual(outcome["assessments_reused"], 1)
+        with BidOwlStore(self.db) as store:
+            self.assertEqual(store.db.execute(
+                "SELECT COUNT(*) FROM assessments"
+            ).fetchone()[0], 3)
+
+    def test_expiry_transition_forces_fresh_assessment_not_stale_reuse(self):
+        first = apply_import(self.prepare())
+        self.assertEqual(first["assessments_saved"], 2)
+        with BidOwlStore(self.db) as store:
+            # Simulate a previous snapshot from a different time without
+            # changing the bid/profile version. Rechecking must not reuse it.
+            store.db.execute("""
+                UPDATE assessments SET is_expired = 1 - is_expired
+                WHERE bid_no = 'TEST-2027-001'
+            """)
+        second = apply_import(self.prepare())
+        self.assertEqual(second["assessments_saved"], 1)
+        self.assertEqual(second["assessments_reused"], 1)
+        with BidOwlStore(self.db) as store:
+            row = store.db.execute("""
+                SELECT a.is_expired
+                FROM assessments a
+                WHERE a.bid_no='TEST-2027-001'
+                ORDER BY a.id DESC LIMIT 1
+            """).fetchone()
+            self.assertEqual(row["is_expired"], 0)
+
+    def test_profile_revision_invalidates_reuse_for_all_bids(self):
+        first = apply_import(self.prepare())
+        self.assertEqual(first["assessments_saved"], 2)
+        with BidOwlStore(self.db) as store:
+            # Simulate a concurrent profile change then explicit restoration
+            # to the original contents as a new version.
+            version2 = store.save_profile(
+                CompanyProfile("test-company", region="서울"), expected_version=1
+            )
+            self.assertEqual(version2, 2)
+            restored = store.save_profile(self.company, expected_version=2)
+            self.assertEqual(restored, 3)
+        second = apply_import(self.prepare())
+        self.assertEqual(second["assessments_saved"], 2)
+        self.assertEqual(second["assessments_reused"], 0)
+        with BidOwlStore(self.db) as store:
+            self.assertEqual(store.db.execute(
+                "SELECT COUNT(*) FROM assessments"
+            ).fetchone()[0], 4)
+            new_versions = tuple(r[0] for r in store.db.execute(
+                "SELECT profile_version FROM assessments ORDER BY id DESC LIMIT 2"
+            ))
+            self.assertEqual(new_versions, (3, 3))
 
     def test_existing_profile_mismatch_fails_before_writes_or_backup(self):
         apply_import(self.prepare())
