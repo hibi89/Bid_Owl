@@ -99,7 +99,7 @@ def _arg(query: dict, name: str, default: str = "") -> str:
     return value[0].strip()
 
 
-def query_bids(conn: sqlite3.Connection, query: dict) -> dict:
+def query_bids(conn: sqlite3.Connection, query: dict, *, favorite_keys: set[tuple[str, str]] | None = None) -> dict:
     search = _arg(query, "q").casefold()
     if len(search) > 120:
         raise ValueError("Search is limited to 120 characters")
@@ -115,6 +115,8 @@ def query_bids(conn: sqlite3.Connection, query: dict) -> dict:
         raise ValueError("Page parameters outside accepted range")
     rows = _latest_rows(conn, profile)
     categories = sorted({str(row["category"]) for row in rows if row["category"]})
+    if favorite_keys is not None:
+        rows = [r for r in rows if (r["source_id"], r["bid_no"]) in favorite_keys]
     if search:
         rows = [r for r in rows if search in " ".join(str(r[k]) for k in ("title","agency","bid_no","source_id")).casefold()]
     if category:
@@ -151,6 +153,29 @@ def query_detail(conn: sqlite3.Connection, query: dict) -> dict:
 def query_profiles(conn: sqlite3.Connection) -> dict:
     rows = conn.execute("SELECT profile_id,latest_version FROM profiles ORDER BY profile_id").fetchall()
     return {"profiles": [{"profile_id": r["profile_id"], "version": r["latest_version"]} for r in rows]}
+
+
+MAX_FAVORITES = 1000
+MAX_FAVORITES_BODY = 1024 * 1024
+FAVORITE_FILTERS = {"q", "category", "status", "deadline", "profile", "page", "page_size"}
+
+
+def query_favorites(conn: sqlite3.Connection, payload: object) -> dict:
+    """A read-only bulk query; browser holds favorite IDs, not the user database."""
+    if not isinstance(payload, dict) or set(payload) != {"favorites", "filters"}:
+        raise ValueError("Expected favorites and filters")
+    favorites, filters = payload["favorites"], payload["filters"]
+    if (not isinstance(favorites, list) or len(favorites) > MAX_FAVORITES
+            or not isinstance(filters, dict) or not set(filters) <= FAVORITE_FILTERS
+            or any(type(value) is not str for value in filters.values())):
+        raise ValueError("Invalid favorite query")
+    keys = set()
+    for pair in favorites:
+        if (not isinstance(pair, list) or len(pair) != 2
+                or any(type(item) is not str or not item.strip() or len(item) > 300 for item in pair)):
+            raise ValueError("Invalid favorite identifier")
+        keys.add((pair[0], pair[1]))
+    return query_bids(conn, {key: [value] for key, value in filters.items()}, favorite_keys=keys)
 
 
 class ViewerHandler(BaseHTTPRequestHandler):
@@ -209,7 +234,37 @@ class ViewerHandler(BaseHTTPRequestHandler):
             self._json(500, {"error": "Local database cannot be read"})
 
     def do_POST(self) -> None:
-        self._json(405, {"error": "Read-only viewer"})
+        # POST carries a bounded list of IDs for a read-only query; it never writes.
+        if self.path != "/api/bids/favorites":
+            self._json(405, {"error": "Read-only viewer"})
+            return
+        host = self.headers.get("Host", "").lower()
+        if host not in {f"localhost:{self.server.server_port}", f"127.0.0.1:{self.server.server_port}"}:
+            self._json(403, {"error": "Forbidden host"})
+            return
+        if self.headers.get("Origin") != f"http://{host}":
+            self._json(403, {"error": "Same-origin request required"})
+            return
+        if self.headers.get("Content-Type", "").split(";", 1)[0].strip().lower() != "application/json":
+            self._json(415, {"error": "JSON required"})
+            return
+        try:
+            length = int(self.headers.get("Content-Length", ""))
+        except ValueError:
+            self._json(411, {"error": "Content-Length required"})
+            return
+        if not 0 < length <= MAX_FAVORITES_BODY:
+            self._json(413, {"error": "Favorite request too large"})
+            return
+        try:
+            payload = json.loads(self.rfile.read(length))
+            with closing(open_database(self.db_path)) as conn:
+                data = query_favorites(conn, payload)
+            self._json(200, data)
+        except ValueError as exc:
+            self._json(400, {"error": str(exc)})
+        except (sqlite3.Error, OSError):
+            self._json(500, {"error": "Local database cannot be read"})
 
     def log_message(self, format: str, *args: object) -> None:
         # Do not echo URLs / user search terms / input records into external logs.
