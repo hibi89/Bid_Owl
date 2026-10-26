@@ -149,6 +149,29 @@ class ProfileWorkflowTests(unittest.TestCase):
             self.assertEqual(store.get_profile('company').region, '제주')
             self.assertEqual(store.db.execute('SELECT COUNT(*) FROM profile_versions').fetchone()[0], 2)
 
+    def test_racing_profile_change_during_reassess_reports_partial_not_no_write(self):
+        actual_assess = BidOwlStore.assess_and_record
+        actual_save = BidOwlStore.save_profile
+        def conflicting_assessment(store, source_id, bid_no, profile_id, **kwargs):
+            # Another client writes a newer revision after THIS apply has
+            # already saved v2, but before its first assessment.
+            actual_save(store, CompanyProfile('company', region='제주'),
+                        expected_version=2)
+            return actual_assess(store, source_id, bid_no, profile_id, **kwargs)
+        backup = self.root / 'racing-assessment.sqlite3'
+        with patch.object(BidOwlStore, 'assess_and_record', autospec=True,
+                          side_effect=conflicting_assessment):
+            with self.assertRaisesRegex(RuntimeError, 'PARTIAL_WRITE: 0/1'):
+                self.run_flow(apply=True, backup_path=backup, reassess=True)
+        self.assertTrue(backup.exists())
+        with BidOwlStore(self.db) as store:
+            self.assertEqual(store.get_profile('company',2).region,'서울')
+            self.assertEqual(store.get_profile('company',3).region,'제주')
+            self.assertEqual(store.db.execute('SELECT COUNT(*) FROM assessments').fetchone()[0],1)
+        with BidOwlStore(backup) as previous:
+            self.assertEqual(previous.get_profile('company').region,'부산')
+            self.assertEqual(previous.db.execute('SELECT COUNT(*) FROM assessments').fetchone()[0],1)
+
     def test_partial_failure_reports_backup_and_preserves_old_snapshot(self):
         backup=self.root/"partial.sqlite3"
         with patch.object(BidOwlStore,"assess_and_record", side_effect=RuntimeError("synthetic failure")):
