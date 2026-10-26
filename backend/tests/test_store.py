@@ -7,6 +7,7 @@ import json
 import sqlite3
 import tempfile
 import unittest
+from unittest.mock import patch
 from contextlib import closing
 from dataclasses import replace
 from datetime import datetime, timedelta, timezone
@@ -264,6 +265,27 @@ class StoreTests(unittest.TestCase):
             self.assertEqual(check.execute('PRAGMA integrity_check').fetchone()[0], 'ok')
         destination.unlink()  # Must succeed on Windows, not only POSIX.
         self.assertFalse(destination.exists())
+
+    def test_backup_destination_connection_is_closed_on_any_os(self):
+        # POSIX allows deleting open files, so unlink() alone cannot prove
+        # that Windows-style file handles are released. Inspect the returned
+        # sqlite3 connection directly after backup_to() returns.
+        self.store.import_bids([bid()], source_id='s')
+        native_connect = sqlite3.connect
+        opened = []
+
+        def tracked_connect(*args, **kwargs):
+            connection = native_connect(*args, **kwargs)
+            opened.append(connection)
+            return connection
+
+        backup = Path(self.temp.name) / 'tracked-backup.sqlite3'
+        with patch("bidowl.store.sqlite3.connect", side_effect=tracked_connect):
+            self.store.backup_to(backup)
+        self.assertEqual(len(opened), 1)
+        with self.assertRaises(sqlite3.ProgrammingError):
+            opened[0].execute("PRAGMA integrity_check")
+        self.assertTrue(backup.exists())
 
     def test_unknown_schema_version_not_rewritten(self):
         future=Path(self.temp.name)/'future.sqlite3'
