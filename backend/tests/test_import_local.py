@@ -465,6 +465,136 @@ class LocalImportTests(unittest.TestCase):
         self.assertEqual(result["assessments_saved"], 2)
         self.assertEqual(result["assessments_reused"], 0)
 
+    def _cli_input_arguments(self):
+        profile = self.root / "mvp-company.json"
+        profile.write_text(json.dumps({
+            "profile_id": self.company.profile_id,
+            "region": self.company.region,
+            "categories": self.company.categories,
+            "licenses": self.company.licenses,
+            "staff_count": self.company.staff_count,
+        }, ensure_ascii=False), encoding="utf-8")
+        return [
+            "--csv", str(self.csv), "--profile", str(profile),
+            "--source-id", "LOCAL-TEST", "--db", str(self.db),
+        ]
+
+    def test_import_returns_saved_and_reused_assessment_ids(self):
+        first = apply_import(self.prepare())
+        saved = first["assessments"]
+        self.assertEqual(len(saved), 2)
+        self.assertTrue(all(not x["reused"] for x in saved))
+        self.assertEqual(len({x["assessment_id"] for x in saved}), 2)
+        self.assertEqual(sum(first["eligibility_counts"].values()), len(saved))
+        second = apply_import(self.prepare())
+        reused = second["assessments"]
+        self.assertEqual(len(reused), 2)
+        self.assertTrue(all(x["reused"] for x in reused))
+        self.assertEqual(
+            {x["bid_no"]: (x["assessment_id"], x["status"]) for x in reused},
+            {x["bid_no"]: (x["assessment_id"], x["status"]) for x in saved},
+        )
+        with BidOwlStore(self.db, must_exist=True) as store:
+            for row in saved:
+                stored = store.db.execute(
+                    "SELECT status FROM assessments WHERE id=?",
+                    (row["assessment_id"],),
+                ).fetchone()
+                self.assertEqual(stored["status"], row["status"])
+
+    def test_one_shot_real_import_then_saved_xlsx_exports(self):
+        from zipfile import ZipFile
+        from xml.etree import ElementTree
+        folder = self.root / "client-reports"
+        argv = self._cli_input_arguments() + [
+            "--apply", "--export-dir", str(folder),
+        ]
+        with contextlib.redirect_stdout(io.StringIO()) as output:
+            self.assertEqual(main(argv), 0)
+        payload = json.loads(output.getvalue())
+        self.assertEqual(payload["status"], "IMPORTED_AND_EXPORTED")
+        self.assertEqual(payload["assessments_saved"], 2)
+        self.assertEqual(len(payload["reports"]), 2)
+        self.assertEqual(
+            {x["assessment_id"] for x in payload["reports"]},
+            {x["assessment_id"] for x in payload["assessments"]},
+        )
+        for report in payload["reports"]:
+            self.assertEqual(len(report["files"]), 1)
+            path = Path(report["files"][0])
+            self.assertEqual(path.parent, folder)
+            with ZipFile(path) as archive:
+                self.assertIsNone(archive.testzip())
+                for name in archive.namelist():
+                    if name.endswith((".xml", ".rels")):
+                        ElementTree.fromstring(archive.read(name))
+
+    def test_report_export_failure_does_not_disguise_successful_import(self):
+        argv = self._cli_input_arguments() + [
+            "--apply", "--export-dir", str(self.root / "exports"),
+        ]
+        with patch("import_local.export_existing", side_effect=RuntimeError("EXPORT_BROKEN")):
+            with contextlib.redirect_stderr(io.StringIO()) as stderr:
+                self.assertEqual(main(argv), 2)
+        result = json.loads(stderr.getvalue())
+        self.assertEqual(result["status"], "IMPORTED_EXPORT_FAILED")
+        self.assertEqual(result["assessments_saved"], 2)
+        self.assertEqual(result["reports"], [])
+        self.assertIn("EXPORT_BROKEN", result["export_error"])
+        with BidOwlStore(self.db, must_exist=True) as store:
+            self.assertEqual(
+                store.db.execute("SELECT COUNT(*) FROM assessments").fetchone()[0], 2,
+            )
+
+    def test_export_path_exists_cannot_overwrite_previous_reports(self):
+        folder = self.root / "fixed-output"
+        argv = self._cli_input_arguments() + [
+            "--apply", "--export-dir", str(folder),
+        ]
+        with contextlib.redirect_stdout(io.StringIO()) as stdout:
+            self.assertEqual(main(argv), 0)
+        first = json.loads(stdout.getvalue())
+        original = {
+            item["files"][0]: Path(item["files"][0]).read_bytes()
+            for item in first["reports"]
+        }
+        with contextlib.redirect_stderr(io.StringIO()) as stderr:
+            self.assertEqual(main(argv), 2)
+        repeated = json.loads(stderr.getvalue())
+        self.assertEqual(repeated["status"], "IMPORTED_EXPORT_FAILED")
+        self.assertEqual(repeated["assessments_reused"], 2)
+        self.assertTrue(repeated["backup"])
+        self.assertEqual(repeated["reports"], [])
+        for path, contents in original.items():
+            self.assertEqual(Path(path).read_bytes(), contents)
+        with BidOwlStore(self.db, must_exist=True) as store:
+            self.assertEqual(
+                store.db.execute("SELECT COUNT(*) FROM assessments").fetchone()[0], 2,
+            )
+
+    def test_pdf_missing_dependency_refused_before_import_or_output(self):
+        target = self.root / "client"
+        argv = self._cli_input_arguments() + [
+            "--apply", "--export-dir", str(target), "--report-format", "both",
+        ]
+        with patch("import_local.check_pdf_support",
+                   side_effect=RuntimeError("SYNTHETIC_NO_KOREAN_FONT")):
+            with contextlib.redirect_stderr(io.StringIO()) as stderr:
+                self.assertEqual(main(argv), 2)
+        self.assertEqual(json.loads(stderr.getvalue())["status"], "IMPORT_FAILED")
+        self.assertFalse(self.db.exists())
+        self.assertFalse(target.exists())
+
+    def test_export_option_requires_apply_and_keeps_preview_nonwriting(self):
+        target = self.root / "unused-reports"
+        argv = self._cli_input_arguments() + ["--export-dir", str(target)]
+        with contextlib.redirect_stderr(io.StringIO()) as stderr:
+            self.assertEqual(main(argv), 2)
+        result = json.loads(stderr.getvalue())
+        self.assertEqual(result["status"], "IMPORT_FAILED")
+        self.assertFalse(self.db.exists())
+        self.assertFalse(target.exists())
+
     def test_desktop_launcher_paths_and_no_http_write(self):
         root_cmd = (BACKEND.parent / "START_BID_OWL_IMPORT.cmd").read_text(encoding="utf-8")
         backend_cmd = (BACKEND / "START_IMPORT.cmd").read_text(encoding="utf-8")
