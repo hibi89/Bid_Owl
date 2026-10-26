@@ -1,26 +1,26 @@
-# BID OWL NEXT_TASK — 2026-10-27 KST
+# BID OWL NEXT_TASK — 2026-10-27 KST (P2-04)
 
-Repo: hibi89/Bid_Owl (private). Work ONLY on feature/bid-owl-v1-basic-mvp. User ㄱ resumes first unfinished step. Read latest HANDOFF -> STATUS -> AGENTS -> REQUIREMENTS -> NEXT_TASK -> source. Never modify main/Vercel without approval.
+Repo: private hibi89/Bid_Owl, feature/bid-owl-v1-basic-mvp. Main/legacy Vercel untouched. On user ㄱ, read HANDOFF, STATUS, AGENTS, REQUIREMENTS, NEXT_TASK and latest source/branch SHA. Resume implementation automatically; don't assume past unverified test results are current.
 
-## Implemented source
-- P1: strict CSV importer, PASS/FAIL/UNKNOWN evidence engine, revisioned SQLite, CLI PDF/XLSX. Previous real combined Linux 96 PASS / 0 FAIL from 2026-10-26, not re-run here.
-- P2-01: localhost SQLite read-only API, responsive listing/filter/detail, seven themes. Previous five isolated mock-data tests PASS.
-- P2-02: server-side global favorites before pagination; bounded same-origin read-only JSON POST; two more viewer regression methods committed, previously unexecuted.
-- P2-03: new `backend/profile_workflow.py` dry-run first, explicit --apply and backup, optimistic existing-version check, create opt-in, optional --reassess all bids (<=10000), history untouched and PARTIAL_WRITE handling. New `GET /api/profile` returns current saved profile read-only. UI field editor exports local JSON for a human-run CLI apply, NOT silent database mutation. Updated backend/ui/index.html, ui.js and ui.css, backend/tests/test_profile_workflow.py (8 source tests) and backend/tests/test_viewer.py (+1 method).
-- GitHub exact blob SHA for profile_workflow.py a8ac6a204edcbf8afde904391d4f51c53f12876f was independently recomputed on local source bytes. AST compile PASS; 7 separate isolated smoke tests with a **fake SQLite store**, 0 fail. Actual GitHub JS source V8 syntax parse PASS. This smoke is NOT the real BidOwlStore integration and is not part of the repository unittest suite.
-- Expected full tests 96 P1 + 8 viewer + 8 profile workflow = **112** tests, but full 112 suite NOT RUN / not PASS-verified.
+## Implemented source / verification
+P1: CSV validation, evidence-based PASS/FAIL/UNKNOWN, immutable bid/profile/assessment revision SQLite with consistent backups, CLI real PDF/XLSX. 96 tests last executed successfully 2026-10-26 on Linux, not rerun after P2.
+P2-01: readonly 127.0.0.1 viewer, search/filters/detail/provenance and seven themes.
+P2-02: browser-local favorites can filter globally before pagination through bounded read-only same-origin POST.
+P2-03: company profile edit JSON builder in browser + local preview/--apply/mandatory non-overwriting backup and optional re-evaluation CLI. No browser mutation API.
+P2-04:
+1) bidowl/store.py: optional expected_version enforced inside BEGIN IMMEDIATE transaction of save_profile(), preventing time-of-check version overwrite; backward compatible default None.
+2) profile_workflow.py: ReadOnlyProfileStore uses SQLite mode=ro/query_only for preview; refuses blank/unversioned/incorrect schema without initialization; apply preflights read-only before writer, uses atomic version guard; distinguishes prewrite profile conflict with retained backup.
+3) viewer.py: exact source_id+bid_no SQL predicate for single detail, no O(all bids) Python scan.
+4) ui/ui.js: labelled dialog, focus containment, stale async response invalidation when drawer closed/another detail is opened, and clearer assessment status messaging.
+5) tests/test_profile_workflow.py +3 regression methods (preview readonly, invalid DB no initialization, race); tests/test_viewer.py +1 (single-key detail) and backend/README.md updated.
 
-## NEXT P2-04: full integration and customer-local usability
-1. Verify latest remote branch HEAD, author/committer, exact files. In a permitted authenticated full private checkout, run:
-   - cd backend && python -m unittest discover -s tests -v
-   - node --check ui/ui.js
-   - python cli.py --csv fixtures/sample_bids.csv --profile fixtures/sample_profile.json --source-id SYNTHETIC-CSV --db ./demo.sqlite3 --output ./reports --format both
-   - python viewer.py --db ./demo.sqlite3 --port 8765
-   - Browser GET /api/bids, POST /api/bids/favorites with same-origin request, GET /api/profile and detail; then profile_workflow.py preview -> backup -> --apply --reassess; confirm original PASS remains in history, latest status reflects new version.
-2. Fix concrete failures, including URI/Host/Origin assumptions, HTTP 400/403 paths, desktop and mobile UI forms, profile null vs empty array, file download restrictions under CSP. Do not repeat prior private raw-download DNS method or Chromium blocked navigation in same execution environment.
-3. Benchmark up to 10,000 bids search and optional re-assessment with real full engine, validate crash recovery and actual backup restore with separate test copy.
-4. Decide UX polish after security review: optional one-click local profile editing route only if authentication, CSRF protection, backup/recovery, authorization and user approval are settled. Current product requires explicit local CLI command and is incomplete as a one-click commercial UI.
-5. Windows 11 real Edge/Chrome, PDF+native Excel, seven-theme visual/accessibility, server only on 127.0.0.1, file preservation, no external egress. Brand/KIPRIS, official API, legal rules and public release unverified.
+GitHub source inventory verified: 116 declared test methods: test_eligibility 27, test_importer 21, test_profile_workflow 11, test_report 20, test_store 28, test_viewer 9. This is a count of *declared tests*, **NOT PASS verification**. Actual current ui.js content parses under V8 Function constructor PASS. P2-04 Python source + 4 tests committed through GitHub, **full Python 116 have not been executed**. Previous private repo clone and signed raw URL cannot resolve via DNS/auth in this execution environment, do not retry identical method. Browser Chromium localhost attempts in prior session blocked by ERR_BLOCKED_BY_ADMINISTRATOR (not necessarily application defect).
 
-## Explicit unresolved / prohibited
-Private full checkout unavailable from this runtime (prior clone DNS/auth and raw signed URL DNS fail); 112 source tests remain unexecuted, browser in this sandbox previously ERR_BLOCKED_BY_ADMINISTRATOR. User real DB, credentials, customer documents, reports, fonts never upload. Main and existing Vercel untouched; Python local module Production deployment N/A. Do not claim real official procurement data, Windows installer, sales readiness, or formal legal qualification. P3 API, P4 paid AI, P5 installer, P6 trademark/sales follow later.
+## NEXT P2-05
+- Prefer an authorized full repository checkout in an environment that can execute private code. Run `cd backend && python -m unittest discover -s tests -v`; report actual 116 pass/fail/skips and fix any failing assertion. Specifically check atomic profile race mock, mode=ro preflight, SQLite detail predicate and same-origin POST.
+- Run `node --check ui/ui.js`, validate real HTTP GET bids/detail/profile and favorites-only POST; run synthetic CSV -> versioned SQLite -> report PDF/XLSX -> profile preview -> mandatory backup -> explicit apply --reassess; confirm existing assessment remains accessible and updated profile revision reflected as required.
+- Validate actual browser (Edge/Chrome Windows 11) Blob JSON export with CSP, dialog keyboard focus, seven themes and responsive layout. Benchmark 10k-bid list+detail; optimize only on measured profile.
+- Improve customer-friendly report actions and missing profile onboarding; current profile updates require CLI, not yet ready as smooth paid-product UI. Future UI mutation route requires CSRF/authentication, backup and user approval.
+- Continue P3 official procurement API (user key) / P4 optional AI / P5 Windows packaging and security / P6 KIPRIS and public sales clearance after BASIC integration.
+
+Safety: no customer records or keys/files/fonts in GitHub; no external API calls/paid products; no main/Vercel/deployment/domain changes. Historic school demo metrics 340/340 unrelated.
