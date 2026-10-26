@@ -118,19 +118,24 @@ function profileNumber(input,name){
   if(!Number.isSafeInteger(parsed))throw Error(name+'의 숫자가 너무 큽니다.');
   return parsed;
 }
-async function openProfileEditor(button){
+async function openProfileEditor(button,creating=false){
   const token=++state.drawerSeq;
   const id=$('profile').value;
-  if(!id){note('먼저 편집할 회사 프로필을 선택하세요.',true);$('profile').focus();return;}
+  if(!creating&&!id){note('먼저 편집할 회사 프로필을 선택하세요.',true);$('profile').focus();return;}
   state.focus=button;$('drawer').hidden=false;$('overlay').hidden=false;document.body.classList.add('drawer-open');
   $('detail-content').replaceChildren(node('p','','저장된 회사 프로필을 읽고 있습니다.'));$('drawer').focus();
   try{
-    const data=await request('/api/profile?'+new URLSearchParams({profile_id:id}).toString());
+    const data=creating?
+      {profile:{profile_id:'',region:null,categories:null,licenses:null,staff_count:null,experience_total_krw:null},version:0}:
+      await request('/api/profile?'+new URLSearchParams({profile_id:id}).toString());
     if(token!==state.drawerSeq||$('drawer').hidden)return;
     const p=data.profile,host=$('detail-content');host.replaceChildren();
-    const heading=node('h2','','회사 프로필 편집 파일');heading.id='detail-title';host.append(heading);
+    const heading=node('h2','',creating?'새 회사 프로필 입력 파일':'회사 프로필 편집 파일');heading.id='detail-title';host.append(heading);
     host.append(node('p','warn','이 화면에서는 SQLite를 직접 수정하지 않습니다. JSON을 내려받은 뒤 로컬 명령으로 변경을 적용해야 합니다. 먼저 미리보기 결과를 확인하세요.'));
-    const form=node('form','profile-form');const pid=node('p','', '프로필 ID: '+p.profile_id+' · 현재 버전 '+data.version);form.append(pid);
+    const form=node('form','profile-form');
+    const pid=creating?field(form,'새 회사 프로필 ID',p.profile_id):
+      node('p','', '프로필 ID: '+p.profile_id+' · 현재 버전 '+data.version);
+    if(!creating)form.append(pid);
     const region=field(form,'사업장 소재지',p.region);
     const categories=listField(form,'업종 / 카테고리',p.categories);
     const licenses=listField(form,'면허 / 자격',p.licenses);
@@ -144,11 +149,13 @@ async function openProfileEditor(button){
       event.preventDefault();
       try{
         const rawRegion=region.value.trim();
-        const profile={profile_id:p.profile_id,region:rawRegion||null,
+        const chosenId=creating?pid.value.trim():p.profile_id;
+        if(!chosenId||chosenId.length>300)throw Error('회사 프로필 ID를 1~300자로 입력하세요.');
+        const profile={profile_id:chosenId,region:rawRegion||null,
           categories:profileList(categories),licenses:profileList(licenses),
           staff_count:profileNumber(staff,'인력 수'),experience_total_krw:profileNumber(experience,'실적 합계')};
         const content=JSON.stringify(profile,null,2);
-        const filename='bidowl_profile_'+p.profile_id.replace(/[^a-zA-Z0-9_-]/g,'_').slice(0,60)+'.json';
+        const filename='bidowl_profile_'+chosenId.replace(/[^a-zA-Z0-9_-]/g,'_').slice(0,60)+'.json';
         const href=URL.createObjectURL(new Blob([content],{type:'application/json;charset=utf-8'}));
         const a=node('a');a.href=href;a.download=filename;document.body.append(a);a.click();a.remove();
         setTimeout(()=>URL.revokeObjectURL(href),1000);
@@ -157,7 +164,7 @@ async function openProfileEditor(button){
     });
     host.append(form,node('h3','','로컬 명령으로 적용하기'));
     const command='python profile_workflow.py --db "DB_PATH" --profile-file "'+
-      'DOWNLOADED_JSON" --expected-version '+data.version+' --reassess';
+      'DOWNLOADED_JSON" '+(creating?'--create':'--expected-version '+data.version)+' --reassess';
     const apply=command+' --apply --backup "NEW_BACKUP_PATH.sqlite3"';
     host.append(node('p','','① 먼저 미리보기 (DB 수정 없음)'),node('pre','command',command),
       node('p','','② 결과 확인 후 명시적으로 적용 (백업 필수)'),node('pre','command',apply),
@@ -174,6 +181,7 @@ $('prev').addEventListener('click',()=>{if(state.page>1){state.page--;loadBids()
 $('next').addEventListener('click',()=>{if(state.page<state.pages){state.page++;loadBids();}});
 $('theme').addEventListener('change',()=>{const val=$('theme').value;if(themes.has(val)){document.body.dataset.theme=val;try{localStorage.setItem('bidowl-theme',val);}catch{}}});
 $('edit-profile').addEventListener('click',()=>openProfileEditor($('edit-profile')));
+$('create-profile').addEventListener('click',()=>openProfileEditor($('create-profile'),true));
 $('close').addEventListener('click',closeDetail);$('overlay').addEventListener('click',closeDetail);
 document.addEventListener('keydown',e=>{
   if($('drawer').hidden)return;
