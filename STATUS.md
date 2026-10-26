@@ -1,3 +1,16 @@
+# BID OWL STATUS — P2-26 BASIC MVP report integration (2026-10-27)
+
+User's explicit priority: finish BASIC MVP before full spec expansion/hardening, then derivative KIC hackathon Disclosure Lightning for **overseas public filings** MAY reuse verified infrastructure later. No overseas filing code added to BID OWL.
+
+**Committed code:** Real `import_local.py` produces explicit current assessment ID/status/reuse records, and optional `--apply --export-dir ... --report-format xlsx|pdf|both` performs saved-assessment read-only XLSX/PDF after DB commit. Preflights PDF runtime before DB mutation, refuses existing output overwrite; returns `IMPORTED_AND_EXPORTED` on success or honest `IMPORTED_EXPORT_FAILED` with already created report file paths when import was successful but export did not complete. `mvp_smoke.py` now tests genuine CLI one-shot registration/export separately alongside the legacy and API/core tests. Seven new `test_import_local` regression methods covering reuse exact IDs, successful XLSX, partial report failure, report collision/no overwrite, PDF missing font, omitted --apply, second-report error.
+
+**Verification:** Authenticated private GitHub source/test inventory: **263 declared Python tests in 17 modules**; test sources are not equivalent to executed PASS. No current full private checkout test run, Windows native GUI, actual XLSX opening or Korean PDF render. Historical Windows WinError32 18 errors/137 tests have not been rechecked after prior fixes. Subjective all-tier progress ~42% previously; no objective re-scoring. Status is feature-implemented/source-committed but **MVP runtime acceptance pending**. UI visual redesign remains on hold by user order.
+
+**Next P2-27:** actual BASIC import→reports workflow runtime QA/bug fix; no unapproved CI cost/cloud, main/Vercel change or customer files. KIC derivative can reuse only when core correctness proven.
+
+---
+## Previous status
+
 # BID OWL STATUS — P2-25 BASIC MVP real customer-importer path wired, 2026-10-27
 
 **User's development direction:** BASIC MVP **first**. Real flow: CSV -> company profile -> local rule screening -> SQLite -> read-only viewer/detail -> Excel/PDF reports. Once MVP passes, compare with full design, add missing features; security/stability and PRO/PREMIUM later. User has rejected current UI mockups and explicitly deferred aesthetic frontend work.
