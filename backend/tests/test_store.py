@@ -13,6 +13,7 @@ from dataclasses import replace
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
+from bidowl.engine_identity import engine_fingerprint
 from bidowl import Bid, BidOwlStore, CSVImportError, CompanyProfile, Requirement, SchemaVersionError
 
 KST = timezone(timedelta(hours=9))
@@ -167,6 +168,35 @@ class StoreTests(unittest.TestCase):
         self.assertEqual((rules[0]['source_text'],rules[0]['source_locator']),('부산 사업장','가상공고 2쪽'))
         self.assertEqual(entry['checked_at'],T.isoformat())
         self.assertEqual(entry['final_approval_required'],1)
+
+    def test_new_assessment_records_current_policy_fingerprint(self):
+        self.store.import_bids([bid()],source_id='s')
+        self.store.save_profile(CompanyProfile('p',region='부산광역시'))
+        assessment_id, decision = self.store.assess_and_record('s','DEMO-1','p',checked_at=T)
+        stored = self.store.db.execute(
+            'SELECT engine_hash FROM assessment_engine_provenance WHERE assessment_id=?',
+            (assessment_id,),
+        ).fetchone()
+        self.assertEqual(stored['engine_hash'], engine_fingerprint())
+        self.assertEqual(decision.status, 'PASS')
+
+    def test_failed_policy_provenance_insert_rolls_back_parent_assessment(self):
+        self.store.import_bids([bid()],source_id='s')
+        self.store.save_profile(CompanyProfile('p',region='부산광역시'))
+        self.store.db.execute("""
+            CREATE TRIGGER fail_test_policy BEFORE INSERT
+            ON assessment_engine_provenance BEGIN
+                SELECT RAISE(ABORT, 'synthetic policy write failure');
+            END;
+        """)
+        with self.assertRaisesRegex(sqlite3.IntegrityError, "synthetic policy"):
+            self.store.assess_and_record('s','DEMO-1','p',checked_at=T)
+        self.assertEqual(self.store.db.execute(
+            'SELECT COUNT(*) FROM assessments'
+        ).fetchone()[0], 0)
+        self.assertEqual(self.store.db.execute(
+            'SELECT COUNT(*) FROM rule_assessments'
+        ).fetchone()[0], 0)
 
     def test_assessment_expected_profile_version_prevents_stale_batch_write(self):
         self.store.import_bids([bid()], source_id='s')
