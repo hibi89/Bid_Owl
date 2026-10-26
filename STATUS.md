@@ -1,27 +1,24 @@
-# BID OWL STATUS — 2026-10-27 KST (P2-03)
+# BID OWL STATUS — P2-04, 2026-10-27 KST
 
-## Repo/branch and source
-Private https://github.com/hibi89/Bid_Owl. Work branch feature/bid-owl-v1-basic-mvp. At task start feature SHA 148d51eec12002c491e19862b27e364be2c7fd51 and main SHA c888c795bef72734f3f7016e54013b82453f11d8. Main and legacy Vercel untouched. Feature HEAD must be re-read after latest HANDOFF commit. Legacy original restore SHA 2807a93a3e0deba98840712401fdd6025e6f5610.
+## Source of truth, branches and originals
+Private hibi89/Bid_Owl (repo id 1399359397); only feature/bid-owl-v1-basic-mvp changed. Starting feature SHA 2ffc013c7b743961bc48897e793ddf034e62a437. Main was c888c795bef72734f3f7016e54013b82453f11d8 at start; legacy original rollback SHA 2807a93a3e0deba98840712401fdd6025e6f5610. Final feature/main HEAD and hibi89 author must be checked after HANDOFF. Existing legacy Vercel project project08-bid-insight / prj_YcrN7OdOjKl6M457HelGIItLeeXZ untouched. New Python viewer production deployment N/A.
 
-## Code completed/implemented
-P1-01 CSV validation; P1-02 conservative evidentiary PASS/FAIL/UNKNOWN; P1-03 immutable SQLite revisions and backups; P1-04 offline CLI PDF+XLSX. P2-01 SQLite GET viewer, search/filter/detail, seven themes. P2-02 global read-only favorites via bounded same-origin POST; browser localStorage and correct global pagination, no DB schema modification.
+## Implementation progress
+P1-01 CSV strict importer, P1-02 evidence/UNKNOWN conservative screening, P1-03 immutable versioned SQLite and backups, P1-04 PDF/XLSX CLI. P2-01 local read-only SQLite 127.0.0.1 UI and seven themes; P2-02 global favorites before pagination via bounded same-origin read-only POST; P2-03 company profile JSON form/readonly profile API and backup-first explicit CLI edit/reassess.
 
-P2-03 new:
-- backend/profile_workflow.py: validate UTF-8 <=64KiB JSON before DB writes; preview default, --apply and unique backup required, profile version guard, optional explicit create, opt-in reassessment of up to 10,000 locally stored bids, retained historical assessments, PARTIAL_WRITE and backup location on failure. SQLite operations are sequential, not globally atomic.
-- backend/viewer.py: GET /api/profile backed by profile_versions read-only SQLite query, distinct from POST favorites query.
-- backend/ui/index.html, ui.js, ui.css: show/edit selected profile fields locally, distinct unknown vs verified empty list, export JSON in browser; NO browser DB write and no customer external upload; operator must run local profile_workflow.py preview then --apply.
-- backend/tests/test_profile_workflow.py: 8 new source test methods. backend/tests/test_viewer.py: 1 new profile-read-only test. backend/README.md and NEXT_TASK.md updated.
+P2-04 fixes committed:
+- backend/bidowl/store.py: save_profile accepts optional expected_version checked under BEGIN IMMEDIATE for atomic compare-and-set, preventing concurrent stale revision overwrite.
+- backend/profile_workflow.py: ReadOnlyProfileStore SQLite mode=ro + query_only for previews, preflight schema refusal on bad/blank DB, apply preflight + guarded save, retained backup conflict errors. No web write API added; earlier assessment history remains immutable.
+- backend/viewer.py: detail lookup constrains exact bid pair inside SQLite rather than loading all bids and scanning in Python.
+- backend/ui/ui.js: dialog heading ID matches aria-labelledby, Tab focus trap including initial dialog focus, async detail/profile response invalidation on close or replacement, honest status label.
+- backend/tests/test_profile_workflow.py +3 edge regression tests; backend/tests/test_viewer.py +1 direct bid detail lookup test.
+- backend/README.md, NEXT_TASK.md, STATUS.md, HANDOFF.md updated.
 
-## Measured verification and honesty boundary
-Historic P1: 96 PASS /0 FAIL Linux on 2026-10-26; old P2-01 isolated 5 PASS/0 FAIL. After P2-02 and P2-03 expected combined suite count 112 (96 P1 + 8 viewer + 8 workflow), NOT EXECUTED in a full real repository, do not report 112 PASS.
-Actual this session: read verified GitHub files (SHA), GitHub profile_workflow.py git blob SHA a8ac6a204edcbf8afde904391d4f51c53f12876f independently recomputed against locally reconstructed **byte-identical** source; Python AST parse PASS, seven **isolated mock-store smoke cases** PASS/0 FAIL against that exact module. This is **not real BidOwlStore integration**. New actual GitHub ui.js syntax parse with V8 Function PASS; no actual DOM/browser interaction. New repository unittest files committed but not executed.
-Full private repo pull unavailable via this environment (previous DNS/auth clone and signed raw URL failed); real Chromium UI blocked by ERR_BLOCKED_BY_ADMINISTRATOR in previous attempt. Stop repeating unchanged approach. The lack of browser signal is not app failure evidence.
-Windows 11, native Excel, API and customer procurement files, 7-theme visuals, 10k-bid performance, backup restoring with real store, official qualification accuracy, legal/trademark clearance remain UNVERIFIED.
+## Verification truth
+Recent previous P1 full suite 96 PASS on Linux 2026-10-26, never rerun with P2 source. GitHub test inventory on latest branch: **116 declared test methods** = importer21 + eligibility27 + store28 + report20 + viewer9 + profile workflow11. Newly added 4 tests committed; combined 116 **NOT EXECUTED**. Exact current remote ui.js V8 Function syntax parse PASS. Backend Python was inspected statically through connector; no current integrated real SQLite run. Do not claim bug fixed through execution; implementation and test cases committed, await confirmation. Previous P2 mock tests isolated from full source, not proof of entire branch.
+Private raw fetch from this environment previously DNS failed, do not repeat identical. Browser locally blocked by ERR_BLOCKED_BY_ADMINISTRATOR in previous attempts; no Windows/7-theme visual/Excel production evidence. Python local work directory includes earlier partial stand-in, NOT an exact full checkout; do not run it and claim branch tests.
+Report/Bid DB/Backup across filesystem not an atomic unit; profile writes+reassess may partially commit and require manual restoration from backup.
+Security: no customer docs/data/SQLite/keys/font uploads, no external services, no browser POST mutating real DB, no main/production/Vercel changes.
 
-## Current state and next priority
-P1 backend MVP source complete; P2-01/02/03 source complete but UI/real-store integration PARTIAL / verification pending. Next P2-04 actual full 112-test suite + synthetic CSV/CLI/PDF+XLSX -> local API -> favorites -> profile preview/backup/apply/reassess -> read-only UI; inspect CSP Blob download, keyboard/7 themes, crash recovery and Windows. Read NEXT_TASK.md.
-Future P3 PRO official API and local-PC-only updates, P4 opt-in AI, P5 Windows release/security, P6 branding and sales gate.
-Price targets BASIC KRW 59,000, PRO KRW 149,000, PREMIUM KRW 299,000 one-time; not validated sales.
-
-## Production, security, data
-Legacy Vercel project project08-bid-insight id prj_YcrN7OdOjKl6M457HelGIItLeeXZ unchanged; existing Production URL/commit/live UI not checked. New Python local app not deployed (N/A). Read-only viewer only binds 127.0.0.1. CLI modifications require explicit --apply + unique backup; no new HTTP write endpoint, key or paid API. No customer DB/CSV/PDF/credentials/.env/fonts uploaded to GitHub. No main/permission/domain/payment/production change. GitHub connected identity hibi89; verify latest commit author and branch HEAD after HANDOFF.
+## Next priorities
+P2-05 actual full 116-test checkout and synthetic end-to-end flow, repair failures; real Windows 11 Chrome/Edge/Excel/PDF/Blob download/keyboard, 7-theme visuals; 10k records benchmark and missing-profile onboarding/report UI. P3 official API P4 opt-in AI P5 Windows release P6 trademark and public sale remain not yet shipped. Pricing planned BASIC 59k/PRO 149k/PREMIUM 299k KRW not sale-validated; BID OWL trademark clearance pending KIPRIS. See NEXT_TASK.md and HANDOFF.
