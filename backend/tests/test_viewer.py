@@ -354,6 +354,53 @@ class ViewerTests(unittest.TestCase):
             self.assertEqual(len(full_load.call_args.kwargs["candidate_keys"]), 1)
             self.assertFalse(conn.in_transaction)
 
+    def test_status_query_with_empty_favorites_never_loads_assessments(self):
+        from unittest.mock import patch
+        import viewer
+        with closing(open_database(self.path)) as conn:
+            with patch("viewer._latest_rows", wraps=viewer._latest_rows) as page_load:
+                with patch("viewer._status_for_candidate_keys", wraps=viewer._status_for_candidate_keys) as statuses:
+                    result = query_bids(conn, {"status": ["UNKNOWN"]}, favorite_keys=set())
+            self.assertEqual(result["total"], 0)
+            self.assertEqual(result["items"], [])
+            self.assertEqual(result["categories"], ["IT", "교육"])
+            self.assertEqual(statuses.call_count, 1)
+            self.assertEqual(statuses.call_args.args[1], [])
+            self.assertEqual(page_load.call_args.kwargs["candidate_keys"], [])
+            self.assertFalse(conn.in_transaction)
+
+    def test_status_respects_explicit_profile_vs_newest_any_profile(self):
+        with closing(sqlite3.connect(self.path)) as writer:
+            writer.execute("INSERT INTO profiles VALUES (?,?)", ("P2", 1))
+            writer.execute("INSERT INTO profile_versions VALUES (?,?,?)", (
+                "P2", 1, json.dumps({"profile_id": "P2"})
+            ))
+            writer.execute("INSERT INTO assessments VALUES (?,?,?,?,?,?,?,?,?,?)", (
+                300, "TEST", "A", 1, "P2", 1, "FAIL",
+                datetime.now(timezone.utc).isoformat(), 0,
+                datetime.now(timezone.utc).isoformat(),
+            ))
+            writer.execute("INSERT INTO assessment_engine_provenance VALUES (?,?)",
+                           (300, engine_fingerprint()))
+            writer.commit()
+        with closing(open_database(self.path)) as conn:
+            self.assertEqual(query_bids(conn, {"status": ["PASS"]})["total"], 0)
+            latest_fail = query_bids(conn, {"status": ["FAIL"]})
+            self.assertIn("A", [x["bid_no"] for x in latest_fail["items"]])
+            own_pass = query_bids(conn, {"status": ["PASS"], "profile": ["P1"]})
+            self.assertEqual([x["bid_no"] for x in own_pass["items"]], ["A"])
+            own_fail = query_bids(conn, {"status": ["FAIL"], "profile": ["P2"]})
+            self.assertEqual([x["bid_no"] for x in own_fail["items"]], ["A"])
+
+    def test_status_filter_does_not_end_caller_owned_readonly_transaction(self):
+        with closing(open_database(self.path)) as conn:
+            conn.execute("BEGIN")
+            self.assertTrue(conn.in_transaction)
+            self.assertEqual(query_bids(conn, {"status": ["PASS"]})["total"], 1)
+            self.assertTrue(conn.in_transaction)
+            conn.execute("ROLLBACK")
+            self.assertFalse(conn.in_transaction)
+
     def test_empty_page_and_no_favorites_never_request_full_assessment_scan(self):
         from unittest.mock import patch
         import viewer
