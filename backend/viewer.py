@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import json
 import sqlite3
+import tempfile
 from datetime import datetime, timezone
 from contextlib import closing
 from http.server import BaseHTTPRequestHandler, HTTPServer
@@ -172,6 +173,27 @@ def query_profile(conn: sqlite3.Connection, query: dict) -> dict:
     return {"profile": profile, "version": row["latest_version"], "read_only": True}
 
 
+MAX_REPORT_BYTES = 16 * 1024 * 1024
+
+
+def render_saved_xlsx(conn: sqlite3.Connection, assessment_id: int) -> bytes:
+    """Render historical XLSX in a self-cleaning temporary directory, DB read-only.
+
+    No customer-selected filesystem path, output overwrite or HTTP mutation API.
+    """
+    if type(assessment_id) is not int or not 1 <= assessment_id <= 9223372036854775807:
+        raise ValueError("Invalid assessment_id")
+    from bidowl.report import load_review_report, write_xlsx
+    from report_existing import SnapshotReader
+
+    report = load_review_report(SnapshotReader(conn), assessment_id)
+    with tempfile.TemporaryDirectory(prefix="bidowl-export-") as work:
+        file = write_xlsx(report, Path(work) / "historical.xlsx")
+        if file.stat().st_size > MAX_REPORT_BYTES:
+            raise ValueError("Report exceeds maximum browser download size")
+        return file.read_bytes()
+
+
 MAX_FAVORITES = 1000
 MAX_FAVORITES_BODY = 1024 * 1024
 FAVORITE_FILTERS = {"q", "category", "status", "deadline", "profile", "page", "page_size"}
@@ -199,9 +221,11 @@ class ViewerHandler(BaseHTTPRequestHandler):
     db_path: Path
     server_version = "BidOwlLocal/0.2"
 
-    def _respond(self, status: int, content: bytes, content_type: str) -> None:
+    def _respond(self, status: int, content: bytes, content_type: str, *, download_name: str | None = None) -> None:
         self.send_response(status)
         self.send_header("Content-Type", content_type)
+        if download_name is not None:
+            self.send_header("Content-Disposition", f'attachment; filename="{download_name}"')
         for key, value in SECURITY.items():
             self.send_header(key, value)
         self.send_header("Content-Length", str(len(content)))
@@ -232,11 +256,26 @@ class ViewerHandler(BaseHTTPRequestHandler):
             except OSError:
                 self._json(500, {"error": "Missing bundled UI asset"})
             return
-        if parsed.path not in ("/api/bids", "/api/detail", "/api/profiles", "/api/profile"):
+        if parsed.path not in ("/api/bids", "/api/detail", "/api/profiles", "/api/profile", "/api/report"):
             self._json(404, {"error": "Not found"})
             return
         try:
             query = parse_qs(parsed.query, keep_blank_values=True, max_num_fields=12, strict_parsing=False)
+            if parsed.path == "/api/report":
+                if set(query) != {"assessment_id"}:
+                    raise ValueError("Only assessment_id is supported for XLSX download")
+                identifier = _arg(query, "assessment_id")
+                if not identifier.isascii() or not identifier.isdecimal() or len(identifier) > 19:
+                    raise ValueError("Invalid assessment_id")
+                assessment_id = int(identifier)
+                if not 1 <= assessment_id <= 9223372036854775807:
+                    raise ValueError("Invalid assessment_id")
+                with closing(open_database(self.db_path)) as conn:
+                    content = render_saved_xlsx(conn, assessment_id)
+                self._respond(200, content,
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    download_name=f"bidowl_review_{assessment_id:08d}.xlsx")
+                return
             with closing(open_database(self.db_path)) as conn:
                 if parsed.path == "/api/bids":
                     payload = query_bids(conn, query)
@@ -247,8 +286,8 @@ class ViewerHandler(BaseHTTPRequestHandler):
                 else:
                     payload = query_profiles(conn)
             self._json(200, payload)
-        except (ValueError, LookupError) as exc:
-            self._json(404 if isinstance(exc, LookupError) else 400, {"error": str(exc)})
+        except (ValueError, LookupError, KeyError) as exc:
+            self._json(404 if isinstance(exc, (LookupError, KeyError)) else 400, {"error": str(exc)})
         except (sqlite3.Error, OSError, json.JSONDecodeError):
             self._json(500, {"error": "Local database cannot be read"})
 
