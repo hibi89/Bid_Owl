@@ -1,3 +1,14 @@
+# BID OWL STATUS — P2-22 backend PASS/FAIL/UNKNOWN fast filtering (2026-10-27 KST)
+
+**Implemented in private feature branch:** `backend/viewer.py` status filters now share metadata-first paging. Keyword/casefold/category/deadline/favorites filter the metadata before fetching lightweight newest assessment/currentness rows in bounded SQL batches of 200 bids. Policy fingerprint, company version, bid revision and missing evidence conservatively determine PASS/FAIL/UNKNOWN. Only page-selected <=100 bids fetch full assessment + provenance data. Single readonly DB transaction and UTC expiration cutoff maintain consistent page results. No frontend aesthetic/JS/CSS changes, database writes, customer uploads or main/Vercel edits.
+
+**Tests/measurements:** 7 new viewer test methods, including 425-row multi-batch synthetic, explicit profile selection, old DB lacking engine hash, misdated/stale bid evidence, favorite status, empty favorites, caller-owned transactions. Previous 17-case exact legacy parity test now applies to status fast route. Opt-in `benchmark_local.py --compare-full-scan` additionally measures and asserts PASS/UNKNOWN fast-vs-old pages on same temporary dataset. Total **245 Python test method definitions across 16 files** per GitHub remote inventory. NOT 245 executed PASS. Standalone python sqlite3 test on synthetic 10k status rows (50 batches) yielded exactly 10,000 expected statuses; this is a SQL contract, NOT full private BID OWL app benchmark/Windows timing. No full branch Python 245-run or target native Windows pass. Historical old Windows suite 137 ran with 18 file-lock errors, no verified rerun.
+
+**Next P2-23:** pursue actual complete source backend QA and measurable 10k app performance or indexed retrieval optimization; keep UI visuals on hold. Prior all-tier subjective ~42% estimate not objectively re-scored. BASIC still not commercially validated; installer, fonts/Excel/PDF, end-to-end real company registration, genuine performance, PRO/PREMIUM remain pending. User requests autonomous GitHub work without repeated local manual QA.
+
+---
+## Prior STATUS
+
 # BID OWL STATUS — P2-21 faster metadata-first local viewer (2026-10-27 KST)
 
 User directive: front-end visual design deferred; BACKEND ONLY.
