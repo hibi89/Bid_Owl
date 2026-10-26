@@ -1,7 +1,7 @@
 'use strict';
 // No external resources and no HTML interpolation of user-supplied bid content.
 const $ = (id) => document.getElementById(id);
-const state = {page: 1, pages: 1, seq: 0, focus: null, items: [], favorites: new Set()};
+const state = {page: 1, pages: 1, seq: 0, drawerSeq: 0, focus: null, items: [], favorites: new Set()};
 const themes = new Set(['cloud','obsidian','midnight','graphite','emerald','sand','iris']);
 const key = (bid) => JSON.stringify([bid.source_id, bid.bid_no]);
 const money = (n) => Number.isSafeInteger(n) ? n.toLocaleString('ko-KR') : '정보 없음';
@@ -61,18 +61,19 @@ async function loadBids(){
   }catch(err){if(seq!==state.seq)return;note('조회 오류: '+err.message,true);$('results').replaceChildren();$('count').textContent='오류';}
 }
 function definition(container,label,value){container.append(node('dt','',label),node('dd','',value===null||value===undefined?'정보 없음':String(value)));}
-async function openDetail(item,button){state.focus=button;$('drawer').hidden=false;$('overlay').hidden=false;document.body.classList.add('drawer-open');$('detail-content').replaceChildren(node('p','','근거를 조회하고 있습니다.'));$('drawer').focus();
+async function openDetail(item,button){const token=++state.drawerSeq;state.focus=button;$('drawer').hidden=false;$('overlay').hidden=false;document.body.classList.add('drawer-open');$('detail-content').replaceChildren(node('p','','근거를 조회하고 있습니다.'));$('drawer').focus();
   try{const query=new URLSearchParams({source_id:item.source_id,bid_no:item.bid_no,profile:$('profile').value});const data=await request('/api/detail?'+query.toString());
-    const host=$('detail-content');host.replaceChildren();host.append(node('h2','',data.bid.title));const dl=node('dl');
+    if(token!==state.drawerSeq||$('drawer').hidden)return;
+    const host=$('detail-content');host.replaceChildren();const heading=node('h2','',data.bid.title);heading.id='detail-title';host.append(heading);const dl=node('dl');
     for(const [label,val] of [['공고번호',data.bid.bid_no],['기관',data.bid.agency],['분야',data.bid.category],['예산',money(data.bid.budget)+' 원'],['마감',date(data.bid.deadline)],['데이터 기준',date(data.bid.data_as_of)],['평가 시점',date(data.bid.checked_at)],['선택된 회사',data.bid.profile_id],['공고 원문 정보',data.bid.source_ref],['저장본 버전',data.bid.bid_version]])definition(dl,label,val);host.append(dl);
-    const statusline=node('div','');statusline.append(badge(data.bid.status));statusline.append(node('span','subline','  · 최신 평가 기준 표시'));host.append(statusline);
+    const statusline=node('div','');statusline.append(badge(data.bid.status));statusline.append(node('span','subline','  · 저장본 판정 / 버전 일치 여부 확인'));host.append(statusline);
     if(!data.evidence_is_current)host.append(node('p','warn',data.bid.review_reason+' · 과거 평가를 PASS로 간주하지 않습니다.'));
     host.append(node('h3','','조건별 판정 근거'));
     if(!data.rules.length)host.append(node('p','','저장된 세부 평가가 없습니다. CLI에서 해당 공고·프로필을 평가해야 합니다.'));
     for(const rule of data.rules){const box=node('section','rule');const heading=node('div');heading.append(badge(rule.status),node('strong','', '  '+rule.rule_id+' · '+rule.kind));box.append(heading,node('p','',rule.explanation),node('div','subline',rule.reason_code));
       if(rule.source_text)box.append(node('div','source',rule.source_text));if(rule.source_locator)box.append(node('div','subline','출처 위치: '+rule.source_locator));host.append(box);}
     host.append(node('p','disclaimer',data.notice));
-  }catch(err){$('detail-content').replaceChildren(node('p','warn','근거 조회 오류: '+err.message));}
+  }catch(err){if(token===state.drawerSeq&&!$('drawer').hidden)$('detail-content').replaceChildren(node('p','warn','근거 조회 오류: '+err.message));}
 }
 
 function field(form,label,value,type='text'){
@@ -108,14 +109,16 @@ function profileNumber(input,name){
   return parsed;
 }
 async function openProfileEditor(button){
+  const token=++state.drawerSeq;
   const id=$('profile').value;
   if(!id){note('먼저 편집할 회사 프로필을 선택하세요.',true);$('profile').focus();return;}
   state.focus=button;$('drawer').hidden=false;$('overlay').hidden=false;document.body.classList.add('drawer-open');
   $('detail-content').replaceChildren(node('p','','저장된 회사 프로필을 읽고 있습니다.'));$('drawer').focus();
   try{
     const data=await request('/api/profile?'+new URLSearchParams({profile_id:id}).toString());
+    if(token!==state.drawerSeq||$('drawer').hidden)return;
     const p=data.profile,host=$('detail-content');host.replaceChildren();
-    host.append(node('h2','','회사 프로필 편집 파일'));
+    const heading=node('h2','','회사 프로필 편집 파일');heading.id='detail-title';host.append(heading);
     host.append(node('p','warn','이 화면에서는 SQLite를 직접 수정하지 않습니다. JSON을 내려받은 뒤 로컬 명령으로 변경을 적용해야 합니다. 먼저 미리보기 결과를 확인하세요.'));
     const form=node('form','profile-form');const pid=node('p','', '프로필 ID: '+p.profile_id+' · 현재 버전 '+data.version);form.append(pid);
     const region=field(form,'사업장 소재지',p.region);
@@ -149,10 +152,10 @@ async function openProfileEditor(button){
     host.append(node('p','','① 먼저 미리보기 (DB 수정 없음)'),node('pre','command',command),
       node('p','','② 결과 확인 후 명시적으로 적용 (백업 필수)'),node('pre','command',apply),
       node('p','disclaimer','파일은 PC에만 저장됩니다. 명령의 DB_PATH/다운로드 경로/새 백업 경로를 실제 경로로 바꿔 실행하세요. 오류나 도중 중단 시 백업을 보존하세요.'));
-  }catch(err){$('detail-content').replaceChildren(node('p','warn','프로필 조회 실패: '+err.message));}
+  }catch(err){if(token===state.drawerSeq&&!$('drawer').hidden)$('detail-content').replaceChildren(node('p','warn','프로필 조회 실패: '+err.message));}
 }
 
-function closeDetail(){$('drawer').hidden=true;$('overlay').hidden=true;document.body.classList.remove('drawer-open');if(state.focus?.isConnected)state.focus.focus();}
+function closeDetail(){++state.drawerSeq;$('drawer').hidden=true;$('overlay').hidden=true;document.body.classList.remove('drawer-open');if(state.focus?.isConnected)state.focus.focus();}
 async function loadProfiles(){try{const data=await request('/api/profiles');for(const p of data.profiles)$('profile').add(new Option(p.profile_id+' (v'+p.version+')',p.profile_id));}catch{note('회사 프로필 목록 조회 실패',true);}}
 let delay;
 for(const id of ['category','status','deadline','profile','only-favorites'])$(id).addEventListener('change',()=>{state.page=1;loadBids();});
@@ -162,5 +165,16 @@ $('next').addEventListener('click',()=>{if(state.page<state.pages){state.page++;
 $('theme').addEventListener('change',()=>{const val=$('theme').value;if(themes.has(val)){document.body.dataset.theme=val;try{localStorage.setItem('bidowl-theme',val);}catch{}}});
 $('edit-profile').addEventListener('click',()=>openProfileEditor($('edit-profile')));
 $('close').addEventListener('click',closeDetail);$('overlay').addEventListener('click',closeDetail);
-document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('drawer').hidden)closeDetail();if(e.key==='Tab'&&!$('drawer').hidden){const x=$('drawer').querySelectorAll('button:not([disabled]),a[href],input,select');if(!x.length)return;const first=x[0],last=x[x.length-1];if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}}});
+document.addEventListener('keydown',e=>{
+  if($('drawer').hidden)return;
+  if(e.key==='Escape'){e.preventDefault();closeDetail();return;}
+  if(e.key!=='Tab')return;
+  const controls=[...$('drawer').querySelectorAll('button:not([disabled]),a[href],input:not([disabled]),select:not([disabled])')].filter(el=>el.getClientRects().length);
+  if(!controls.length){e.preventDefault();$('drawer').focus();return;}
+  const first=controls[0],last=controls[controls.length-1];
+  if(document.activeElement===$('drawer')||!$('drawer').contains(document.activeElement)){
+    e.preventDefault();(e.shiftKey?last:first).focus();
+  }else if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}
+  else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}
+});
 loadPreferences();loadProfiles().then(loadBids);
