@@ -1,3 +1,21 @@
+# BID OWL NEXT — P2-16 engine fingerprint auto-invalidation complete in source (2026-10-27 KST)
+
+**Next ㄱ => P2-17 autonomous.** User explicitly does NOT want repeated ZIP downloads and manual PowerShell tests. Work directly in connected private GitHub `hibi89/Bid_Owl` feature/bid-owl-v1-basic-mvp, preserve main + legacy Vercel, no paid runner/customer data/API keys. Read START_HERE/HANDOFF/STATUS/AGENTS/REQUIREMENTS first and verify latest feature/main heads.
+
+P2-16 code:
+- `backend/bidowl/engine_identity.py`: deterministic SHA-256 fingerprint over local eligibility.py, schema.py, profile.py, store.py (source behavior and storage logic). Missing policy source fails closed for new writes; viewer displays UNKNOWN.
+- `backend/bidowl/store.py`: fresh v1 DB gets additive `assessment_engine_provenance(assessment_id,engine_hash)` without changing PRAGMA user_version=1; new assessment and corresponding fingerprint recorded in SAME SQLite write transaction, rollback on provenance insert failure. Legacy v1 DB opening never silently creates provenance.
+- `backend/import_local.py`: existing v1 DB gets provenance table only AFTER consistent non-overwriting SQLite backup; snapshots without hash or with different hash are NOT reused. Automatic re-assessment, plus P2-15 bid/profile version and deadline tests still apply, CLI `--force-reassess` remains available as optional override. New stored current hashes only, never retroactively label old PASS as current.
+- `backend/profile_workflow.py`: company profile `--apply` upgrades legacy provenance metadata only AFTER mandatory backup and records hashes on new reassessments. Legacy CLI paths without upgrade retain unproven snapshots.
+- `backend/viewer.py`: readonly SQL shows historical `snapshot_status` but current `status=UNKNOWN`, `requires_human_review=true` on old/missing/stale engine hash. No database mutation from browser, source files absent => UNKNOWN, not PASS.
+- Tests: +11 declarations: test_engine_identity.py 3, test_import_local.py +2, test_viewer.py +3, test_store.py +2, test_profile_workflow.py +1. GitHub live source inventory = **189 test methods / 14 modules**, NOT 189 PASS. Isolated SQLite grammar for viewer legacy v1, viewer provenance join, reuse query **3/3 PASSED** using in-memory synthetic DB; does NOT execute whole project. Full private repo Python suite and native Windows acceptance still not run by assistant. Prior real Windows 137-test run had 18 WinError32 errors before P2-11 remediation; no measured confirmation since.
+- Docs: backend/ENGINE_POLICY.md and backend/IMPORT.md explain fail-closed behavior, additive migration and packaging/source resource limitation. No payment or sensitive data involved.
+
+P2-17 next: (1) review legacy `cli.py` writer and optional schema-provenance upgrade after secure backup so all application entrypoints can emit fresh engine hashes, or improve BASIC guided report export/backup-restore, (2) prove native Windows 189-suite+loopback/UI+Excel/PDF, (3) packaging source resources for fingerprint (PyInstaller/EXE source files missing must fail-closed, do not claim packaged). Actual tested speed and sale-readiness still open. Previously re-estimated overall subjective approx **40%**; do not arbitrarily increase without milestone evidence.
+
+---
+## Prior task history
+
 # BID OWL NEXT — P2-15 implemented; P2-16 autonomous (2026-10-27 KST)
 
 Resume rule: user `ㄱ` = continue most important feasible source task on `feature/bid-owl-v1-basic-mvp`, no routine request to download ZIP or rerun tests on their PC. Auth GitHub heads, HANDOFF.md, STATUS.md, AGENTS.md, REQUIREMENTS.md, START_HERE.md and this file must be read first. Main and legacy Vercel protected; no public service, private customer data upload, paid runner, customer API/AI keys without approval.
