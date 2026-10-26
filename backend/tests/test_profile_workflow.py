@@ -1,0 +1,125 @@
+"""Synthetic-only profile workflow tests: versioning, preflight, backup, restore."""
+from __future__ import annotations
+
+import json
+import sqlite3
+import tempfile
+import unittest
+from pathlib import Path
+from unittest.mock import patch
+from datetime import datetime, timedelta, timezone
+
+from bidowl import Bid, BidOwlStore, CompanyProfile, Requirement
+from profile_workflow import execute, load_profile_file, main
+
+
+class ProfileWorkflowTests(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.root = Path(self.tmp.name)
+        self.db = self.root / "sample.sqlite3"
+        self.profile_file = self.root / "profile.json"
+        deadline = datetime.now(timezone.utc) + timedelta(days=7)
+        bid = Bid(bid_no="S1", title="합성 공고", agency="가상 발주처", category="IT",
+                  bid_deadline=deadline, budget=3000,
+                  requirements=(Requirement(id="region", kind="region_any", value=["부산"],
+                                source_text="부산 소재", source_locator="테스트 원문"),),
+                  source_ref="SYNTHETIC", data_as_of=datetime.now(timezone.utc), input_line=2)
+        with BidOwlStore(self.db) as store:
+            store.import_bids([bid], source_id="synthetic")
+            store.save_profile(CompanyProfile("company", region="부산"))
+            self.old_id, self.old = store.assess_and_record("synthetic", "S1", "company")
+        self.write_profile(region="서울")
+
+    def write_profile(self, *, region="서울", profile_id="company"):
+        self.profile_file.write_text(json.dumps({"profile_id":profile_id, "region":region}, ensure_ascii=False), encoding="utf-8")
+
+    def run_flow(self, **kwargs):
+        return execute(db_path=self.db, profile_path=self.profile_file, expected_version=1, **kwargs)
+
+    def test_preview_never_changes_file_or_reassesses(self):
+        before = self.db.read_bytes()
+        result = self.run_flow(reassess=True)
+        self.assertEqual(result["status"], "PREVIEW")
+        self.assertEqual((result["previous_version"],result["planned_version"]), (1,2))
+        self.assertEqual(result["reassess_count"], 1)
+        self.assertEqual(before, self.db.read_bytes())
+        with BidOwlStore(self.db) as store:
+            self.assertEqual(store.get_profile("company").region,"부산")
+            self.assertEqual(store.db.execute("SELECT count(*) FROM assessments").fetchone()[0],1)
+
+    def test_apply_requires_backup_and_creates_version_with_history(self):
+        with self.assertRaises(ValueError):
+            self.run_flow(apply=True)
+        backup=self.root/"safe-backup.sqlite3"
+        result=self.run_flow(apply=True,backup_path=backup,reassess=True)
+        self.assertEqual((result["status"],result["planned_version"],result["assessments_saved"]),("APPLIED",2,1))
+        self.assertTrue(backup.exists())
+        with BidOwlStore(self.db) as store:
+            self.assertEqual(store.get_profile("company").region,"서울")
+            self.assertEqual(store.get_profile("company",1).region,"부산")
+            self.assertEqual(store.assessment(self.old_id)[0]["status"],"PASS")
+            latest=store.db.execute("SELECT id FROM assessments ORDER BY id DESC LIMIT 1").fetchone()[0]
+            self.assertEqual(store.assessment(latest)[0]["profile_version"],2)
+            self.assertEqual(store.assessment(latest)[0]["status"],"FAIL")
+        with BidOwlStore(backup) as restored:
+            self.assertEqual(restored.get_profile("company").region,"부산")
+            self.assertEqual(restored.db.execute("SELECT count(*) FROM assessments").fetchone()[0],1)
+
+    def test_version_conflict_never_writes_or_backs_up(self):
+        backup=self.root/"dont-create.sqlite3"
+        with self.assertRaisesRegex(ValueError,"version mismatch"):
+            execute(db_path=self.db,profile_path=self.profile_file,expected_version=99,
+                    apply=True,backup_path=backup)
+        self.assertFalse(backup.exists())
+
+    def test_backup_overwrite_refused_with_original_unchanged(self):
+        backup=self.root/"existing.sqlite3"
+        backup.write_bytes(b"NEVER OVERWRITE")
+        with self.assertRaises(FileExistsError):
+            self.run_flow(apply=True,backup_path=backup)
+        self.assertEqual(backup.read_bytes(), b"NEVER OVERWRITE")
+        with BidOwlStore(self.db) as store:
+            self.assertEqual(store.get_profile("company").region,"부산")
+
+    def test_invalid_profile_rejected_before_any_db_edit(self):
+        backup=self.root/"never.sqlite3"
+        self.profile_file.write_text('{"profile_id":"company","region":""}', encoding="utf-8")
+        with self.assertRaises(ValueError):
+            self.run_flow(apply=True,backup_path=backup)
+        self.assertFalse(backup.exists())
+        self.profile_file.write_bytes(b"x"*65537)
+        with self.assertRaisesRegex(ValueError,"64 KiB"):
+            load_profile_file(self.profile_file)
+
+    def test_create_requires_explicit_flag(self):
+        self.write_profile(region="부산",profile_id="newco")
+        with self.assertRaisesRegex(ValueError,"--create"):
+            self.run_flow()
+        backup=self.root/"create-backup.sqlite3"
+        result=execute(db_path=self.db,profile_path=self.profile_file,expected_version=0,
+                       create=True,apply=True,backup_path=backup)
+        self.assertEqual((result["status"],result["planned_version"]),("APPLIED",1))
+        with BidOwlStore(self.db) as store:
+            self.assertEqual(store.get_profile("newco").region,"부산")
+
+    def test_safe_limit_validation(self):
+        with self.assertRaises(ValueError):
+            self.run_flow(max_reassess=0)
+        with self.assertRaises(ValueError):
+            self.run_flow(max_reassess=10001)
+
+    def test_partial_failure_reports_backup_and_preserves_old_snapshot(self):
+        backup=self.root/"partial.sqlite3"
+        with patch.object(BidOwlStore,"assess_and_record", side_effect=RuntimeError("synthetic failure")):
+            with self.assertRaisesRegex(RuntimeError,"PARTIAL_WRITE"):
+                self.run_flow(apply=True,backup_path=backup,reassess=True)
+        self.assertTrue(backup.exists())
+        with BidOwlStore(backup) as store:
+            self.assertEqual(store.get_profile("company").region,"부산")
+            self.assertEqual(store.assessment(self.old_id)[0]["status"],"PASS")
+
+
+if __name__ == "__main__":
+    unittest.main()
