@@ -61,7 +61,12 @@ def _latest_rows(conn: sqlite3.Connection, profile_id: str = "", only_key: tuple
         "SELECT 1 FROM sqlite_master WHERE type='table' "
         "AND name='assessment_engine_provenance'"
     ).fetchone())
-    engine_hash = engine_fingerprint()
+    try:
+        engine_hash = engine_fingerprint()
+    except OSError:
+        # A mispackaged or missing policy resource must NOT cause an old
+        # PASS to appear valid. Keep the read-only UI available as UNKNOWN.
+        engine_hash = None
     policy_column = "ep.engine_hash" if has_provenance else "NULL AS engine_hash"
     policy_join = (
         "LEFT JOIN assessment_engine_provenance ep ON ep.assessment_id=a.id"
