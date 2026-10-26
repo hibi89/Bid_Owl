@@ -66,6 +66,54 @@ class BackupRecoveryTests(unittest.TestCase):
             )}
             self.assertEqual(hashes, {engine_fingerprint()})
 
+    def test_evidence_digest_is_identical_after_complete_restore(self):
+        plan = prepare_recovery(self.backup, self.recovered)
+        self.assertEqual(len(plan.evidence_sha256), 64)
+        before = preview_summary(plan)
+        self.assertEqual(before["evidence_sha256"], plan.evidence_sha256)
+        result = restore_to_new_file(plan)
+        self.assertEqual(result["evidence_sha256"], plan.evidence_sha256)
+        # A new source preview over the restored file must hash the same rows.
+        second = prepare_recovery(self.recovered, self.root / "third.sqlite3")
+        self.assertEqual(second.evidence_sha256, plan.evidence_sha256)
+
+    def test_same_count_mutated_restored_record_is_detected_and_removed(self):
+        plan = prepare_recovery(self.backup, self.recovered)
+        from backup_recovery import _source_snapshot as original_snapshot
+
+        def mutate_restored(path):
+            if path == self.recovered:
+                with contextlib.closing(sqlite3.connect(path)) as writer:
+                    writer.execute("UPDATE profiles SET latest_version=99")
+                    writer.commit()
+            return original_snapshot(path)
+
+        with patch("backup_recovery._source_snapshot", side_effect=mutate_restored):
+            with self.assertRaisesRegex(ValueError, "evidence content differs"):
+                restore_to_new_file(plan)
+        self.assertFalse(self.recovered.exists())
+        self.assertTrue(self.backup.exists())
+
+    def test_same_count_changed_source_blocks_preview_apply(self):
+        plan = prepare_recovery(self.backup, self.recovered)
+        with contextlib.closing(sqlite3.connect(self.backup)) as writer:
+            writer.execute("UPDATE profiles SET latest_version=99")
+            writer.commit()
+        self.assertEqual(
+            preview_summary(prepare_recovery(self.backup, self.recovered))["record_counts"],
+            preview_summary(plan)["record_counts"],
+        )
+        with self.assertRaisesRegex(ValueError, "changed since preview"):
+            restore_to_new_file(plan)
+        self.assertFalse(self.recovered.exists())
+
+    def test_backup_shm_sidecar_is_rejected_before_destination_created(self):
+        sidecar = Path(str(self.backup) + "-shm")
+        sidecar.write_bytes(b"synthetic shared memory")
+        with self.assertRaisesRegex(ValueError, "WAL/journal"):
+            prepare_recovery(self.backup, self.recovered)
+        self.assertFalse(self.recovered.exists())
+
     def test_destination_already_exists_never_overwritten(self):
         self.recovered.parent.mkdir(parents=True)
         self.recovered.write_bytes(b"DO_NOT_OVERWRITE")
