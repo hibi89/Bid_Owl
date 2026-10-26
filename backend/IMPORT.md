@@ -1,0 +1,45 @@
+# BID OWL P2-14 — 실제 CSV + 회사 정보 로컬 등록
+
+이 문서는 상용 사용자 DB용 **등록 작업**입니다. 가상 공고만 사용하는 `DEMO.md`와 별도이며, 실제 사용자 파일을 GitHub·외부 서버·모델 API로 전송하지 않습니다. Python 3.11 이상의 Windows 로컬 PC용으로 설계했으며 이 단계는 개발판으로, 실제 Windows 11 화면과 전체 회귀 테스트 통과는 아직 미확인입니다.
+
+## 원클릭 등록 GUI
+
+GitHub 개발 브랜치 압축을 푼 뒤 저장소 최상위의 **`START_BID_OWL_IMPORT.cmd`**를 더블클릭합니다. `backend/START_IMPORT.cmd`도 동일합니다. Python 기본 설치에 Tkinter GUI 구성요소가 필요합니다. 공공기관 API, PDF 글꼴, ReportLab 및 구독 서비스는 필요하지 않습니다.
+
+1. 로컬 CSV 선택. 사용자가 직접 준비한 **실제 공고 CSV**만 사용합니다. 샘플 `fixtures/sample_bids.csv`의 `DEMO_ONLY` 공고를 실제 DB에 등록하는 것은 차단됩니다.
+2. 출처 ID 지정. 예: `LOCAL-2026-OCT`. 공고번호는 출처 ID와 함께 식별하므로 같은 출처의 재가져오기는 중복 행 대신 버전 비교합니다.
+3. 회사 프로필 ID, 소재지, 업종, 면허, 직원 수, 실적 금액 기입. 등록하기 전에 만들어둔 JSON 프로필은 **기존 회사 JSON 불러오기** 버튼으로 입력 폼에 채울 수 있습니다.
+4. **검증 후 백업·가져오기**를 누르면 먼저 CSV 전체를 읽고 데이터 스키마·회사 정보·기존 DB/프로필을 **읽기 전용으로** 검사합니다. 이때 DB에 기록하지 않습니다.
+5. 공고 개수, 출처 ID, 회사 ID, 로컬 DB 위치, 기존 DB의 백업 여부를 확인한 후 확인 창에서 **명시적으로 승인**해야 저장합니다. 기존 DB는 첫 수정 전에 `.../BID_OWL/backups/<db>_<UTC>_<random>.sqlite3`에 **덮어쓰지 않는 SQLite 일관 백업**을 만듭니다. 신규 DB에는 이전 데이터가 없으므로 백업이 없습니다.
+6. 로컬 규칙 판정 결과 PASS/FAIL/UNKNOWN 수를 보여줍니다. 원하는 경우 기존 읽기 전용 `127.0.0.1` 공고 조회 화면을 실행합니다. 브라우저를 열었다면 해당 PowerShell/명령 창의 Ctrl+C로 종료할 수 있습니다.
+
+회사 정보에서 **빈칸은 정보 없음(unknown)**으로 저장하며, 임의로 0건/면허 없음/자격충족으로 처리하지 않습니다. 이미 저장된 **동일 프로필 ID에 다른 내용**이 입력되면 가져오기를 중단하고 `profile_workflow.py`의 버전 확인·백업 필수 편집 절차를 사용하도록 안내합니다. 기존 회사 프로필을 묵시적으로 갱신하지 않습니다.
+
+## 자동화·QA용 CLI — 기본은 저장하지 않는 미리보기
+
+```powershell
+cd backend
+
+python import_local.py --csv "C:\data\bids.csv" --profile "C:\data\company.json" --source-id LOCAL-OCT --db "C:\data\bidowl.sqlite3"
+
+# 사전 검토 후 저장하기로 결정했을 때만
+python import_local.py --csv "C:\data\bids.csv" --profile "C:\data\company.json" --source-id LOCAL-OCT --db "C:\data\bidowl.sqlite3" --apply
+```
+
+`--db`를 빼면 운영체제 로컬 애플리케이션 폴더 아래의 BID OWL 기본 DB를 사용합니다. CLI에서 `--apply`를 생략하면 `PREVIEW_NO_WRITE` JSON만 출력하며 DB를 만들지 않습니다. 프로필 JSON은 기존 `profile_workflow.load_profile_file`로 검증하고, GUI 작성 프로필도 동일한 300자 필드/목록 제한을 적용합니다.
+
+CSV 입력 계약(UTF-8/UTF-8-SIG, 최대 10 MiB·10,000행):
+`bid_no,title,agency,category,bid_deadline,budget,requirements` 필수,
+`source_ref,data_as_of` 선택. 날짜·금액·출처·규칙의 구체 형식은 [README.md](README.md)의 입력 계약을 참고하세요. 입력 전체가 검증되지 않으면 저장하지 않습니다. 데모용 회사 `SYNTHETIC-` 프로필, `DEMO-` 공고, `DEMO_ONLY` 출처 및 전용 `BIDOWL_SYNTHETIC_DEMO` 출처 ID를 사용자 DB에 등록하지 않습니다.
+
+## 백업·실패·보안 제한
+
+- **기존 DB 수정 전 백업** 및 프로필 버전 조건부 저장을 지원합니다. 백업 파일을 자동 덮어쓰거나 자동 복구하지 않습니다. 손상 또는 중단 시 원본과 백업을 확인한 후 수동 복원하세요.
+- 공고 가져오기·회사 프로필 저장·각 공고 평가가 각각 DB 트랜잭션을 사용합니다. **전체 등록은 단일 원자 트랜잭션이 아닙니다**. 중간 실패 시 `IMPORT_PARTIAL_OR_UNCERTAIN` 오류와 백업 정보를 반환합니다. 신규 DB에는 이전 백업이 없으므로 아직 완료되지 않은 DB가 남을 수 있습니다.
+- 미리보기 후 CSV 변경을 SHA-256으로 재검사하고, 기존 DB/프로필 변경도 읽기 전용으로 다시 점검합니다. 동시 외부 쓰기까지 완전하게 격리하는 교차 프로세스 락을 제공하지는 않습니다.
+- GUI는 운영체제 파일 선택·입력 창(Tkinter)을 쓰며 브라우저에 DB 쓰기 엔드포인트를 추가하지 않습니다. 완료 후 공고 뷰어는 오직 `127.0.0.1`에 바인딩되고 SQLite는 읽기 전용으로 엽니다.
+- 이 단계는 CSV 전체 가져오기 및 검토 스냅샷 생성에 집중합니다. 기존 PDF/XLSX는 별도 기존 명령 및 읽기 전용 보고서 기능을 사용합니다. Windows 설치 파일·Excel 원본 출력·실제 대량 조회 성능·면허 법률 판정 정확도는 검증 완료로 주장하지 않습니다.
+
+## 검증 상태
+
+`tests/test_import_local.py`에 미리보기 무변경, 신규 저장, 기존 DB 백업과 재등록, 불일치 프로필 차단, 잘못된 CSV/데모/기존 타사 DB 차단, 파일 변경 경쟁, 프로필 변경, 중단 시 백업 보존, 미확인 입력, CLI 미리보기/명시적 적용, 실행기 경로 등 **17개 테스트 정의**를 추가했습니다. 이 문서와 GitHub 커밋만으로 실제 Windows/Python 17개 PASS 또는 전체 테스트 PASS가 입증되는 것은 아닙니다.
