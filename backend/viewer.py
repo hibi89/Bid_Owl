@@ -1,0 +1,246 @@
+"""BID OWL P2 read-only local SQLite browser (no remote server, no write API)."""
+from __future__ import annotations
+
+import argparse
+import json
+import sqlite3
+from datetime import datetime, timezone
+from contextlib import closing
+from http.server import BaseHTTPRequestHandler, HTTPServer
+from pathlib import Path
+from urllib.parse import parse_qs, urlsplit
+
+from bidowl.store import default_database_path
+
+UI = Path(__file__).resolve().parent / "ui"
+ALLOWED_FILES = {"/": ("index.html", "text/html; charset=utf-8"),
+                 "/ui.css": ("ui.css", "text/css; charset=utf-8"),
+                 "/ui.js": ("ui.js", "text/javascript; charset=utf-8")}
+SECURITY = {"Cache-Control": "no-store", "X-Content-Type-Options": "nosniff",
+            "X-Frame-Options": "DENY", "Referrer-Policy": "no-referrer",
+            "Cross-Origin-Resource-Policy": "same-origin",
+            "Content-Security-Policy": "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"}
+
+
+def open_database(path: Path) -> sqlite3.Connection:
+    """SQLite URI mode=ro forbids mutations even from a future accidental SQL statement."""
+    if not path.is_file():
+        raise FileNotFoundError("SQLite file does not exist. Run cli.py to import CSV first.")
+    conn = sqlite3.connect(path.resolve().as_uri() + "?mode=ro", uri=True, timeout=5)
+    conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA query_only=ON")
+    try:
+        if conn.execute("PRAGMA user_version").fetchone()[0] != 1:
+            raise ValueError("Unsupported SQLite schema version; expected BID OWL v1")
+        required = {"bids", "bid_versions", "assessments", "rule_assessments", "profiles"}
+        tables = {row[0] for row in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+        if not required <= tables:
+            raise ValueError("Not a complete BID OWL database")
+    except BaseException:
+        conn.close()
+        raise
+    return conn
+
+
+def _timestamp(text: str | None) -> datetime | None:
+    if not text:
+        return None
+    try:
+        result = datetime.fromisoformat(text.replace("Z", "+00:00"))
+        return result if result.utcoffset() is not None else None
+    except (TypeError, ValueError):
+        return None
+
+
+def _latest_rows(conn: sqlite3.Connection, profile_id: str = "") -> list[dict]:
+    # All selected user fields are parameter bound. Read-only connection is mandatory.
+    rows = conn.execute("""
+        SELECT b.source_id,b.bid_no,b.latest_version,v.payload,
+               a.id assessment_id,a.status,a.checked_at,a.bid_version assessment_bid_version,
+               a.profile_id,a.profile_version,a.requires_human_review,a.data_as_of assessment_data_as_of,
+               p.latest_version latest_profile_version
+          FROM bids b JOIN bid_versions v
+            ON v.source_id=b.source_id AND v.bid_no=b.bid_no AND v.version=b.latest_version
+          LEFT JOIN assessments a ON a.id=(
+            SELECT x.id FROM assessments x
+             WHERE x.source_id=b.source_id AND x.bid_no=b.bid_no
+               AND (?='' OR x.profile_id=?) ORDER BY x.id DESC LIMIT 1)
+          LEFT JOIN profiles p ON p.profile_id=a.profile_id
+        ORDER BY b.source_id,b.bid_no
+    """, (profile_id, profile_id)).fetchall()
+    now = datetime.now(timezone.utc)
+    result = []
+    for row in rows:
+        bid = json.loads(row["payload"])
+        deadline = _timestamp(bid.get("bid_deadline"))
+        fresh = bool(row["assessment_id"] and row["assessment_bid_version"] == row["latest_version"]
+                     and row["profile_version"] == row["latest_profile_version"])
+        status = row["status"] if fresh else "UNKNOWN"
+        result.append({
+            "source_id": row["source_id"], "bid_no": row["bid_no"], "title": bid.get("title", ""),
+            "agency": bid.get("agency", ""), "category": bid.get("category", ""),
+            "budget": bid.get("budget"), "deadline": bid.get("bid_deadline"),
+            "data_as_of": bid.get("data_as_of"), "source_ref": bid.get("source_ref"),
+            "bid_version": row["latest_version"], "expired": deadline is None or deadline <= now,
+            "status": status, "snapshot_status": row["status"], "assessment_fresh": fresh,
+            "assessment_id": row["assessment_id"], "checked_at": row["checked_at"],
+            "profile_id": row["profile_id"],
+            "requires_human_review": (not fresh or bool(row["requires_human_review"])),
+            "review_reason": ("미판정" if row["assessment_id"] is None else
+                              "원본 또는 회사 프로필 변경 후 재판정 필요" if not fresh else ""),
+        })
+    return result
+
+
+def _arg(query: dict, name: str, default: str = "") -> str:
+    value = query.get(name, [default])
+    if len(value) != 1 or len(value[0]) > 160:
+        raise ValueError(f"Invalid query argument: {name}")
+    return value[0].strip()
+
+
+def query_bids(conn: sqlite3.Connection, query: dict) -> dict:
+    search = _arg(query, "q").casefold()
+    if len(search) > 120:
+        raise ValueError("Search is limited to 120 characters")
+    category, status, deadline, profile = [_arg(query, field) for field in ("category", "status", "deadline", "profile")]
+    if status not in ("", "PASS", "FAIL", "UNKNOWN") or deadline not in ("", "open", "expired"):
+        raise ValueError("Unsupported filter")
+    try:
+        page = int(_arg(query, "page", "1"))
+        page_size = int(_arg(query, "page_size", "30"))
+    except ValueError as exc:
+        raise ValueError("Page parameters must be integers") from exc
+    if not 1 <= page <= 10000 or not 1 <= page_size <= 100:
+        raise ValueError("Page parameters outside accepted range")
+    rows = _latest_rows(conn, profile)
+    categories = sorted({str(row["category"]) for row in rows if row["category"]})
+    if search:
+        rows = [r for r in rows if search in " ".join(str(r[k]) for k in ("title","agency","bid_no","source_id")).casefold()]
+    if category:
+        rows = [r for r in rows if r["category"] == category]
+    if status:
+        rows = [r for r in rows if r["status"] == status]
+    if deadline:
+        rows = [r for r in rows if r["expired"] == (deadline == "expired")]
+    rows.sort(key=lambda r: (r["expired"], r["deadline"] or "", r["source_id"], r["bid_no"]))
+    total = len(rows)
+    return {"items": rows[(page-1)*page_size:page*page_size], "total": total, "page": page,
+            "page_size": page_size, "categories": categories, "generated_at": datetime.now(timezone.utc).isoformat(),
+            "notice": "사용자 로컬 SQLite 조회. 자격 판정은 참고용이며 최종 공고 원문 확인 필수."}
+
+
+def query_detail(conn: sqlite3.Connection, query: dict) -> dict:
+    source_id, bid_no, profile = [_arg(query, field) for field in ("source_id", "bid_no", "profile")]
+    if not source_id or not bid_no:
+        raise ValueError("source_id and bid_no required")
+    row = next((row for row in _latest_rows(conn, profile)
+                if row["source_id"] == source_id and row["bid_no"] == bid_no), None)
+    if row is None:
+        raise LookupError("Bid not found")
+    rules = []
+    if row["assessment_id"]:
+        for record in conn.execute("""SELECT rule_id,kind,status,reason_code,explanation,source_text,
+            source_locator,requires_human_review FROM rule_assessments WHERE assessment_id=? ORDER BY position""",
+            (row["assessment_id"],)):
+            rules.append(dict(record))
+    return {"bid": row, "rules": rules, "evidence_is_current": row["assessment_fresh"],
+            "notice": "과거 평가 근거는 참고용. 버전이 바뀌면 재평가가 필요합니다."}
+
+
+def query_profiles(conn: sqlite3.Connection) -> dict:
+    rows = conn.execute("SELECT profile_id,latest_version FROM profiles ORDER BY profile_id").fetchall()
+    return {"profiles": [{"profile_id": r["profile_id"], "version": r["latest_version"]} for r in rows]}
+
+
+class ViewerHandler(BaseHTTPRequestHandler):
+    db_path: Path
+    server_version = "BidOwlLocal/0.2"
+
+    def _respond(self, status: int, content: bytes, content_type: str) -> None:
+        self.send_response(status)
+        self.send_header("Content-Type", content_type)
+        for key, value in SECURITY.items():
+            self.send_header(key, value)
+        self.send_header("Content-Length", str(len(content)))
+        self.end_headers()
+        self.wfile.write(content)
+
+    def _json(self, status: int, payload: dict) -> None:
+        self._respond(status, json.dumps(payload, ensure_ascii=False, allow_nan=False).encode("utf-8"), "application/json; charset=utf-8")
+
+    def do_GET(self) -> None:
+        expected = {f"localhost:{self.server.server_port}", f"127.0.0.1:{self.server.server_port}"}
+        host = self.headers.get("Host", "").lower()
+        if host not in expected:
+            self._json(403, {"error": "Forbidden host"})
+            return
+        origin = self.headers.get("Origin")
+        if origin and origin not in {f"http://{host}"}:
+            self._json(403, {"error": "Forbidden origin"})
+            return
+        if len(self.path) > 1024:
+            self._json(414, {"error": "URL too long"})
+            return
+        parsed = urlsplit(self.path)
+        if parsed.path in ALLOWED_FILES and not parsed.query:
+            filename, content_type = ALLOWED_FILES[parsed.path]
+            try:
+                self._respond(200, (UI / filename).read_bytes(), content_type)
+            except OSError:
+                self._json(500, {"error": "Missing bundled UI asset"})
+            return
+        if parsed.path not in ("/api/bids", "/api/detail", "/api/profiles"):
+            self._json(404, {"error": "Not found"})
+            return
+        try:
+            query = parse_qs(parsed.query, keep_blank_values=True, max_num_fields=12, strict_parsing=False)
+            with closing(open_database(self.db_path)) as conn:
+                if parsed.path == "/api/bids":
+                    payload = query_bids(conn, query)
+                elif parsed.path == "/api/detail":
+                    payload = query_detail(conn, query)
+                else:
+                    payload = query_profiles(conn)
+            self._json(200, payload)
+        except (ValueError, LookupError) as exc:
+            self._json(404 if isinstance(exc, LookupError) else 400, {"error": str(exc)})
+        except (sqlite3.Error, OSError, json.JSONDecodeError):
+            self._json(500, {"error": "Local database cannot be read"})
+
+    def do_POST(self) -> None:
+        self._json(405, {"error": "Read-only viewer"})
+
+    def log_message(self, format: str, *args: object) -> None:
+        # Do not echo URLs / user search terms / input records into external logs.
+        pass
+
+
+def make_server(path: Path, port: int) -> HTTPServer:
+    if port < 0 or port > 65535:
+        raise ValueError("port must be between 0 and 65535")
+    with closing(open_database(path)):
+        pass  # Fail before serving a missing or incompatible DB.
+    handler = type("BoundViewerHandler", (ViewerHandler,), {"db_path": path})
+    return HTTPServer(("127.0.0.1", port), handler)
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description="BID OWL localhost read-only SQLite viewer")
+    parser.add_argument("--db", type=Path, default=default_database_path(), help="Local BID OWL SQLite database")
+    parser.add_argument("--port", type=int, default=8765, help="Local 127.0.0.1 port (0 for random)")
+    args = parser.parse_args(argv)
+    try:
+        with make_server(args.db, args.port) as server:
+            print(f"BID OWL LOCAL VIEWER: http://127.0.0.1:{server.server_port}", flush=True)
+            server.serve_forever()
+    except (ValueError, OSError, sqlite3.Error) as exc:
+        print(f"LOCAL_VIEWER_FAILED: {exc}")
+        return 2
+    except KeyboardInterrupt:
+        return 0
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
