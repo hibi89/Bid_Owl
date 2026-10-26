@@ -1,3 +1,28 @@
+# BID OWL STATUS — P2-15 assessment reuse + explicit rescoring, 2026-10-27 KST
+
+## Current release/development state
+Private `hibi89/Bid_Owl`, feature branch `feature/bid-owl-v1-basic-mvp`. Start HEAD `04b92e44faa0ec2e9197c7e6c0c53e2e30b5e05a`. Protected main previous `c888c795bef72734f3f7016e54013b82453f11d8` and unrelated legacy Vercel remain untouched. Whole BASIC+PRO+PREMIUM+installer+sale **~40% subjective estimate** re-scored in conversation after P2-14; not a measured percentage, do not imply QA gate has passed.
+
+## P2-15 code actually written to GitHub
+- `backend/import_local.py`: reusable assessment lookup uses parameterized SQL filtered by *source_id, bid_no, profile_id*, checks current bid version and latest saved assessment's bid version, exact profile version, and whether the saved `is_expired` matches the bid's present time-based expiry. On all matches, reuse unchanged saved assessment and skip new row; changing bid, profile version or expiry triggers new evaluation.
+- Extra guard: if profile.latest_version changes during import (observed at candidate reused snapshot), fail closed instead of showing stale reused outcome.
+- `apply_import(plan,force_reassess=False)`: explicit override always creates fresh assessments, for upgrades to the eligibility engine; UI Tkinter checkbox and CLI `--force-reassess` (only with CLI `--apply`) added. Old snapshots remain immutable. The engine code version is NOT automatically persisted/compared in the DB; after software/rule upgrades **force-reassess is required** until future automatic invalidation.
+- Return adds `assessments_reused`, changes `assessments_saved` to only newly written evaluations; `eligibility_counts` counts all CSV rows, whether fresh or reused; GUI completion message distinguishes new vs reused. Existing consistent non-overwriting backup still created on an existing DB before import/audit write, even on no-op reimports.
+- `backend/tests/test_import_local.py`: previous 18 methods + **8** regressions = **26**. Covers unchanged repeat with same assessment IDs, one revised bid selected, artificial expiration flag crossover, profile change and restoration at v3 requiring full re-eval, mid-import profile drift stopping reuse and retaining backup, force reassess and invalid flag, and CLI force reassess.
+- `backend/IMPORT.md`: documents exact matching conditions, identity/expiry/engine caveat, CLI override, saved/reused response shape. Existing GUI writes remain explicit opt-in and local-only; no new HTTP write route.
+
+## Measured checks vs not measured
+- **Actual isolated SQLite SQL contract:** 4/4 PASS on model Python sandbox using matching query structure and synthetic in-memory DB: same revisions reuse, expiry difference refuses reuse, bid-version difference refuses, profile-version drift raises. This does NOT run the whole authentic GitHub product or its fixture/test modules.
+- Authenticated GitHub source was read back for SQL and tests. Total **178 declared Python test methods in 13 test modules** (previous 170 +8). **NOT 178 PASS.** No full source Python integration run, no Windows Tkinter/native Excel/PDF or 10k measured workload this turn. User's earlier real Windows test (old source): 137 ran, 119 without error, 18 WinError32 SQLite file-lock cleanup errors, zero assertion failures; subsequent handle fixes never retested on Windows.
+- User explicitly requested not to be burdened with ZIP downloading/manual tests. No new user action requested. No real data, API keys, private documents, paid CI, public deployment or main/Vercel changes.
+
+## Next P2-16
+1. Automatically track eligibility/rule-engine version or fingerprint per assessment so a code update cannot silently reuse logically stale snapshots; stale/legacy assessments must be recalculated safely. Needs thoughtful additive schema/backup ordering and compatibility with existing DB v1 before implementation.
+2. Add read-only backup health inspection and careful guided local restore/recovery path **without** silent live DB overwrite; improve BASIC report export GUI/launcher. Keep actual customer DB strict and all writes explicitly consented/backed-up.
+3. Eventually native Windows full 178+ case QA, GUI/Excel/Korean-font PDF, 10k benchmark, installer/security, official PRO user-key API, PREMIUM opt-in AI, trademark/pricing clearance. Sale readiness not yet confirmed.
+
+---
+## Earlier milestones (P2-14 and below)
 # BID OWL STATUS — P2-14 local actual CSV/company onboarding · 2026-10-27 KST
 
 **Branch/product:** private `hibi89/Bid_Owl`, `feature/bid-owl-v1-basic-mvp` (started P2-14 at `7718f34b1398d9e9309cd82a9dcb2e761778c7e7`). Main baseline `c888c795bef72734f3f7016e54013b82453f11d8` unchanged; legacy school Vercel untouched. Entire BASIC+PRO+PREMIUM/installer subjective ~35% last estimate, not recalculated by code completion alone.
