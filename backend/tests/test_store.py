@@ -254,6 +254,17 @@ class StoreTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.store.backup_to(self.path)
 
+    def test_backup_destination_handle_released_before_return(self):
+        # Windows refuses to delete an open SQLite file (WinError 32).
+        # sqlite3.Connection's regular "with" does not close the handle.
+        self.store.import_bids([bid()], source_id='s')
+        destination = Path(self.temp.name) / 'released.sqlite3'
+        self.store.backup_to(destination)
+        with closing(sqlite3.connect(destination)) as check:
+            self.assertEqual(check.execute('PRAGMA integrity_check').fetchone()[0], 'ok')
+        destination.unlink()  # Must succeed on Windows, not only POSIX.
+        self.assertFalse(destination.exists())
+
     def test_unknown_schema_version_not_rewritten(self):
         future=Path(self.temp.name)/'future.sqlite3'
         with closing(sqlite3.connect(future)) as db, db:
