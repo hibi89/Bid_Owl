@@ -1,3 +1,27 @@
+# BID OWL NEXT — P2-25 BASIC MVP-first acceptance, 2026-10-27
+
+**NEXT ㄱ => P2-26 BASIC MVP FIRST, not generic hardening.** User explicitly re-confirmed MVP first. User's order: (1) complete a runnable BASIC CSV -> company -> rule screening -> viewer -> XLSX/PDF workflow; (2) compare with original full product design and fill missing features; (3) security/performance/commercial hardening; (4) PRO/PREMIUM afterward. UI aesthetics deferred; no new visual mockups/themes/CSS unless asked. GitHub private `hibi89/Bid_Owl` feature branch `feature/bid-owl-v1-basic-mvp` only; protect main/Vercel, no paid CI, no customer data uploads and no repetitive user ZIP/PowerShell QA requests.
+
+## P2-25 source actually committed
+- NEW `backend/mvp_smoke.py`: isolated real BASIC importer synthetic acceptance using `import_local.prepare_import` and `apply_import` (unlike old `cli.py` smoke), `viewer.open_database/query_bids/query_detail/query_profile`, `report_existing.export_existing` to two XLSX with full ZIP+OOXML validity, reported assessment ID/snapshot status, read-only DB mutation denial, and second identical import checking mandatory SQLite backup, unchanged 2 assessment IDs, 2 reused snapshots and no prior report overwrites. Fixture bytes deliberately remap DEMO- and DEMO_ONLY to synthetic non-demo provenance solely within `TemporaryDirectory`, so actual customer input guards stay enabled. Optional `--require-pdf` verifies ReportLab/font *before* any test DB write and exports both XLSX+PDF with PDF header checks. No real customer files, network or normal BID OWL default DB.
+- NEW `backend/tests/test_mvp_smoke.py`: five Python test methods: real importer end-to-end full assertions, JSON CLI shape and honest browser/Windows flags, PDF prerequisite failure, importer failure cannot be called MVP PASS, wrong PDF flag type.
+- UPDATED `backend/qa_runner.py`: the mandatory `_synthetic_smoke` stage now runs BOTH historical CLI smoke AND the actual BASIC customer importer smoke. Both must return their exact success status to yield PASS, independent exceptions captured as failures. `_unit_suite` now fails if no tests were discovered instead of treating 0 tests as PASS.
+- UPDATED `backend/tests/test_qa_runner.py`: three new test methods covering two smoke requirements, failure not masked by legacy PASS, and 0-tests QA FAIL. **GitHub count: 256 Python test definitions in 17 modules** (prior P2-23 count 248, +8); declaration count only, NOT 256 executing PASS.
+- NEW `backend/MVP_ACCEPTANCE.md`, root `README.md`, `START_HERE.md`, `backend/README.md`, NEXT_TASK/STATUS/HANDOFF reflect MVP-first policy and honest gates.
+- GitHub write access WORKED this turn (last P2-24 blocked, its uncommitted QA bundle remains local artifact; repository already had stronger `backend/qa_runner.py`). Last known main baseline `c888c795bef72734f3f7016e54013b82453f11d8`. Fetch fresh feature/main heads after final docs, verify only feature writes.
+
+## Verified/unverified
+- Authenticated GitHub files and test definitions reread. New code **committed**, no authenticated full backend execution because model container cannot clone private repo (no DNS) and no authorized paid runner. Not claiming `BASIC_MVP_SYNTHETIC_E2E_PASS` was obtained. Old Windows 137 tests/18 WinError32 cleanups unresolved until actual test run. No native PDF Korean fonts, Excel opening, Tkinter workflow, browser UI, 10k genuine app benchmark, install package. PRO government API and PREMIUM optional AI not implemented.
+- Overall subjective old 42% all-tier estimate not automatically increased; MVP completion is **pending real execution and fixes**.
+
+## Next P2-26 priority
+1. Make real end-to-end smoke run in a reproducible permitted environment without prompting user for repeated manual work. Fix actual failures of `mvp_smoke.py`, `qa_runner.py`, `import_local.py` and `report_existing.py` if found. Stop confusing test definitions with PASS. Optionally add direct user-friendly BASIC orchestration/report convenience after checking current GUI's viewer/XLSX save path; avoid visual rework.
+2. Test strict PDF prerequisite and actual Korean output. Do not silently change existing DB when export fails; clearly separate import success from report error.
+3. Then first-run local onboarding/packaging gap to deliver a genuinely executable BASIC MVP, followed by full spec and protection. No premature PRO/PREMIUM work.
+
+---
+## Earlier NEXT_TASK history
+
 # P2-23 완료 / 다음 P2-24 (2026-10-27 KST)
 
 사용자 지시: **백엔드 우선, 프론트엔드 디자인 보류**. ㄱ = 묻지 않고 다음 작업 진행. 개인/고객 데이터 업로드 금지, 유료 CI 금지, main/Vercel 변경 금지. 작업 브랜치 feature/bid-owl-v1-basic-mvp 유지.
