@@ -1,5 +1,6 @@
 # BID OWL local Windows verification. Run ONLY on an authorized private checkout.
 # This never modifies customer DBs: smoke_local.py uses synthetic fixture/temp files.
+param([switch]$Benchmark)
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 $start = Get-Date
@@ -19,6 +20,11 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'JavaScript syntax FAILED' }
   } else {
     Write-Warning 'Node not installed; JavaScript syntax CHECK SKIPPED (not PASS)'
+  }
+  if ($Benchmark) {
+    Write-Host 'BID OWL local QA: isolated synthetic 10,000-record benchmark'
+    python benchmark_local.py --records 10000 --assessed 200
+    if ($LASTEXITCODE -ne 0) { throw 'Synthetic 10k benchmark FAILED' }
   }
   $duration = (Get-Date) - $start
   Write-Host ('LOCAL_QA_COMPLETED: all invoked checks passed, elapsed {0:N1} sec' -f $duration.TotalSeconds)
