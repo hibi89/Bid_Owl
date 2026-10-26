@@ -17,7 +17,7 @@ from pathlib import Path
 
 from backup_recovery import prepare_recovery, restore_to_new_file
 from bidowl import Bid, BidOwlStore, CompanyProfile, Requirement
-from viewer import open_database, query_bids, query_detail, query_favorites
+from viewer import _latest_rows, open_database, query_bids, query_detail, query_favorites
 
 SOURCE = "SYNTHETIC-PERF-ONLY"
 
@@ -30,13 +30,16 @@ def timed(name: str, task, results: dict):
 
 
 def run_benchmark(*, records: int = 10000, assessed: int = 200,
-                  measure_recovery: bool = False) -> dict:
+                  measure_recovery: bool = False,
+                  measure_viewer_baseline: bool = False) -> dict:
     if type(records) is not int or not 1 <= records <= 10000:
         raise ValueError("records must be an integer between 1 and 10000")
     if type(assessed) is not int or not 0 <= assessed <= records:
         raise ValueError("assessed must be an integer between 0 and records")
     if type(measure_recovery) is not bool:
         raise ValueError("measure_recovery must be a bool")
+    if type(measure_viewer_baseline) is not bool:
+        raise ValueError("measure_viewer_baseline must be a bool")
     now = datetime.now(timezone.utc)
     deadline = now + timedelta(days=30)
     data = [
@@ -76,6 +79,30 @@ def run_benchmark(*, records: int = 10000, assessed: int = 200,
                 conn, {"page": ["1"], "page_size": ["30"]}), timings)
             if listing["total"] != records or len(listing["items"]) != min(records, 30):
                 raise AssertionError("Synthetic paginated query was incomplete")
+            if measure_viewer_baseline:
+                def legacy_full_scan_page():
+                    # The P2-20 approach for a useful comparable baseline:
+                    # parse all rows AND run historical assessment lookups
+                    # before sorting and slicing the first 30.
+                    rows = _latest_rows(conn)
+                    categories = sorted({
+                        str(row["category"]) for row in rows if row["category"]
+                    })
+                    rows.sort(key=lambda row: (
+                        row["expired"], row["deadline"] or "",
+                        row["source_id"], row["bid_no"],
+                    ))
+                    return {
+                        "total": len(rows), "items": rows[:30],
+                        "categories": categories,
+                    }
+                previous = timed(
+                    "legacy_full_scan_page_1_ms", legacy_full_scan_page, timings,
+                )
+                if (previous["total"] != listing["total"]
+                        or previous["categories"] != listing["categories"]
+                        or previous["items"] != listing["items"]):
+                    raise AssertionError("Fast viewer query changed historical page results")
             filtered = timed("filter_category_search_ms", lambda: query_bids(
                 conn, {"category": ["IT"], "q": ["용역"], "page_size": ["30"]}), timings)
             if filtered["total"] != (records + 1) // 2:
@@ -122,6 +149,7 @@ def run_benchmark(*, records: int = 10000, assessed: int = 200,
             "assessed": assessed,
             "db_size_bytes": db.stat().st_size,
             "recovery_verified": recovery_result is not None,
+            "viewer_baseline_compared": measure_viewer_baseline,
             "recovery_evidence_sha256": (recovery_result["evidence_sha256"]
                                          if recovery_result is not None else None),
             "timings_ms": timings,
@@ -138,12 +166,15 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="BID OWL isolated synthetic 10k performance benchmark")
     parser.add_argument("--records", type=int, default=10000)
     parser.add_argument("--assessed", type=int, default=200)
+    parser.add_argument("--compare-full-scan", action="store_true",
+                        help="Also time and compare the legacy all-assessment full scan")
     parser.add_argument("--with-recovery", action="store_true",
                         help="Also measure consistent backup, evidence validation and safe restore")
     args = parser.parse_args(argv)
     try:
         print(json.dumps(run_benchmark(records=args.records, assessed=args.assessed,
-                                              measure_recovery=args.with_recovery),
+                                              measure_recovery=args.with_recovery,
+                                              measure_viewer_baseline=args.compare_full_scan),
                          ensure_ascii=False, indent=2))
         return 0
     except (OSError, ValueError, sqlite3.Error, AssertionError) as exc:
