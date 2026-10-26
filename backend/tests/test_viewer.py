@@ -81,6 +81,40 @@ class ViewerTests(unittest.TestCase):
             self.assertEqual(detail['bid']['bid_no'],'A')
             self.assertEqual(detail['rules'][0]['rule_id'],'r1')
 
+    def test_schema_length_identifiers_reach_detail_and_profile_filters(self):
+        # Stored source/bid/profile IDs are allowed up to 300 characters.
+        # A shared 160-character URL argument limit made those records unviewable.
+        source = 'S' * 220
+        number = 'B' * 220
+        profile = 'P' * 220
+        with sqlite3.connect(self.path) as writer:
+            record = {'bid_no':number, 'title':'긴 ID 합성 공고',
+                'agency':'테스트 기관','category':'IT',
+                'bid_deadline':self.deadline,'budget':1200,
+                'data_as_of':datetime.now(timezone.utc).isoformat(),
+                'source_ref':'SYNTHETIC','requirements':[]}
+            writer.execute('INSERT INTO bids VALUES (?,?,?)',(source,number,1))
+            writer.execute('INSERT INTO bid_versions VALUES (?,?,?,?)',
+                           (source,number,1,json.dumps(record,ensure_ascii=False)))
+            writer.execute('INSERT INTO profiles VALUES (?,?)',(profile,1))
+            writer.execute('INSERT INTO profile_versions VALUES (?,?,?)',
+                           (profile,1,json.dumps({'profile_id':profile})))
+            writer.execute('INSERT INTO assessments VALUES (?,?,?,?,?,?,?,?,?,?)',
+                (400,source,number,1,profile,1,'UNKNOWN',
+                 datetime.now(timezone.utc).isoformat(),1,
+                 datetime.now(timezone.utc).isoformat()))
+        with open_database(self.path) as conn:
+            detail=query_detail(conn,{'source_id':[source],'bid_no':[number],
+                                      'profile':[profile]})
+            self.assertEqual(detail['bid']['assessment_id'],400)
+            self.assertEqual(detail['bid']['bid_no'],number)
+            self.assertEqual(detail['bid']['source_id'],source)
+            result=query_bids(conn,{'profile':[profile]})
+            self.assertTrue(any(item['bid_no']==number for item in result['items']))
+            self.assertEqual(query_profile(conn,{'profile_id':[profile]})['version'],1)
+            with self.assertRaises(ValueError):
+                query_detail(conn,{'source_id':['X'*301],'bid_no':[number]})
+
     def test_read_only_and_rule_provenance(self):
         with open_database(self.path) as c:
             self.assertEqual(query_profiles(c)['profiles'][0]['profile_id'],'P1')
