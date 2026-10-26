@@ -54,7 +54,11 @@ def _timestamp(text: str | None) -> datetime | None:
         return None
 
 
-def _latest_rows(conn: sqlite3.Connection, profile_id: str = "", only_key: tuple[str, str] | None = None) -> list[dict]:
+def _latest_rows(
+    conn: sqlite3.Connection, profile_id: str = "",
+    only_key: tuple[str, str] | None = None,
+    *, candidate_keys: list[tuple[str, str]] | None = None,
+) -> list[dict]:
     # Old schema-v1 databases can lack engine provenance: never imply a
     # historical PASS is current in that case. No DB schema edits in viewer.
     has_provenance = bool(conn.execute(
@@ -72,6 +76,26 @@ def _latest_rows(conn: sqlite3.Connection, profile_id: str = "", only_key: tuple
         "LEFT JOIN assessment_engine_provenance ep ON ep.assessment_id=a.id"
         if has_provenance else ""
     )
+    # Fast page lookup: fetch assessment/rule provenance for at most 100
+    # selected bids, rather than running correlated assessment lookup for
+    # every saved bid. The input list comes from our own validated page keys.
+    if candidate_keys is not None:
+        if only_key is not None:
+            raise ValueError("Detail key and page keys cannot be combined")
+        if len(candidate_keys) > 100:
+            raise ValueError("Page key count exceeded")
+        if not candidate_keys:
+            return []
+        where_clause = "WHERE (b.source_id,b.bid_no) IN (" + ",".join(
+            "(?,?)" for _ in candidate_keys
+        ) + ")"
+        params = (profile_id, profile_id, *(x for key in candidate_keys for x in key))
+    elif only_key is not None:
+        where_clause = "WHERE b.source_id=? AND b.bid_no=?"
+        params = (profile_id, profile_id, *only_key)
+    else:
+        where_clause = ""
+        params = (profile_id, profile_id)
     # All selected user fields are parameter bound. Read-only connection is mandatory.
     rows = conn.execute("""
         SELECT b.source_id,b.bid_no,b.latest_version,v.payload,
@@ -90,10 +114,9 @@ def _latest_rows(conn: sqlite3.Connection, profile_id: str = "", only_key: tuple
         {where_clause}
         ORDER BY b.source_id,b.bid_no
     """.format(
-        where_clause="WHERE b.source_id=? AND b.bid_no=?" if only_key else "",
+        where_clause=where_clause,
         policy_column=policy_column, policy_join=policy_join,
-    ),
-        (profile_id, profile_id, *only_key) if only_key else (profile_id, profile_id)).fetchall()
+    ), params).fetchall()
     now = datetime.now(timezone.utc)
     result = []
     for row in rows:
@@ -130,6 +153,70 @@ def _arg(query: dict, name: str, default: str = "", *, max_length: int = 160) ->
     return value[0].strip()
 
 
+def _query_without_status(
+    conn: sqlite3.Connection, *, profile: str, search: str, category: str,
+    deadline: str, page: int, page_size: int,
+    favorite_keys: set[tuple[str, str]] | None,
+) -> dict:
+    """Metadata-first paging with exact legacy Python filters and ordering.
+
+    SQL retrieves bid payloads and does NOT join correlated assessments for
+    all 10k bids. Only page keys subsequently load provenance. Status-filter
+    queries intentionally retain the legacy full-scan path.
+    """
+    own_snapshot = not conn.in_transaction
+    if own_snapshot:
+        conn.execute("BEGIN")  # readonly snapshot across both SELECTs
+    try:
+        bid_rows = conn.execute("""
+            SELECT b.source_id,b.bid_no,v.payload
+            FROM bids b JOIN bid_versions v
+              ON v.source_id=b.source_id AND v.bid_no=b.bid_no
+             AND v.version=b.latest_version
+            ORDER BY b.source_id,b.bid_no
+        """).fetchall()
+        now = datetime.now(timezone.utc)
+        metadata = []
+        categories = set()
+        for entry in bid_rows:
+            bid = json.loads(entry["payload"])
+            title, agency = bid.get("title", ""), bid.get("agency", "")
+            kind, due = bid.get("category", ""), bid.get("bid_deadline")
+            if kind:
+                categories.add(str(kind))
+            source_id, bid_no = entry["source_id"], entry["bid_no"]
+            if favorite_keys is not None and (source_id, bid_no) not in favorite_keys:
+                continue
+            if search and search not in " ".join(
+                str(value) for value in (title, agency, bid_no, source_id)
+            ).casefold():
+                continue
+            if category and kind != category:
+                continue
+            expired = _timestamp(due) is None or _timestamp(due) <= now
+            if deadline and expired != (deadline == "expired"):
+                continue
+            metadata.append((expired, due or "", source_id, bid_no))
+        metadata.sort()
+        total = len(metadata)
+        keys = [(source, number) for _, _, source, number in
+                metadata[(page - 1) * page_size:page * page_size]]
+        selected = _latest_rows(conn, profile, candidate_keys=keys)
+        by_key = {(row["source_id"], row["bid_no"]): row for row in selected}
+        # Preserve metadata pagination order; SQLite candidate IN order is
+        # unspecified. All page keys refer to current b.latest_version.
+        items = [by_key[key] for key in keys]
+        return {
+            "items": items, "total": total, "page": page,
+            "page_size": page_size, "categories": sorted(categories),
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "notice": "사용자 로컬 SQLite 조회. 자격 판정은 참고용이며 최종 공고 원문 확인 필수.",
+        }
+    finally:
+        if own_snapshot:
+            conn.execute("ROLLBACK")
+
+
 def query_bids(conn: sqlite3.Connection, query: dict, *, favorite_keys: set[tuple[str, str]] | None = None) -> dict:
     search = _arg(query, "q").casefold()
     if len(search) > 120:
@@ -145,6 +232,12 @@ def query_bids(conn: sqlite3.Connection, query: dict, *, favorite_keys: set[tupl
         raise ValueError("Page parameters must be integers") from exc
     if not 1 <= page <= 10000 or not 1 <= page_size <= 100:
         raise ValueError("Page parameters outside accepted range")
+    if not status:
+        return _query_without_status(
+            conn, profile=profile, search=search, category=category,
+            deadline=deadline, page=page, page_size=page_size,
+            favorite_keys=favorite_keys,
+        )
     rows = _latest_rows(conn, profile)
     categories = sorted({str(row["category"]) for row in rows if row["category"]})
     if favorite_keys is not None:
