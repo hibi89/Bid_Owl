@@ -76,24 +76,29 @@ def _unit_suite() -> dict:
 
 
 def _synthetic_smoke() -> dict:
+    """Gate both legacy synthetic CLI and genuine BASIC customer-importer path."""
     from smoke_local import run_smoke
+    from mvp_smoke import run_mvp_smoke
 
     started = time.perf_counter()
-    try:
-        result = run_smoke()
-        status = "PASS" if result.get("status") == "SYNTHETIC_E2E_PASS" else "FAIL"
-        return {
-            "status": status,
-            "elapsed_ms": round((time.perf_counter() - started) * 1000, 2),
-            "synthetic_result": result,
-        }
-    except Exception as exc:
-        return {
-            "status": "FAIL",
-            "elapsed_ms": round((time.perf_counter() - started) * 1000, 2),
-            "error_type": type(exc).__name__,
-            "reason": str(exc)[:500],
-        }
+    outcomes = {}
+    for label, check in (("legacy_cli", run_smoke), ("basic_mvp", run_mvp_smoke)):
+        try:
+            outcomes[label] = check()
+        except Exception as exc:
+            outcomes[label] = {
+                "status": "FAILED", "error_type": type(exc).__name__,
+                "reason": str(exc)[:500],
+            }
+    status = ("PASS" if
+              outcomes["legacy_cli"].get("status") == "SYNTHETIC_E2E_PASS"
+              and outcomes["basic_mvp"].get("status") == "BASIC_MVP_SYNTHETIC_E2E_PASS"
+              else "FAIL")
+    return {
+        "status": status,
+        "elapsed_ms": round((time.perf_counter() - started) * 1000, 2),
+        "synthetic_result": outcomes,
+    }
 
 
 def _syntax_check() -> dict:
