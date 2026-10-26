@@ -80,6 +80,19 @@ class ViewerTests(unittest.TestCase):
         self.assertEqual(rows["A"]["snapshot_status"], "PASS")
         self.assertFalse(rows["A"]["engine_fresh"])
 
+    def test_missing_policy_source_and_legacy_provenance_are_not_equal(self):
+        from unittest.mock import patch
+        with closing(sqlite3.connect(self.path)) as writer:
+            writer.execute("DROP TABLE assessment_engine_provenance")
+            writer.commit()
+        with patch("viewer.engine_fingerprint", side_effect=FileNotFoundError("missing source")):
+            with closing(open_database(self.path)) as reader:
+                rows = {r["bid_no"]: r for r in query_bids(reader, {})["items"]}
+        self.assertEqual(rows["A"]["status"], "UNKNOWN")
+        self.assertEqual(rows["A"]["snapshot_status"], "PASS")
+        self.assertFalse(rows["A"]["engine_fresh"])
+        self.assertTrue(rows["A"]["requires_human_review"])
+
     def test_stale_policy_fingerprint_invalidates_previous_pass(self):
         with closing(sqlite3.connect(self.path)) as writer:
             writer.execute(
