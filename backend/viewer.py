@@ -102,6 +102,7 @@ def _latest_rows(
         SELECT b.source_id,b.bid_no,b.latest_version,v.payload,
                a.id assessment_id,a.status,a.checked_at,a.bid_version assessment_bid_version,
                a.profile_id,a.profile_version,a.requires_human_review,a.data_as_of assessment_data_as_of,
+               a.is_expired assessment_is_expired,
                p.latest_version latest_profile_version,
                {policy_column}
           FROM bids b JOIN bid_versions v
@@ -124,16 +125,22 @@ def _latest_rows(
         bid = json.loads(row["payload"])
         deadline = _timestamp(bid.get("bid_deadline"))
         policy_fresh = bool(engine_hash is not None and row["engine_hash"] == engine_hash)
+        expired = deadline is None or deadline <= now
+        expiry_fresh = bool(
+            row["assessment_id"]
+            and row["assessment_is_expired"] is not None
+            and bool(row["assessment_is_expired"]) == expired
+        )
         fresh = bool(row["assessment_id"] and row["assessment_bid_version"] == row["latest_version"]
                      and row["profile_version"] == row["latest_profile_version"]
-                     and policy_fresh)
+                     and policy_fresh and expiry_fresh)
         status = row["status"] if fresh else "UNKNOWN"
         result.append({
             "source_id": row["source_id"], "bid_no": row["bid_no"], "title": bid.get("title", ""),
             "agency": bid.get("agency", ""), "category": bid.get("category", ""),
             "budget": bid.get("budget"), "deadline": bid.get("bid_deadline"),
             "data_as_of": bid.get("data_as_of"), "source_ref": bid.get("source_ref"),
-            "bid_version": row["latest_version"], "expired": deadline is None or deadline <= now,
+            "bid_version": row["latest_version"], "expired": expired,
             "status": status, "snapshot_status": row["status"], "assessment_fresh": fresh,
             "engine_fresh": policy_fresh,
             "assessment_id": row["assessment_id"], "checked_at": row["checked_at"],
@@ -142,6 +149,7 @@ def _latest_rows(
             "review_reason": ("미판정" if row["assessment_id"] is None else
                               "판정 엔진 변경 또는 이전 엔진 정보 없음 — 재판정 필요"
                               if not policy_fresh else
+                              "공고 마감 상태 변경 — 재판정 필요" if not expiry_fresh else
                               "원본 또는 회사 프로필 변경 후 재판정 필요" if not fresh else ""),
         })
     return result
@@ -157,6 +165,7 @@ def _arg(query: dict, name: str, default: str = "", *, max_length: int = 160) ->
 def _status_for_candidate_keys(
     conn: sqlite3.Connection, keys: list[tuple[str, str]],
     profile_id: str,
+    *, expected_expiry: dict[tuple[str, str], bool],
 ) -> dict[tuple[str, str], str]:
     """Evaluate only minimal currentness metadata, in bounded SQL batches.
 
@@ -187,7 +196,7 @@ def _status_for_candidate_keys(
         statement = """
             SELECT b.source_id,b.bid_no,b.latest_version,
                    a.id AS assessment_id,a.status,
-                   a.bid_version AS assessed_bid_version,
+                   a.bid_version AS assessed_bid_version,a.is_expired AS assessed_expired,
                    a.profile_version,p.latest_version AS current_profile_version,
                    {policy_column}
               FROM bids b
@@ -214,6 +223,10 @@ def _status_for_candidate_keys(
                 and row["profile_version"] == row["current_profile_version"]
                 and policy_hash is not None
                 and row["engine_hash"] == policy_hash
+                and row["assessed_expired"] is not None
+                and bool(row["assessed_expired"]) == expected_expiry[
+                    (row["source_id"], row["bid_no"])
+                ]
             )
             statuses[(row["source_id"], row["bid_no"])] = (
                 row["status"] if fresh else "UNKNOWN"
@@ -272,7 +285,11 @@ def _query_without_status(
             candidate_keys = [(source, number)
                               for _, _, source, number in metadata]
             candidate_status = _status_for_candidate_keys(
-                conn, candidate_keys, profile
+                conn, candidate_keys, profile,
+                expected_expiry={
+                    (source, number): expired
+                    for expired, _, source, number in metadata
+                },
             )
             metadata = [
                 item for item in metadata
