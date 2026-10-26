@@ -1,3 +1,26 @@
+# BID OWL NEXT — P2-13 disposable local BASIC demo shipped to feature branch, 2026-10-27 KST
+
+User says ㄱ = read current GitHub feature + main heads and START_HERE, AGENTS, STATUS, HANDOFF, REQUIREMENTS, NEXT_TASK, then implement next step without asking user to download/test ZIP. User previously objected to routine manual QA; no extra user actions here. Never modify main, legacy Vercel, private user data, paid tools, external API or distribute private source without approval.
+
+## P2-13 implementation already committed
+- NEW root `START_BID_OWL_DEMO.cmd`, `backend/START_DEMO.cmd`: Windows double-click entry from ZIP root, invokes local `py -3` or `python` without ReportLab install requirement, keeps failure message visible.
+- NEW `backend/demo_local.py`: Python 3.11+ stdlib + local bidowl; takes **packaged fake CSV/profile only**, explicitly checks all `source_ref=DEMO_ONLY`, bid number prefix `DEMO-` and company ID `SYNTHETIC-` before DB creation, refuses any existing target file. Creates a fresh SQLite in `TemporaryDirectory(prefix='bidowl-synthetic-demo-')`, imports two fake bids, records rule assessments for fake profile, serves existing read-only `viewer.make_server` at 127.0.0.1 random port by default, opens default browser (optional `--no-browser`, explicit `--port`). Ctrl+C releases server and temp directory. No default customer DB path, no external network, no API keys, no ReportLab/font. Abnormal termination can leave OS temp data; do not overclaim deletion guarantee.
+- Modified `backend/ui/index.html`, `backend/ui/ui.js`, `backend/ui/ui.css`: visually distinguish synthetic data via persistent-in-session, accessible warning banner when source ID `BIDOWL_SYNTHETIC_DEMO` appears in local bids; styling uses existing 7-theme CSS variables. No HTML interpolation or new API write route.
+- NEW `backend/tests/test_demo_local.py`: **8 test methods** covering synthetic 2-bid DB, existing user file untouched, fake/changed fixture rejection, local-only readonly HTTP, teardown after synthetic server exits, invalid port, UI warning and root+backend Windows launchers.
+- NEW `backend/DEMO.md`: launch, provenance, safety/termination and validation limitations.
+- Updated root README.md (legacy BID INSIGHT warning), backend README.md (demo quickstart), START_HERE.md (latest stage), STATUS/HANDOFF/NEXT_TASK.
+- Source-level verification: exact remote new JS parses successfully using V8 Function (syntax-only PASS), GitHub fetched demo files and verified fixture-path/test/warning/loopback guards. **No real Windows double-click, no full Python suite or demo-server runtime executed on authentic private checkout by assistant.** Historical user Windows test 137 cases, 18 WinError 32 (earlier branch), JS PASS; P2-11 fixed handles but current tests still need measured run.
+- Declared Python test methods **152** in 12 test files after +8. This is not 152 PASS.
+
+## NEXT P2-14 autonomous work
+1. Improve BASIC first-run flow beyond disposable demo: safe, explicit *real* CSV import + profile capture and backup semantics, reducing current CLI friction WITHOUT exposing writable HTTP endpoints to drive-by requests. Consider a single offline CLI wizard or separate deliberate local one-click importer with preflight JSON validation, restricted local path, source IDs and back up before edits. Never mix fake demo DB with real customer storage.
+2. Add integration/unit tests for all new flows and Windows handle lifetime, preserve PASS/FAIL/UNKNOWN unknown-first and snapshot evidence, no mandatory cloud. Source-level V8 syntax/statics where runtime checkout unavailable; no fabricated QA.
+3. Only after BASIC usability, tackle Windows packaging, real Excel/PDF, 10k performance and final native QA as release gates. P3 PRO official procurement customer key API, P4 PREMIUM opt-in AI, naming/KIPRIS checks and commercial sale are later.
+All-tier subjective progress prior approx 35%, do not increase numerically without objective evaluation.
+
+---
+## Earlier P2-12 and P2-11 notes retained for context
+
 # BID OWL NEXT — P2-12 autonomous Windows-lock prevention / diagnostic consolidation (2026-10-27 KST)
 
 **Continue on `feature/bid-owl-v1-basic-mvp` only; no user action required for ordinary code tasks.** User has explicitly objected to repeatedly downloading ZIPs and rerunning scripts. Do not request another user-side test in routine ㄱ work; do as much source implementation/static validation as possible independently, and leave native Windows test as an honest release-gate limitation. No paid hosted CI/cloud runner or private-code transfer to third-party project without approval; main and Vercel protected.
