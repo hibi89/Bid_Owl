@@ -58,6 +58,90 @@ class ViewerTests(unittest.TestCase):
                       (assessment_id, engine_fingerprint()))
         c.commit();c.close()
 
+    def test_deadline_crossing_invalidates_snapshot_even_without_bid_revision(self):
+        from viewer import _latest_rows, _status_for_candidate_keys
+
+        deadline = datetime.fromisoformat(self.deadline)
+        before = deadline - timedelta(seconds=1)
+        after = deadline + timedelta(seconds=1)
+        with closing(open_database(self.path)) as conn:
+            old = _latest_rows(conn, "P1", ("TEST", "A"), as_of=before)[0]
+            self.assertEqual(old["status"], "PASS")
+            self.assertFalse(old["expired"])
+            new = _latest_rows(conn, "P1", ("TEST", "A"), as_of=after)[0]
+            self.assertEqual(new["snapshot_status"], "PASS")
+            self.assertEqual(new["status"], "UNKNOWN")
+            self.assertTrue(new["expired"])
+            self.assertFalse(new["assessment_fresh"])
+            self.assertTrue(new["requires_human_review"])
+            self.assertIn("마감 상태 변경", new["review_reason"])
+            keys = [("TEST", "A")]
+            self.assertEqual(
+                _status_for_candidate_keys(
+                    conn, keys, "P1", expected_expiry={keys[0]: False}
+                )[keys[0]], "PASS",
+            )
+            self.assertEqual(
+                _status_for_candidate_keys(
+                    conn, keys, "P1", expected_expiry={keys[0]: True}
+                )[keys[0]], "UNKNOWN",
+            )
+
+    def test_expiry_freshness_applies_to_all_status_filters_and_detail(self):
+        # The source data and assessment versions deliberately stay the
+        # same. Only the deadline crosses from open to expired.
+        with closing(sqlite3.connect(self.path)) as writer:
+            payload = json.loads(writer.execute(
+                "SELECT payload FROM bid_versions "
+                "WHERE source_id='TEST' AND bid_no='A'"
+            ).fetchone()[0])
+            payload["bid_deadline"] = self.old_deadline
+            writer.execute(
+                "UPDATE bid_versions SET payload=? "
+                "WHERE source_id='TEST' AND bid_no='A'",
+                (json.dumps(payload, ensure_ascii=False),),
+            )
+            writer.commit()
+        with closing(open_database(self.path)) as conn:
+            result = query_bids(conn, {"status": ["PASS"]})
+            self.assertEqual(result["total"], 0)
+            unknown = query_bids(conn, {"status": ["UNKNOWN"]})
+            self.assertEqual(
+                {row["bid_no"] for row in unknown["items"]},
+                {"A", "C"},
+            )
+            detail = query_detail(conn, {
+                "source_id": ["TEST"], "bid_no": ["A"], "profile": ["P1"],
+            })
+            self.assertFalse(detail["evidence_is_current"])
+            self.assertEqual(detail["bid"]["snapshot_status"], "PASS")
+            self.assertEqual(detail["bid"]["status"], "UNKNOWN")
+            self.assertTrue(detail["bid"]["requires_human_review"])
+
+    def test_expired_snapshot_no_longer_valid_if_deadline_moved_forward(self):
+        with closing(sqlite3.connect(self.path)) as writer:
+            payload = json.loads(writer.execute(
+                "SELECT payload FROM bid_versions "
+                "WHERE source_id='TEST' AND bid_no='B'"
+            ).fetchone()[0])
+            payload["bid_deadline"] = self.deadline
+            writer.execute(
+                "UPDATE bid_versions SET payload=? "
+                "WHERE source_id='TEST' AND bid_no='B'",
+                (json.dumps(payload, ensure_ascii=False),),
+            )
+            writer.commit()
+        with closing(open_database(self.path)) as conn:
+            self.assertEqual(query_bids(conn, {"status": ["FAIL"]})["total"], 0)
+            unknown = query_bids(conn, {"status": ["UNKNOWN"]})
+            self.assertEqual(
+                {x["bid_no"] for x in unknown["items"]}, {"B", "C"},
+            )
+            row = next(x for x in unknown["items"] if x["bid_no"] == "B")
+            self.assertEqual(row["snapshot_status"], "FAIL")
+            self.assertFalse(row["assessment_fresh"])
+            self.assertIn("마감 상태 변경", row["review_reason"])
+
     def test_legacy_database_without_policy_provenance_shows_unknown(self):
         with closing(sqlite3.connect(self.path)) as writer:
             writer.execute("DROP TABLE assessment_engine_provenance")
