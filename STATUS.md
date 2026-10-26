@@ -1,3 +1,18 @@
+# BID OWL STATUS — P2-20 (2026-10-27 KST)
+
+Frontend aesthetics deferred at user's request; this stage changed backend and tests/docs only.
+
+**Implemented:** `backend/backup_recovery.py` now hashes full local immutable procurement evidence (all v1 profile/bid/version/import/assessment/rules and optional policy fingerprint rows) as `evidence_sha256`. Source preview and copy verify record equality, not just row counts, and reject WAL/journal/SHM sidecars appearing between checks. SQLite read transaction keeps counts and evidence hash from a single snapshot. Existing active DB and backup remain unmodified; recovery still creates only a new, non-overwriting DB.
+
+**Opt-in performance measurement:** `backend/benchmark_local.py --with-recovery` now separately measures synthetic SQLite backup, full validation/hash and verified new-DB recovery; ordinary tests unchanged. New five backup tests and two benchmark tests added. GitHub remote source inventory: **233 Python test methods across 16 modules**, NOT 233 passed executions.
+
+**Executed evidence:** Separate isolated Python/sqlite3 content-hash behavior 5/5 PASS and isolated fake 10,000-bid+200-assessment SQLite microbenchmark in model container. Neither runs the actual private GitHub full application, Windows runtime or complete 10k viewer/performance script; no claim that full project 10k benchmark passes. Windows WinError32 original 137-suite/18 cleanup failures still need native re-run after previous source fixes. Native 233 test execution, browser, PDF/Excel, installer, recovering real user data, legal name and PROD performance remain outstanding. Product subjective overall ~42% prior estimate, not independently rescored by commits.
+
+**Next P2-21:** index/filter/query correctness and actual measurable 10k speed improvements in backend; keep frontend postponed, no customer data/API/paid runner/main/Vercel modifications, no routine user ZIP QA requests.
+
+---
+## Historical statuses
+
 # BID OWL STATUS — P2-19 backup integrity and non-overwriting recovery (2026-10-27 KST)
 
 **Backend-first direction confirmed:** User dislikes both generated UI concepts. FRONTEND VISUAL REDESIGN IS ON HOLD until explicitly resumed; do not spend subsequent ㄱ calls on mockups/visual design. Focus on backend safety, correctness and data recovery. Work only in private `feature/bid-owl-v1-basic-mvp` and leave main/Vercel untouched.
