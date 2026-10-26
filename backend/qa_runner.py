@@ -51,7 +51,7 @@ def _unit_suite() -> dict:
     runner = unittest.TextTestRunner(stream=sys.stderr, verbosity=1)
     result = runner.run(suite)
     return {
-        "status": "PASS" if result.wasSuccessful() else "FAIL",
+        "status": "PASS" if result.wasSuccessful() and result.testsRun > 0 else "FAIL",
         "tests_run": result.testsRun,
         "failures": len(result.failures),
         "errors": len(result.errors),
