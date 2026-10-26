@@ -1,3 +1,13 @@
+## P2-21 — metadata-first viewer page and explicit historical comparison
+
+Default `query_bids` listing without a status filter now reads current bid metadata, applies **the same Python Unicode casefold/category/deadline/favorite filters and ordering**, then queries complete assessment/provenance only for the selected page (max 100 bid keys). Historical status filters intentionally retain the prior full-assessment scan until future indexed validation. A single readonly transaction is used to hold both page-selection and assessment lookup on the same DB snapshot.
+
+Run `python benchmark_local.py --records 10000 --assessed 200 --compare-full-scan` to **explicitly** measure `all_rows_page_1_ms` against `legacy_full_scan_page_1_ms` and assert exact page item/category/total equality in the same synthetic SQLite. This flag is opt-in; normal unit tests use at most 41 synthetic bids for this comparison. May combine with `--with-recovery` to measure recovery in the same isolated workspace. Do not advertise performance gains until executing the genuine full application and measuring on the supported Windows PC.
+
+The optimization still parses all current bid JSON and sorts metadata in Python, and the status-filter path still scans all assessments. It targets the expensive *per-bid assessment correlated subqueries and provenance* on normal listings, not arbitrary O(1) retrieval.
+
+---
+
 ## P2-20 optional recovery benchmark
 
 The optional command `python benchmark_local.py --records 10000 --assessed 200 --with-recovery` adds three measured stages to the established synthetic import/query timings: `sqlite_backup_ms`, `recovery_validate_and_hash_ms`, `recovery_copy_verify_ms`. The result also reports `recovery_verified` and the reconstructed evidence SHA-256. Without `--with-recovery`, the normal benchmark and regression-test workload are unchanged. A small 31-record/5-assessment test checks the opt-in path; there is no hidden 10k task in a standard unit run.
