@@ -88,6 +88,16 @@ class SchemaVersionError(RuntimeError):
     pass
 
 
+def database_file_identity(path: str | Path) -> tuple[int, int, int, int]:
+    """Snapshot file identity for preflight-to-write replacement detection.
+
+    Includes device/inode and size/mtime for platforms where inode may be 0.
+    This is a fail-closed conflict guard, NOT a cross-process locking scheme.
+    """
+    stat = Path(path).stat()
+    return (stat.st_dev, stat.st_ino, stat.st_size, stat.st_mtime_ns)
+
+
 class BidOwlStore:
     """Open one process-owned connection; use with a context manager.
 
@@ -95,13 +105,49 @@ class BidOwlStore:
     Never use this class concurrently from multiple threads; SQLite serializes writers.
     """
 
-    def __init__(self, path: str | Path | None = None) -> None:
+    def __init__(
+        self, path: str | Path | None = None, *,
+        must_exist: bool = False,
+        expected_identity: tuple[int, int, int, int] | None = None,
+    ) -> None:
+        """Default is legacy new-DB mode; protected callers use mode=rw.
+
+        `must_exist=True` refuses a missing, blank, foreign or obsolete DB
+        instead of creating/initializing it. `expected_identity` binds the
+        caller's readonly preflight to the same on-disk file. Passing an
+        expected identity for a freshly O_EXCL-reserved empty file allows its
+        *explicit* initialization while still refusing a different file.
+        Neither guard replaces an OS-level cross-process write lock.
+        """
+        if type(must_exist) is not bool:
+            raise TypeError("must_exist must be a bool")
+        if expected_identity is not None and (
+            not isinstance(expected_identity, tuple)
+            or len(expected_identity) != 4
+            or any(type(part) is not int for part in expected_identity)
+        ):
+            raise ValueError("expected_identity must be a 4-integer file identity")
         self.path = Path(path) if path is not None else default_database_path()
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        self.db = sqlite3.connect(str(self.path), isolation_level=None, timeout=15)
-        self.db.row_factory = sqlite3.Row
-        self.db.execute("PRAGMA foreign_keys = ON")
+        if must_exist or expected_identity is not None:
+            if expected_identity is not None and database_file_identity(self.path) != expected_identity:
+                raise ValueError("SQLite database file identity changed since preflight")
+            # mode=rw NEVER creates a database even if a different process
+            # deletes the path after the last Path.stat() check.
+            uri = self.path.resolve().as_uri() + "?mode=rw"
+            self.db = sqlite3.connect(uri, uri=True, isolation_level=None, timeout=15)
+        else:
+            self.path.parent.mkdir(parents=True, exist_ok=True)
+            self.db = sqlite3.connect(str(self.path), isolation_level=None, timeout=15)
         try:
+            if expected_identity is not None and database_file_identity(self.path) != expected_identity:
+                raise ValueError("SQLite database replaced while opening writer")
+            self.db.row_factory = sqlite3.Row
+            self.db.execute("PRAGMA foreign_keys = ON")
+            if must_exist:
+                # A missing or foreign database MUST NOT acquire a new v1
+                # schema just because SQLite opened an empty file.
+                if self.db.execute("PRAGMA user_version").fetchone()[0] != SCHEMA_VERSION:
+                    raise SchemaVersionError("Existing BID OWL v1 database required")
             self._initialize()
         except BaseException:
             self.db.close()
