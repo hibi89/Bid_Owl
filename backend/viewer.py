@@ -58,6 +58,7 @@ def _latest_rows(
     conn: sqlite3.Connection, profile_id: str = "",
     only_key: tuple[str, str] | None = None,
     *, candidate_keys: list[tuple[str, str]] | None = None,
+    as_of: datetime | None = None,
 ) -> list[dict]:
     # Old schema-v1 databases can lack engine provenance: never imply a
     # historical PASS is current in that case. No DB schema edits in viewer.
@@ -117,7 +118,7 @@ def _latest_rows(
         where_clause=where_clause,
         policy_column=policy_column, policy_join=policy_join,
     ), params).fetchall()
-    now = datetime.now(timezone.utc)
+    now = as_of if as_of is not None else datetime.now(timezone.utc)
     result = []
     for row in rows:
         bid = json.loads(row["payload"])
@@ -202,7 +203,7 @@ def _query_without_status(
         total = len(metadata)
         keys = [(source, number) for _, _, source, number in
                 metadata[(page - 1) * page_size:page * page_size]]
-        selected = _latest_rows(conn, profile, candidate_keys=keys)
+        selected = _latest_rows(conn, profile, candidate_keys=keys, as_of=now)
         by_key = {(row["source_id"], row["bid_no"]): row for row in selected}
         # Preserve metadata pagination order; SQLite candidate IN order is
         # unspecified. All page keys refer to current b.latest_version.
