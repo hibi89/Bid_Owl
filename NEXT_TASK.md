@@ -1,3 +1,23 @@
+# BID OWL NEXT — P2-15 implemented; P2-16 autonomous (2026-10-27 KST)
+
+Resume rule: user `ㄱ` = continue most important feasible source task on `feature/bid-owl-v1-basic-mvp`, no routine request to download ZIP or rerun tests on their PC. Auth GitHub heads, HANDOFF.md, STATUS.md, AGENTS.md, REQUIREMENTS.md, START_HERE.md and this file must be read first. Main and legacy Vercel protected; no public service, private customer data upload, paid runner, customer API/AI keys without approval.
+
+P2-15 source changes:
+- `backend/import_local.py` now avoids duplicate SQLite assessment rows on unchanged repeat CSV import: exact source/bid/profile, saved bid_revision==latest_revision, saved profile_version==latest profile revision, and recorded expiry flag==current expiry. If any mismatch, evaluate and save new immutable snapshot, ensuring deadline crossing forces reevaluation. Profile drift during reused lookup is rejected. Uses parameter-bound SQL. Existing backup before any DB modification remains mandatory.
+- `apply_import(plan, force_reassess=False)`: new `assessments_saved` (new only) and `assessments_reused`, counts cover all processed bids. GUI displays both counts and has user-selected re-evaluate checkbox. CLI explicit `--force-reassess` with `--apply` for known rule-engine changes, preserving historical snapshots. **Known limitation:** rules-engine source changes not auto-detected, so manual full reevaluation needed after app upgrade; build safe automatic invalidation in P2-16.
+- `backend/tests/test_import_local.py` new +8 (total 26) scenarios including unchanged SQL identity, revised bid, expiry transition, company profile revision, concurrent mid-import company version drift + backup preserved, forced reassessment (CLI & direct), and invalid option type.
+- `backend/IMPORT.md` updated with reuse and override behavior. `STATUS/HANDOFF/NEXT_TASK/START_HERE` updated.
+- **Verification:** source readback and static guard checks; four small isolated SQLite SQL contract checks actually passed in Python sandbox (not full GitHub import run). Current GitHub **178 Python test_* declarations across 13 modules**, not 178 execution PASS. Old actual 137-test Windows run had 18 WinError32 errors, no new full Windows confirmation of fixes.
+
+P2-16 implementation priorities:
+1. Engine-code version/fingerprint invalidation: track which eligibility policy/logic version produced a reusable assessment. MUST not mutate existing SQLite v1 before taking required backup; existing snapshots without engine provenance must be reevaluated. Do not silently treat code-upgrade old PASS as current. Add tests for old-version and current-version cache states.
+2. Backup/recovery user-facing support: verify SQLite backup read-only and create safe opt-in restore plan with explicit backup of current DB before any swap, no automatic replacement without dedicated confirmation; or report launcher to reduce BASIC CLI friction.
+3. Full native Windows release validation remains future gate. Avoid source-test-count "PASS" exaggeration, 10k unmeasured benchmark, paid CI or user burden.
+
+Progress: previous subjective global BASIC/PRO/PREMIUM/etc estimate ~40%, no objective recalculation from this iteration alone. Continue P2-16 source delivery then record exact remote SHAs and modified paths.
+
+---
+## Historical P2-14 and older notes retained
 # BID OWL NEXT — P2-14 real CSV/company onboarding implemented · 2026-10-27 KST
 
 **On next ㄱ continue P2-15 automatically.** Private `hibi89/Bid_Owl` working branch `feature/bid-owl-v1-basic-mvp` only. Fetch current feature/main heads + latest HANDOFF/STATUS/AGENTS/REQUIREMENTS/START_HERE. User expressly does not want repeated ZIP downloads/PowerShell QA; do ALL reasonable development, source verification and documentation autonomously. Protect main and original Vercel, no external paid CI, no customer data or keys.
