@@ -5,7 +5,7 @@
 ## 즉시 행동
 1. GitHub `main`과 `feature/bid-owl-v1-basic-mvp` HEAD 확인.
 2. `AGENTS.md`, `STATUS.md`, `HANDOFF.md`, `NEXT_TASK.md`, `REQUIREMENTS.md` 순서로 읽기.
-3. 이미 승인된 내용을 다시 묻지 말고 `NEXT_TASK.md`의 **최신 미완료 단계부터** 실제 구현 + 가능한 검증 + 커밋. 2026-10-27 기준 P2-16까지 진행하며 현재 단계는 판정 엔진 지문·자동 재평가 및 구형 PASS 무효화를 포함. 실제 CSV 등록은 `START_BID_OWL_IMPORT.cmd` / `backend/import_local.py`, 가상 데모는 `START_BID_OWL_DEMO.cmd`.
+3. 이미 승인된 내용을 다시 묻지 말고 `NEXT_TASK.md`의 **최신 미완료 단계부터** 실제 구현 + 가능한 검증 + 커밋. 2026-10-27 기준 P2-17까지 진행하며 기존 CLI 백업 선행·프로필 변경 거부·지문 저장 호환성까지 보강. 다음은 P2-18의 기존 DB 재생성 경쟁 조건 방지. 실제 CSV 등록은 `START_BID_OWL_IMPORT.cmd` / `backend/import_local.py`, 가상 데모는 `START_BID_OWL_DEMO.cmd`.
 4. 코드 변경은 feature 브랜치에서만, main 교육용 데모는 보존. 차단사항은 기록하고 가능한 작업 진행.
 5. 작업 후 STATUS/HANDOFF 갱신과 정확한 최신 SHA 보고.
 
@@ -45,3 +45,7 @@
 - 저장된 공고 버전/회사 프로필 버전/판정 엔진 SHA-256이 모두 일치해야 현재 PASS로 표시. 구형 DB나 누락된 지문은 UNKNOWN.
 - 구형 DB는 정상 백업을 먼저 만든 뒤 추가 메타데이터 테이블 생성. 판정 이력 보존.
 - 근거·제한 문서: `backend/ENGINE_POLICY.md`; 최신 개발은 P2-17부터. 완료 코드와 실행된 전체 테스트를 혼동하지 말 것.
+
+## P2-17 구형 CLI 호환성 개선
+- 구형 `backend/cli.py` CSV/PDF/XLSX 경로가 기존 SQLite를 수정하기 전에 읽기 전용 검사와 비덮어쓰기 백업을 수행하도록 보강. 규칙 엔진 지문 테이블은 백업 이후에만 보강.
+- 소스 검토와 9개 신규 테스트 정의 반영. 전체 Python **199개 정의 테스트는 실제 실행 검증되지 않음**. 사용자에게 반복적인 ZIP/PowerShell 테스트 요청 금지.
