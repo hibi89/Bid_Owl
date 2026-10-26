@@ -1,3 +1,9 @@
+# P2-26 — BASIC MVP 실사용 단일 명령 등록+보고서
+
+기존 `import_local.py` 실제 사용자 등록기에 선택적인 `--export-dir` 및 `--report-format`을 붙였습니다. 등록 → 평가 ID 기록 → 해당 평가의 XLSX/PDF 저장을 명령 한 번으로 수행하며, 기존 저장 ID 재사용과 보고서 실패의 부분 성공 상태까지 구분합니다. [IMPORT.md](IMPORT.md) 및 [MVP_ACCEPTANCE.md](MVP_ACCEPTANCE.md) 참조. `mvp_smoke.py`는 해당 실제 등록 명령으로 Excel 보고서 두 개를 생성하는 추가 수용 검사도 포함합니다. Windows 전체 Python 실행과 PDF 실사용 폰트 검증은 아직 완료되지 않았습니다.
+
+---
+
 # P2-25 — 실제 BASIC MVP 고객 등록기 경로 통합
 
 원래 **MVP 먼저 → 전체 설계 대비 기능 확장 → 안정성/보안/상용화** 순서로 복귀. `mvp_smoke.py`는 `cli.py`의 개발용 경로가 아닌 실제 `import_local.prepare_import/apply_import`를 직접 호출해 CSV와 회사 등록, 판정 저장, 읽기 전용 조회, 공고 상세, Excel 보고서, 중복 재가져오기/백업 보존을 종합 검사한다. GUI·테마 디자인은 변경하지 않았고 합성 임시 파일만 사용한다.
