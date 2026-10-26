@@ -89,7 +89,7 @@ def run_mvp_smoke(*, require_pdf: bool = False) -> dict:
                 if assessment_id in ids:
                     raise AssertionError("BASIC import reused the same assessment for two bids")
                 ids.add(assessment_id)
-                exported.append((item["bid_no"], assessment_id))
+                exported.append((item["bid_no"], assessment_id, item["snapshot_status"]))
             try:
                 readonly.execute("DELETE FROM bids")
             except sqlite3.OperationalError:
@@ -98,14 +98,16 @@ def run_mvp_smoke(*, require_pdf: bool = False) -> dict:
                 raise AssertionError("BASIC viewer database was not read-only")
 
         report_paths = []
-        for number, assessment_id in exported:
+        for number, assessment_id, snapshot_status in exported:
             report = export_existing(
                 db_path=db, assessment_id=assessment_id,
                 output_dir=reports,
                 format="both" if require_pdf else "xlsx",
             )
-            if report["status"] != "LOCAL_EXPORTED":
-                raise AssertionError("BASIC saved assessment report did not export")
+            if (report["status"] != "LOCAL_EXPORTED"
+                    or report["assessment_id"] != assessment_id
+                    or report["snapshot_status"] != snapshot_status):
+                raise AssertionError("BASIC saved assessment report mismatched current evidence")
             files = [Path(path) for path in report["files"]]
             if not any(path.suffix == ".xlsx" for path in files):
                 raise AssertionError("BASIC Excel export missing")
@@ -116,6 +118,10 @@ def run_mvp_smoke(*, require_pdf: bool = False) -> dict:
                     with ZipFile(path) as archive:
                         if archive.testzip() is not None:
                             raise AssertionError("BASIC XLSX ZIP integrity failed")
+                        if number.encode("utf-8") not in archive.read(
+                            "xl/worksheets/sheet1.xml"
+                        ):
+                            raise AssertionError("BASIC XLSX report omitted its bid identifier")
                         for name in archive.namelist():
                             if name.endswith((".xml", ".rels")):
                                 ElementTree.fromstring(archive.read(name))
@@ -147,6 +153,13 @@ def run_mvp_smoke(*, require_pdf: bool = False) -> dict:
             prior = old.execute("SELECT COUNT(*) FROM assessments").fetchone()[0]
         if (actual, prior) != (2, 2):
             raise AssertionError("BASIC repeat import altered evidence or backup history")
+        with closing(open_database(db)) as current:
+            newest = query_bids(current, {"profile": [PROFILE_ID]})
+            if (newest["total"] != 2 or
+                    {x["assessment_id"] for x in newest["items"]} !=
+                    {assessment_id for _, assessment_id, _ in exported} or
+                    not all(x["assessment_fresh"] for x in newest["items"])):
+                raise AssertionError("BASIC reimport changed current assessment selection")
 
         return {
             "status": "BASIC_MVP_SYNTHETIC_E2E_PASS",
