@@ -1,3 +1,43 @@
+# BID OWL HANDOFF — P2-12 autonomous source hardening (2026-10-27 KST)
+
+## 1. User intent and current product
+Private BID OWL Windows-local procurement screening: BASIC CSV/profile/versioned SQLite + conservative evidence based PASS/FAIL/UNKNOWN + readonly localhost UI/seven themes + saved XLSX/PDF; PRO official Korean procurement API via user's own key, PREMIUM opt-in AI, planned 59k/149k/299k KRW, unverified prices/trademark. The user **explicitly does not want repeated manual test requests**. Continue own source development on feature branch. Final native Windows acceptance is a distinct release gate, not routine user labor.
+
+## 2. P2-12 changes (this turn)
+- New `backend/tests/test_sqlite_handles.py` (4 tests) AST-scans backend app and test Python source, rejecting direct `with sqlite3.connect(...)` / `with open_database(...)` because sqlite3 Connection.__exit__ is transaction-only and does NOT close file handles. Includes 3 synthetic positive/negative AST scanner cases; no customer data/DB. Does not detect aliases or all possible lifetime leaks.
+- `backend/tests/test_store.py` +1 deterministic cross-platform test wraps `bidowl.store.sqlite3.connect` with side-effect tracer during `backup_to`, then asserts tracked target is already closed after return (sqlite3.ProgrammingError). Complements P2-11 Windows-only backup unlink regression; minimal standalone connection-spy proof PASS in local Python. No production backup logic changed in P2-12.
+- `backend/qa_runner.py` now runs the isolated synthetic smoke and opt-in 10k synthetic benchmark independently even if unit tests have errors; still reports overall FAIL unless all mandatory invoked stages PASS, Node missing still SKIP. Prevents unneeded repeat downloads/commands just to gather additional independent diagnostics. `backend/tests/test_qa_runner.py` updated prior fail-gating test and adds 1 explicit isolated smoke-fails-but-benchmark-runs test.
+- `backend/BENCHMARK.md` recorded new semantics and previous first measured Windows failure evidence; `NEXT_TASK.md`, `STATUS.md`, `HANDOFF.md` updated.
+
+## 3. Actual source and test evidence / limitations
+Remote authenticated GitHub inspection of exact 25 Python backend files found **0 direct bare SQLite `with` patterns** after P2-11 closure fix (static line-pattern scan, does not execute AST across exact authenticated repo in local CPython). Standalone copy of the new AST scanner executed 3 behavioral unit tests PASS under the author's Python environment; fourth full-repo scan could NOT run locally without authenticated full checkout. Standalone synthetic tracer demonstrated how to detect a closed SQLite handle by `sqlite3.ProgrammingError`. These do **NOT** constitute full project integrated QA.
+Current authenticated source contains **144 declared Python test_* methods in 11 files**. **144 not executed**. Historical user Windows ZIP run on preceding version actually executed 137 tests in 7.237 seconds: 119 successful, 18 ERROR WinError32 deletion of still-open temporary SQLite files, zero assertion failures; JavaScript syntax PASS, then synthetic smoke and 10k benchmark SKIP under previous failure-gated QA semantics. P2-11 fixed observed open connections but new code is not yet measured on Windows. P1 old 96 Linux PASS on earlier branch is not current QA. Do not fabricate Windows success/10k timing.
+Current running environment sandbox cannot fetch and mount entire authenticated private repo (earlier DNS/auth failures); GitHub connector reads/writes files but not Python execution checkout. No main/production/customer changes.
+
+## 4. Next iteration without user work
+P2-13: improve BASIC first-use usability or add more offline/local source safety tests; prioritize actual user-facing workflow after Windows handle leak fixes. Keep 127.0.0.1 app read-only and data modifications only through explicit CLI with backups and expected revisions, unless approved secure authentication/CSRF threat model. If a safe way to execute the authenticated full private suite from own authorized environment becomes available without paid external CI/private-code egress, use it and record real results. Do not automatically request the user to download another ZIP on ㄱ. Native Windows/browser/Excel/PDF real acceptance remains pending and must be reported honestly.
+
+## 5. Repository, commits, backups, restrictions
+Private https://github.com/hibi89/Bid_Owl repo id 1399359397, work branch `feature/bid-owl-v1-basic-mvp`. P2-12 begins at `dd4fbfa2966e277a23726916ff30491ae2458e69`. Source commits:
+- `d4640f97eb4c7c61b0f7ab71828c3b9c106517dd` test_sqlite_handles.py 4 new;
+- `098dc1596b023e54ceda800b1aa92def01b74a70` qa_runner independent stages;
+- `8f0b6fbbc521f60c0ba4204d2319d6816dd51cff` qa-runner tests;
+- `74b35dce7d44148c13ba4a5f9c148e6f9c2c0f33` cross-platform backup-close spy test;
+- `8dffb415c91ef2c5e24b76d135102eb8ccb449be` benchmark docs;
+- NEXT_TASK and STATUS updates follow; current HANDOFF update is last expected HEAD, verify SHA/author after write.
+Main must remain `c888c795bef72734f3f7016e54013b82453f11d8` and old school demo/Vercel unchanged. No actual customer SQLite/CSV/PDF/XLSX/keys/secret/fonts uploaded; no GitHub public action/paid services/external API/permission change; backup always non-overwriting before write. Old school demo 340/340 not BID OWL QA.
+
+## 6. Production and environment
+New Python BID OWL has no public deployment. Authenticated local developer after CSV import may run `python viewer.py --db ./demo.sqlite3 --port 8765` in backend and access http://127.0.0.1:8765; app HTTP is read-only. PDF uses ReportLab and locally installed permitted Korean font, one-click historical XLSX is read-only. Prior unrelated Vercel project project08-bid-insight ID prj_YcrN7OdOjKl6M457HelGIItLeeXZ untouched. No verified Windows native browser/Excel/PDF or install yet.
+
+## 7. Explicit QA logic and acceptance
+`python qa_runner.py --benchmark` from an **actual current** authenticated checkout records real unittest results, separate synthetic smoke, optional Node syntax, requested 10k benchmark with timings, Git SHA when checkout exposes git (ZIP SHA may be null), and writes local ignored `qa_results` JSON. One failing stage can no longer suppress independent diagnostics; no stage failure is converted into success. This implementation has not been run end-to-end from exact source in this turn. Final commercial BASIC gates: Windows cleanup lock bug confirmed fixed by real runs, 10k measured acceptable, native Excel/PDF, accessibility and 7 themes, packaging, customer-data privacy, legal clearance.
+
+## 8. Last checkpoint and continuation
+2026-10-27 KST. Authenticated GitHub source updated and static checks performed; latest current full run unverified. No further user action requested. User ㄱ resumes P2-13 autonomous work. The more detailed historical P2-11 handoff follows for earlier errors, exact Windows console result and rationale.
+
+---
+
 # BID OWL HANDOFF — P2-11 Windows SQLite handle fix, 2026-10-27 KST
 
 ## 1. Product and technical requirements
