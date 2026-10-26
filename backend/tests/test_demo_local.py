@@ -154,6 +154,8 @@ class LocalDemoTests(unittest.TestCase):
         self.assertIn(DEMO_SOURCE, js)
         self.assertIn("demo_local.py", cmd)
         self.assertIn('%~dp0', cmd)
+        outer = (backend.parent / "START_BID_OWL_DEMO.cmd").read_text(encoding="utf-8")
+        self.assertIn('backend\\START_DEMO.cmd', outer)
 
 
 if __name__ == "__main__":
