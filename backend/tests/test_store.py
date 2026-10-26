@@ -166,6 +166,26 @@ class StoreTests(unittest.TestCase):
         self.assertEqual(entry['checked_at'],T.isoformat())
         self.assertEqual(entry['final_approval_required'],1)
 
+    def test_assessment_expected_profile_version_prevents_stale_batch_write(self):
+        self.store.import_bids([bid()], source_id='s')
+        self.store.save_profile(CompanyProfile('p', region='부산광역시'))
+        old, outcome = self.store.assess_and_record(
+            's', 'DEMO-1', 'p', checked_at=T, expected_profile_version=1)
+        self.assertEqual(outcome.status, 'PASS')
+        self.store.save_profile(CompanyProfile('p', region='서울특별시'))
+        with self.assertRaisesRegex(ValueError, 'Profile version mismatch'):
+            self.store.assess_and_record(
+                's', 'DEMO-1', 'p', checked_at=T, expected_profile_version=1)
+        with self.assertRaises(ValueError):
+            self.store.assess_and_record(
+                's', 'DEMO-1', 'p', checked_at=T, expected_profile_version=True)
+        self.assertEqual(self.store.db.execute('SELECT count(*) FROM assessments').fetchone()[0], 1)
+        current, outcome = self.store.assess_and_record(
+            's', 'DEMO-1', 'p', checked_at=T, expected_profile_version=2)
+        self.assertEqual(outcome.status, 'FAIL')
+        self.assertEqual(self.store.assessment(old)[0]['profile_version'],1)
+        self.assertEqual(self.store.assessment(current)[0]['profile_version'],2)
+
     def test_assess_after_profile_edit_retains_old_snapshot(self):
         self.store.import_bids([bid()],source_id='s')
         self.store.save_profile(CompanyProfile('p',region='부산광역시'))
