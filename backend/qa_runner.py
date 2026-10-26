@@ -163,18 +163,13 @@ def run_qa(*, benchmark: bool = False, output_dir: str | Path | None = None) -> 
     }
     try:
         outcome["unit_tests"] = _unit_suite()
-        if outcome["unit_tests"]["status"] == "PASS":
-            outcome["synthetic_smoke"] = _synthetic_smoke()
-        else:
-            outcome["synthetic_smoke"] = {"status": "SKIP", "reason": "Unit tests failed"}
+        # These stages use separate disposable synthetic databases.
+        # Run independently even when another stage fails: one run should
+        # collect all useful diagnostics, not force repeated user reruns.
+        outcome["synthetic_smoke"] = _synthetic_smoke()
         outcome["javascript_syntax"] = _syntax_check()
         if benchmark:
-            if all(outcome[key]["status"] == "PASS" for key in ("unit_tests", "synthetic_smoke")):
-                outcome["synthetic_benchmark"] = _benchmark()
-            else:
-                outcome["synthetic_benchmark"] = {
-                    "status": "SKIP", "reason": "Unit tests or smoke failed"
-                }
+            outcome["synthetic_benchmark"] = _benchmark()
         else:
             outcome["synthetic_benchmark"] = {
                 "status": "SKIP", "reason": "Use --benchmark to run 10k synthetic records"
