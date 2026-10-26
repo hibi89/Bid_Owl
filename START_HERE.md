@@ -7,7 +7,7 @@
 ## 즉시 행동
 1. GitHub `main`과 `feature/bid-owl-v1-basic-mvp` HEAD 확인.
 2. `AGENTS.md`, `STATUS.md`, `HANDOFF.md`, `NEXT_TASK.md`, `REQUIREMENTS.md` 순서로 읽기.
-3. 이미 승인된 내용을 다시 묻지 말고 `NEXT_TASK.md`의 **최신 미완료 단계부터** 실제 구현 + 가능한 검증 + 커밋. 2026-10-27 기준 P2-19까지 진행. 기존 DB를 덮어쓰지 않는 백업 검증·새 파일 복원 구현, 다음 P2-20은 백엔드 안정성/성능 검수. 실제 CSV 등록은 `START_BID_OWL_IMPORT.cmd` / `backend/import_local.py`, 가상 데모는 `START_BID_OWL_DEMO.cmd`.
+3. 이미 승인된 내용을 다시 묻지 말고 `NEXT_TASK.md`의 **최신 미완료 단계부터** 실제 구현 + 가능한 검증 + 커밋. 2026-10-27 기준 P2-20까지 진행. 백업 전체 공고·판정·규칙 근거 내용 해시 및 복원 후 비교, 선택형 1만 건 복구 벤치마크 구현. 다음은 P2-21의 백엔드 조회 성능 보강. 실제 CSV 등록은 `START_BID_OWL_IMPORT.cmd` / `backend/import_local.py`, 가상 데모는 `START_BID_OWL_DEMO.cmd`.
 4. 코드 변경은 feature 브랜치에서만, main 교육용 데모는 보존. 차단사항은 기록하고 가능한 작업 진행.
 5. 작업 후 STATUS/HANDOFF 갱신과 정확한 최신 SHA 보고.
 
@@ -61,3 +61,8 @@
 - `backend/backup_recovery.py` 기본은 백업 무결성 미리보기(`RECOVERY_PREVIEW_NO_WRITE`), `--apply` 시에도 기존 DB를 건드리지 않고 별도 새 DB 파일로만 복구.
 - 구형 v1 백업의 기존 PASS는 최신 엔진 판정으로 취급하지 않음. 자세한 계약은 `backend/RECOVERY.md`.
 - 226개 Python 테스트 정의 중 신규 14개; 전체 실행/Windows 검증은 아직 아님. UI 디자인 수정은 사용자 재개 요청까지 보류.
+
+## P2-20 백엔드 근거 지문과 성능 측정
+- `backend/backup_recovery.py`: 백업 원본과 복원 DB의 전체 레코드 내용 `evidence_sha256` 비교; 같은 건수라도 행 내용이 달라지면 실패. 기존 DB 덮어쓰기 없음.
+- `backend/benchmark_local.py --with-recovery`: 합성 데이터 백업·지문 계산·복원 단계별 시간 측정용 옵션. 현재 전체 1만 건 프로그램 실행 및 Windows 실사용은 미검증.
+- 233개 테스트 **정의**(16개 파일), 전체 실행 PASS가 아님. 현재 프론트엔드 미관 작업은 사용자 지시로 계속 보류하며 P2-21은 백엔드 조회 최적화.
