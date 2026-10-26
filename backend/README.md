@@ -1,3 +1,11 @@
+# BID OWL BASIC — 오프라인 합성 데모 (P2-13)
+
+Windows에서 개발판 압축을 풀었다면 저장소 최상위 `START_BID_OWL_DEMO.cmd`를 더블클릭하여 **가상 공고 2건만** 보는 임시 로컬 체험을 시작할 수 있습니다. Python 3.11+ 외에 ReportLab이나 API 키는 필요 없습니다. 브라우저가 자동으로 열리며 콘솔 Ctrl+C로 종료합니다. 데모는 실제 고객 DB를 사용하지 않으며 원본 입찰공고가 아닙니다.
+
+명령줄로도 `python demo_local.py`를 실행할 수 있습니다. 세부 제한·정리·검증 상태는 [DEMO.md](DEMO.md) 참조. 아래 CLI 설명은 실제 프로젝트 데이터 작업을 위한 기존 수동 개발 경로이며, 데모와 혼용하지 마세요.
+
+---
+
 # BID OWL BASIC — Local CLI MVP (P1-04)
 
 Offline CSV → company profile → PASS/FAIL/UNKNOWN rule evaluation → SQLite → PDF/XLSX reports.
