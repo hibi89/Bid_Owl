@@ -1,28 +1,27 @@
-# BID OWL NEXT_TASK — P2-09 · 2026-10-27 KST
+# BID OWL NEXT_TASK — P2-10 · 2026-10-27 KST
 
-Private repository hibi89/Bid_Owl; changes ONLY on feature/bid-owl-v1-basic-mvp. User ㄱ means read latest HANDOFF/STATUS/AGENTS/REQUIREMENTS/NEXT_TASK + current source/main HEAD, then continue. No main/Vercel/production/external API/payment changes, no customer uploads without approval.
+## Resume rule
+Private hibi89/Bid_Owl. User ㄱ = automatically continue after fetching current main + feature branch heads and reading HANDOFF, STATUS, NEXT_TASK, AGENTS, REQUIREMENTS plus source. Work only `feature/bid-owl-v1-basic-mvp`. No deployment, main rewrite, external customer-data transfer, paid automation, API key sharing or public sale without user authorization.
 
-## Scope/source already implemented
-P1 strict CSV, evidence-backed PASS/FAIL/UNKNOWN, revisioned SQLite/backups and CLI XLSX/PDF. P2-01 readonly localhost UI + 7 themes; P2-02 global favorites; P2-03 backed-up CLI profile edit/reassessment plus browser JSON export; P2-04 SQLite CAS and safe detail lookup; P2-05 immutable report replay and disposable synthetic smoke; P2-06 non-overwriting interrupted-output cleanup and new-profile JSON onboarding; P2-07 single-click read-only historical Excel download; P2-08 300-char Korean ID query support, profile-version pinning during batch reassessment, truthful backup/partial-write errors.
+## Source through P2-09
+P1 strict CSV/rule PASS/FAIL/UNKNOWN versioned SQLite with evidence and PDF/XLSX. P2-01 readonly loopback viewer/7 themes; P2-02 global favorites; P2-03 mandatory-backup profile CLI and JSON download; P2-04 CAS and readonly preview/detail; P2-05 saved assessment report replay + synthetic smoke; P2-06 partial-file export cleanup and new-company form; P2-07 read-only one-click XLSX; P2-08 long Korean ID and pinned profile-version reassessment; P2-09 synthetic up-to-10k bid performance benchmark source.
 
-## P2-09 actual new code/docs
-- NEW backend/benchmark_local.py creates **disposable synthetic SQLite only** under TemporaryDirectory, never touches user/customer DB or external services. Default `--records 10000 --assessed 200` imports Bid objects, saves synthetic profile + first 200 assessments, measures wall-clock ms using perf_counter for import, subset evaluation, first-page list, category/text filter, exact detail, one favorite across all sources. Verifies selected counts and mode=ro/query_only rejects writes; prints JSON including DB size, timings, disclaimer. The "import" metric starts after creation of in-memory Bid objects, and this is NOT a full 10k CSV parser/Excel/PDF/browser benchmark.
-- NEW backend/tests/test_benchmark_local.py (3 small tests): 31-row workload, 1-row zero-assessment edge, invalid count/bool input boundaries. Keeps full 10k test optional for runtime predictability.
-- backend/verify_local.ps1 adds optional `-Benchmark` switch to run Python unittest + synthetic smoke + optional Node JS check + 10k benchmark. Without flag, normal full suite remains fast.
-- NEW backend/BENCHMARK.md documents exact commands, measurements and omissions. No actual timings were collected in this tool session; the code is committed but Python runtime QA is still pending.
-- Current GitHub 9 test files declare **134 distinct `test_*` methods**: benchmark3, eligibility27, importer21, profile_workflow12, report21, report_existing10, smoke_local1, store29, viewer10. Verified by reading actual source, **134 NOT EXECUTED / NOT 134 PASS**. Previously exact remote ui.js V8 JavaScript syntax parse PASS; no browser validation.
+## P2-10 commits/source
+- NEW `backend/qa_runner.py` cross-platform actual Python test suite runner. Calls unittest.TestLoader.discover + TextTestRunner on all `test_*.py` under tests, collects **real** tests_run/failures/errors/skips/expected failures/unexpected successes/failed IDs and elapsed_ms, then executes synthetic `smoke_local.run_smoke` only if unittests succeeded. Validates optional Node.js `node --check ui/ui.js`; 10k synthetic benchmark only when `--benchmark` explicitly requested and unit/smoke succeeded. Report returns FAIL for any failing executed stage, and distinguishes SKIP. Git HEAD if available, Python/OS/machine, timestamp recorded; customer data never read. Writes an exclusive new JSON file `backend/qa_results/bidowl_qa_...json` that is not uploaded.
+- NEW `backend/tests/test_qa_runner.py` three deterministic mocked tests of machine-readable PASS result shape, failure preventing smoke/benchmark, and JavaScript failure propagating to overall FAIL. Mock result count is fixture, not genuine executed test count.
+- `backend/verify_local.ps1` simplified to call new Python runner `python qa_runner.py` or `python qa_runner.py --benchmark` once, with same opt-in `-Benchmark`, reporting real JSON path. No new external CI services or paid runners.
+- `backend/.gitignore` excludes `qa_results/`. `backend/BENCHMARK.md` documents local invocation and measured-vs-unverified distinction. STATUS/HANDOFF/NEXT_TASK updated.
+- GitHub remote **10 Python test modules / 137 declared `def test_*` functions**, counted by fetching each current test file: benchmark3, eligibility27, importer21, profile workflow12, QA reporter3, reports21, replay10, smoke1, storage29, viewer10. **137 NOT EXECUTED, NOT 137 PASS** in current authoring environment. Last actual historical Linux P1: 96 PASS (2026-10-26 on earlier source); current branch Python integration remains unknown. Earlier exact remote JavaScript V8 syntax parse PASS, but not browser E2E.
 
-## NEXT P2-10 priority
-1. Obtain permitted authentic checkout of this private repo and run from backend:
-   `python -m pip install -r requirements.txt` (if dependency not already present)
-   `python -m unittest discover -s tests -v`
-   `python smoke_local.py`
-   `node --check ui/ui.js`
-   `python benchmark_local.py --records 10000 --assessed 200`
-   On local Windows with prerequisites installed: `powershell -ExecutionPolicy Bypass -File .\verify_local.ps1 -Benchmark`.
-   Record TRUE passing/failing/skipped case counts and *measured* timings. Fix genuine failures before advertising BASIC stability/10k performance. No CI runs exist on feature branch. Avoid initiating paid GitHub Actions or writing to protected main.
-2. Verify real Windows browser and Excel/PDF native rendering, long Korean identifiers and one-click historical XLSX, profile JSON Blob download, 7 themes, keyboard/mobile, interrupted profile revision/backup recovery. Check 10k query timing; if slow, profile with SQLite EXPLAIN and optimize only after actual benchmark evidence.
-3. Finish BASIC usability: CSV import and profile apply and PDF replay still require separate CLI. Any HTTP write path requires threat model, CSRF/Host/Origin/auth and backups plus explicit user permission. Later P3 PRO government API customer key; P4 opt-in AI; P5 Windows packaging/security; P6 KIPRIS legal name clearance/sales approval.
+## NEXT P2-11: actual execution, highest release blocker
+1. Run on an authentic authorized private repository checkout with Python 3.11+, ReportLab and local Korean licensed TTF:
+    cd backend
+    python qa_runner.py --benchmark
+   or Windows:
+    powershell -ExecutionPolicy Bypass -File .\verify_local.ps1 -Benchmark
+   This runs and records the **real** all-Python-unit suite, synthetic end-to-end, JavaScript check if Node installed and 10k dataset timing, local JSON under backend/qa_results/. Compare actual Git SHA in JSON to branch HEAD before stating PASS. If the run reports FAIL or SKIP, fix source/test or environment and rerun. Do not invent timings.
+2. Validate real Windows 11 Chrome/Edge UI 7 themes, first-use company JSON download and explicit backed-up apply, historical XLSX download opens natively in Excel, Korean PDF with local font, keyboard focus, 300-char Korean IDs and actual 10k search responsiveness. The QA runner *does not* claim these browser/native results.
+3. BASIC still CLI-assisted for CSV import, profile DB writes and PDF. Secure one-click UX needs CSRF/auth/backups, not an unreviewed writable HTTP endpoint. Later P3 PRO official government API user key, P4 optional PREMIUM AI, P5 packager/security, P6 trademark/KIPRIS/sales gating.
 
-## Known blocker and legal/privacy boundaries
-GitHub connector source reads/writes work. Current container had no authenticated private checkout; earlier private git/raw/API DNS/auth and Chromium localhost ERR_BLOCKED_BY_ADMINISTRATOR prevented actual Python/browser tests. Do not re-run obsolete /mnt/data/bidowl_p2 and misrepresent results. No customer SQLite/docs/CSV/Excel/PDF, credentials/API keys/.env/font binaries committed. Local and disposable synthetic tests only. Planned prices 59k BASIC, 149k PRO, 299k PREMIUM are unverified. Historic school demo 340/340 is not new BID OWL QA.
+## Blocking history and privacy
+Exact current private repo cannot be checked out in this author's local container (prior private git/raw/API DNS+auth failures); no direct Python 137-run measurement here. Previous sandbox Chromium localhost blocked with ERR_BLOCKED_BY_ADMINISTRATOR. Never run old partial stand-in as if full current checkout. GitHub action runs absent at last check; avoid consuming potentially paid GitHub compute without approval. No customer CSV/SQLite/docs/reports/fonts/credentials/API keys/.env committed or uploaded. Main/Vercel original school demo preserved. Total all-tier project completion estimate previous ~35%, not an objectively measured percentage or changed in P2-10.
