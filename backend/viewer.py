@@ -262,6 +262,10 @@ class ViewerHandler(BaseHTTPRequestHandler):
         try:
             query = parse_qs(parsed.query, keep_blank_values=True, max_num_fields=12, strict_parsing=False)
             if parsed.path == "/api/report":
+                site = self.headers.get("Sec-Fetch-Site")
+                if site is not None and site not in ("same-origin", "none"):
+                    self._json(403, {"error": "Cross-site report download rejected"})
+                    return
                 if set(query) != {"assessment_id"}:
                     raise ValueError("Only assessment_id is supported for XLSX download")
                 identifier = _arg(query, "assessment_id")
