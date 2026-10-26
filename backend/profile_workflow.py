@@ -19,6 +19,39 @@ MAX_PROFILE_BYTES = 65536
 MAX_REASSESS = 10000
 
 
+class ReadOnlyProfileStore:
+    """Preflight a real schema-v1 database without opening any writable connection."""
+
+    def __init__(self, path: Path):
+        self.db = sqlite3.connect(path.resolve().as_uri() + "?mode=ro", uri=True, timeout=5)
+        self.db.row_factory = sqlite3.Row
+        try:
+            self.db.execute("PRAGMA query_only=ON")
+            if self.db.execute("PRAGMA user_version").fetchone()[0] != 1:
+                raise ValueError("Not a BID OWL schema-v1 database")
+            needed = {"profiles", "profile_versions", "bids"}
+            found = {r[0] for r in self.db.execute(
+                "SELECT name FROM sqlite_master WHERE type='table'"
+            )}
+            if not needed <= found:
+                raise ValueError("Missing BID OWL data tables")
+        except BaseException:
+            self.db.close()
+            raise
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.db.close()
+
+    def get_profile(self, profile_id: str) -> CompanyProfile | None:
+        row = self.db.execute("""SELECT v.payload FROM profiles p
+            JOIN profile_versions v ON p.profile_id=v.profile_id AND p.latest_version=v.version
+            WHERE p.profile_id=?""", (profile_id,)).fetchone()
+        return CompanyProfile.from_mapping(json.loads(row["payload"])) if row else None
+
+
 def load_profile_file(path: str | Path) -> CompanyProfile:
     """Validate complete JSON before opening any writable database."""
     source = Path(path).expanduser().resolve()
@@ -68,7 +101,10 @@ def execute(
     if apply and Path(backup_path).expanduser().resolve() == db:
         raise ValueError("Backup must differ from the active database")
 
-    with BidOwlStore(db) as store:
+    # Schema validation must not initialize an existing unrelated/blank SQLite file.
+    with ReadOnlyProfileStore(db):
+        pass
+    with (BidOwlStore(db) if apply else ReadOnlyProfileStore(db)) as store:
         existing_row = store.db.execute(
             "SELECT latest_version FROM profiles WHERE profile_id=?", (profile.profile_id,)
         ).fetchone()
@@ -111,13 +147,17 @@ def execute(
         saved = 0
         try:
             if changed:
-                summary["planned_version"] = store.save_profile(profile)
+                summary["planned_version"] = store.save_profile(profile, expected_version=version)
             for source_id, bid_no in bid_keys:
                 store.assess_and_record(source_id, bid_no, profile.profile_id)
                 saved += 1
         except BaseException as exc:
-            # The historical snapshot is safe in backup; individual assessments may
-            # have committed. Never misrepresent it as an atomic rollback.
+            # No other process may silently overwrite a newer profile version.
+            # Earlier per-bid commits can still exist if a later assessment fails.
+            if isinstance(exc, ValueError) and "Profile version mismatch" in str(exc) and saved == 0:
+                raise ValueError(
+                    f"CONFLICT_NO_WRITE: {exc}; backup retained at {saved_backup}"
+                ) from exc
             raise RuntimeError(
                 f"PARTIAL_WRITE: {saved}/{len(bid_keys)} assessments committed; "
                 f"backup retained at {saved_backup}. Inspect DB before manual restore."
