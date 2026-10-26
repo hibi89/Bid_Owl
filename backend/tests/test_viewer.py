@@ -85,9 +85,9 @@ class ViewerTests(unittest.TestCase):
     def test_schema_length_identifiers_reach_detail_and_profile_filters(self):
         # Stored source/bid/profile IDs are allowed up to 300 characters.
         # A shared 160-character URL argument limit made those records unviewable.
-        source = 'S' * 220
-        number = 'B' * 220
-        profile = 'P' * 220
+        source = '출' * 220
+        number = '공' * 220
+        profile = '회' * 220
         with closing(sqlite3.connect(self.path)) as writer:
             record = {'bid_no':number, 'title':'긴 ID 합성 공고',
                 'agency':'테스트 기관','category':'IT',
@@ -116,6 +116,32 @@ class ViewerTests(unittest.TestCase):
             self.assertEqual(query_profile(conn,{'profile_id':[profile]})['version'],1)
             with self.assertRaises(ValueError):
                 query_detail(conn,{'source_id':['X'*301],'bid_no':[number]})
+        # HTTP percent-encoding of three long Korean identifiers exceeds 1 KB.
+        # It must work without relaxing parsed field or route-size boundaries.
+        server=make_server(self.path,0)
+        worker=threading.Thread(target=server.serve_forever,daemon=True)
+        worker.start()
+        try:
+            host=f'127.0.0.1:{server.server_port}'
+            target='/api/detail?'+urlencode({
+                'source_id':source,'bid_no':number,'profile':profile})
+            self.assertGreater(len(target),1024)
+            self.assertLess(len(target),12288)
+            for path, expected in ((target,200),('/api/bids?'+'x'*12290,414)):
+                connection=http.client.HTTPConnection('127.0.0.1',server.server_port,timeout=5)
+                try:
+                    connection.request('GET',path,headers={'Host':host})
+                    response=connection.getresponse()
+                    result=json.loads(response.read())
+                    self.assertEqual(response.status,expected)
+                    if expected==200:
+                        self.assertEqual(result['bid']['bid_no'],number)
+                finally:
+                    connection.close()
+        finally:
+            server.shutdown()
+            server.server_close()
+            worker.join(timeout=3)
 
     def test_read_only_and_rule_provenance(self):
         with open_database(self.path) as c:
