@@ -59,6 +59,18 @@ def _unit_suite() -> dict:
         "expected_failures": len(result.expectedFailures),
         "unexpected_successes": len(result.unexpectedSuccesses),
         "failed_tests": [str(test) for test, _ in result.failures + result.errors],
+        # Keep the root exception in local JSON so sharing the entire
+        # PowerShell transcript is not necessary. No raw environment dump.
+        "failed_test_errors": [
+            {
+                "test": str(test),
+                "error_summary": next(
+                    (line.strip() for line in reversed(trace.splitlines()) if line.strip()),
+                    "Unknown unittest error",
+                )[:600],
+            }
+            for test, trace in result.failures + result.errors
+        ],
         "elapsed_ms": round((time.perf_counter() - started) * 1000, 2),
     }
 
