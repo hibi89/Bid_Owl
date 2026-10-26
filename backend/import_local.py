@@ -19,6 +19,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from bidowl import BidOwlStore, CompanyProfile, CSVImportError, parse_csv
+from bidowl.engine_identity import engine_fingerprint
 from bidowl.schema import MAX_CSV_BYTES
 from bidowl.store import default_database_path
 from profile_workflow import load_profile_file
@@ -159,6 +160,7 @@ def _new_backup_path(db_path: Path) -> Path:
 def _reusable_assessment_status(
     store: BidOwlStore, *, source_id: str, bid_no: str,
     profile_id: str, profile_version: int, is_expired: bool,
+    engine_hash: str,
 ) -> str | None:
     """Reuse only a snapshot matching both revisions and today's expiry.
 
@@ -168,7 +170,8 @@ def _reusable_assessment_status(
     row = store.db.execute("""
         SELECT b.latest_version,
                p.latest_version AS current_profile_version,
-               a.bid_version, a.profile_version, a.status, a.is_expired
+               a.bid_version, a.profile_version, a.status, a.is_expired,
+               ep.engine_hash
         FROM bids b
         JOIN profiles p ON p.profile_id = ?
         LEFT JOIN assessments a ON a.id = (
@@ -177,6 +180,7 @@ def _reusable_assessment_status(
               AND x.profile_id = ?
             ORDER BY x.id DESC LIMIT 1
         )
+        LEFT JOIN assessment_engine_provenance ep ON ep.assessment_id=a.id
         WHERE b.source_id = ? AND b.bid_no = ?
     """, (profile_id, profile_id, source_id, bid_no)).fetchone()
     if row is not None and row["current_profile_version"] != profile_version:
@@ -184,6 +188,7 @@ def _reusable_assessment_status(
     if (row is not None and row["status"] in ("PASS", "FAIL", "UNKNOWN")
             and row["bid_version"] == row["latest_version"]
             and row["profile_version"] == profile_version
+            and row["engine_hash"] == engine_hash
             and bool(row["is_expired"]) == is_expired):
         return str(row["status"])
     return None
@@ -200,6 +205,9 @@ def apply_import(plan: ImportPlan, *, force_reassess: bool = False) -> dict:
         raise TypeError("Expected an ImportPlan from prepare_import")
     if type(force_reassess) is not bool:
         raise ValueError("force_reassess must be a boolean")
+    # Fail CLOSED before any DB write if the rule-policy source resources
+    # cannot be verified (e.g. a mispackaged executable).
+    policy_hash = engine_fingerprint()
     # Input file may be changed after preview; require identical bytes.
     if plan.csv_path.stat().st_size > MAX_CSV_BYTES:
         raise ValueError("CSV grew beyond 10 MiB since preview")
@@ -229,6 +237,16 @@ def apply_import(plan: ImportPlan, *, force_reassess: bool = False) -> dict:
         with BidOwlStore(plan.db_path) as store:
             if plan.existing_db:
                 backup = store.backup_to(_new_backup_path(plan.db_path))
+            # This is an additive v1 table, never created merely by opening
+            # an existing DB. Existing DB is now backed up; new DB is ours.
+            started_writing = True
+            store.db.execute("""
+                CREATE TABLE IF NOT EXISTS assessment_engine_provenance (
+                    assessment_id INTEGER PRIMARY KEY,
+                    engine_hash TEXT NOT NULL CHECK(length(engine_hash) = 64),
+                    FOREIGN KEY(assessment_id) REFERENCES assessments(id) ON DELETE CASCADE
+                )
+            """)
             # Use CAS for both first-creation and already-matching profile.
             if plan.profile_action == "CREATE":
                 started_writing = True
@@ -257,6 +275,7 @@ def apply_import(plan: ImportPlan, *, force_reassess: bool = False) -> dict:
                         profile_id=plan.profile.profile_id,
                         profile_version=profile_version,
                         is_expired=bid.is_expired(checked_at),
+                        engine_hash=policy_hash,
                     )
                 if previous_status is not None:
                     reused_assessments += 1
