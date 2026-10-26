@@ -147,16 +147,20 @@ def execute(
         saved_backup = store.backup_to(destination)
         summary["backup"] = str(saved_backup)
         saved = 0
+        profile_committed = False
         try:
             if changed:
                 summary["planned_version"] = store.save_profile(profile, expected_version=version)
+                profile_committed = True
             for source_id, bid_no in bid_keys:
-                store.assess_and_record(source_id, bid_no, profile.profile_id)
+                store.assess_and_record(source_id, bid_no, profile.profile_id,
+                    expected_profile_version=summary["planned_version"])
                 saved += 1
         except BaseException as exc:
             # No other process may silently overwrite a newer profile version.
             # Earlier per-bid commits can still exist if a later assessment fails.
-            if isinstance(exc, ValueError) and "Profile version mismatch" in str(exc) and saved == 0:
+            if (isinstance(exc, ValueError) and "Profile version mismatch" in str(exc)
+                    and saved == 0 and not profile_committed):
                 raise ValueError(
                     f"CONFLICT_NO_WRITE: {exc}; backup retained at {saved_backup}"
                 ) from exc
