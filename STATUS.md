@@ -1,3 +1,16 @@
+# BID OWL STATUS — P2-25 BASIC MVP real customer-importer path wired, 2026-10-27
+
+**User's development direction:** BASIC MVP **first**. Real flow: CSV -> company profile -> local rule screening -> SQLite -> read-only viewer/detail -> Excel/PDF reports. Once MVP passes, compare with full design, add missing features; security/stability and PRO/PREMIUM later. User has rejected current UI mockups and explicitly deferred aesthetic frontend work.
+
+**Committed in GitHub private feature branch:** NEW `backend/mvp_smoke.py` drives the real customer importer `prepare_import/apply_import` (not just legacy CLI) using temp synthetic non-demo fixtures, then checks read-only query of two saved tenders/current rules/company profile, creates two actual local XLSX exports of saved assessments, validates Zip/OOXML and matching bid ID/status, tests second identical CSV import has prewrite SQLite backup and reuses two exact assessment IDs rather than creating another snapshot, and original reports remain byte-identical. `--require-pdf` optionally fails closed before DB writes if PDF dependency/font missing, and verifies PDF signature when available. `qa_runner.py` now requires BOTH legacy and real-importer E2E smoke PASS and fails on zero discovered unit tests. Added 5 MVP tests + 3 QA-runner tests, `MVP_ACCEPTANCE.md`, docs.
+
+**QA truth:** **256 Python test functions defined across 17 files** (248 previous + 8). Authenticated GitHub code readback confirmed source and QA wiring. **FULL PYTHON 256 TEST RUN, new MVP smoke run, Windows native GUI/Excel/PDF and browser not executed in current session** (container lacks private repo network/clone access; no user-hosted CI). Do not claim actual `BASIC_MVP_SYNTHETIC_E2E_PASS`, Windows PASS, app performance or commercial readiness. Previous local Windows 137 test run had 18 WinError32 cleanup errors before source fixes, no documented native rerun. Product overall all-tier prior ~42% subjective, unchanged pending measured release QA.
+
+**Next P2-26:** obtain genuine allowed end-to-end run and fix real failures; simplify BASIC first-run onboarding/export without redesign, test optional PDF/Korean font; maintain main and Vercel unchanged; don't ask user to repeat manual ZIP/PowerShell QA on ㄱ.
+
+---
+## Previous STATUS snapshots
+
 # P2-23 (2026-10-27 KST) — 마감 시점 변경에 따른 판정 무효화
 
 **실제 코드 변경:** `backend/viewer.py`의 일반·상태별 공고 검색에서 저장된 `assessments.is_expired`와 현 시점 마감 상태를 비교하도록 수정. 공고 및 프로필 버전·규칙 엔진 해시가 같아도 평가 이후 공고가 마감되거나 기한이 연장되어 상태가 달라지면 PASS/FAIL을 현재 결과로 표시하지 않는다. 과거 `snapshot_status`와 근거는 유지, 현재 상태 UNKNOWN/수동 재검토/상세 evidence_is_current=false. 기존 200건 상태 일괄 조회에도 동일 조건 적용.
