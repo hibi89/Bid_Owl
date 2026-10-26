@@ -71,7 +71,7 @@ class QAReportingTests(unittest.TestCase):
     def test_both_real_importer_mvp_and_legacy_smoke_are_required(self):
         legacy = {"status": "SYNTHETIC_E2E_PASS"}
         basic = {"status": "BASIC_MVP_SYNTHETIC_E2E_PASS"}
-        with patch("smoke_local.run_smoke", return_value=legacy) as old, \\
+        with patch("smoke_local.run_smoke", return_value=legacy) as old, \
              patch("mvp_smoke.run_mvp_smoke", return_value=basic) as new:
             result = _synthetic_smoke()
         self.assertEqual(result["status"], "PASS")
@@ -82,7 +82,7 @@ class QAReportingTests(unittest.TestCase):
 
     def test_mvp_failure_marks_qa_smoke_failed_even_if_legacy_passes(self):
         with patch("smoke_local.run_smoke",
-                   return_value={"status": "SYNTHETIC_E2E_PASS"}), \\
+                   return_value={"status": "SYNTHETIC_E2E_PASS"}), \
              patch("mvp_smoke.run_mvp_smoke",
                    side_effect=RuntimeError("MVP_IMPORT_BROKEN")):
             result = _synthetic_smoke()
