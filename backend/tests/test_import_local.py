@@ -168,6 +168,33 @@ class LocalImportTests(unittest.TestCase):
             ))
             self.assertEqual(new_versions, (3, 3))
 
+    def test_mid_import_profile_version_drift_stops_cached_reuse(self):
+        apply_import(self.prepare())
+        plan = self.prepare()
+        original = BidOwlStore.import_bids
+
+        def drift_after_import(store, *args, **kwargs):
+            result = original(store, *args, **kwargs)
+            store.save_profile(
+                CompanyProfile("test-company", region="서울특별시"),
+                expected_version=1,
+            )
+            return result
+
+        with patch.object(BidOwlStore, "import_bids", new=drift_after_import):
+            with self.assertRaisesRegex(RuntimeError, "IMPORT_PARTIAL_OR_UNCERTAIN"):
+                apply_import(plan)
+        backups = list((self.root / "backups").glob("*.sqlite3"))
+        self.assertEqual(len(backups), 1)
+        with BidOwlStore(backups[0]) as original_backup:
+            self.assertEqual(original_backup.db.execute(
+                "SELECT latest_version FROM profiles WHERE profile_id='test-company'"
+            ).fetchone()[0], 1)
+        with BidOwlStore(self.db) as store:
+            self.assertEqual(store.db.execute(
+                "SELECT COUNT(*) FROM assessments"
+            ).fetchone()[0], 2)
+
     def test_existing_profile_mismatch_fails_before_writes_or_backup(self):
         apply_import(self.prepare())
         before = self.db.stat().st_size
