@@ -103,6 +103,33 @@ def run_benchmark(*, records: int = 10000, assessed: int = 200,
                         or previous["categories"] != listing["categories"]
                         or previous["items"] != listing["items"]):
                     raise AssertionError("Fast viewer query changed historical page results")
+            if measure_viewer_baseline:
+                for target_status in ("PASS", "UNKNOWN"):
+                    def old_status_page():
+                        rows = [row for row in _latest_rows(conn)
+                                if row["status"] == target_status]
+                        rows.sort(key=lambda row: (
+                            row["expired"], row["deadline"] or "",
+                            row["source_id"], row["bid_no"],
+                        ))
+                        return {"total": len(rows), "items": rows[:30]}
+                    previous_status = timed(
+                        f"legacy_status_{target_status.lower()}_scan_ms",
+                        old_status_page, timings,
+                    )
+                    current_status = timed(
+                        f"status_{target_status.lower()}_page_1_ms",
+                        lambda: query_bids(conn, {
+                            "status": [target_status],
+                            "page": ["1"], "page_size": ["30"],
+                        }), timings,
+                    )
+                    if (current_status["total"] != previous_status["total"]
+                            or current_status["items"] != previous_status["items"]):
+                        raise AssertionError(
+                            "Status fast path changed historical results: "
+                            + target_status
+                        )
             filtered = timed("filter_category_search_ms", lambda: query_bids(
                 conn, {"category": ["IT"], "q": ["용역"], "page_size": ["30"]}), timings)
             if filtered["total"] != (records + 1) // 2:
