@@ -1,23 +1,31 @@
-# BID OWL STATUS — 2026-10-26 KST
+# BID OWL STATUS — 2026-10-27 KST
 
-## GitHub
-Repo hibi89/Bid_Owl (private), ID 1399359397. Main HEAD c888c795bef72734f3f7016e54013b82453f11d8 unchanged. Feature branch feature/bid-owl-v1-basic-mvp; current feature HEAD must be read from GitHub after this P1-04 commit. Pre-P1-04 baseline 3de92cbb9f6b969ed2bf3abe83eb3060da2a391b. Legacy rollback reference 2807a93a3e0deba98840712401fdd6025e6f5610.
+## Scope / branch
+- Private repository: hibi89/Bid_Owl, ID 1399359397.
+- Feature: feature/bid-owl-v1-basic-mvp. P2-01 SOURCE baseline: 2ff7a22082b2e37362d0935dee32fa292566eecb. Subsequent documentation commits change feature HEAD: always re-read GitHub HEAD. Main baseline verified at beginning of session: c888c795bef72734f3f7016e54013b82453f11d8. Legacy education rollback: 2807a93a3e0deba98840712401fdd6025e6f5610. Main and existing Vercel were not modified here.
+- Production deployment is NOT APPLICABLE for new Python local viewer; existing legacy Vercel URL, deployed SHA, live rendering unverified.
 
-## Implemented
-P1-01 strict CSV parser; P1-02 company profile and PASS/FAIL/UNKNOWN plus source; P1-03 versioned SQLite and audit; P1-04 backend/cli.py and backend/bidowl/report.py plus report/CLI tests, synthetic profile fixture, reportlab dependency.
-Actual CLI flow validates whole CSV and profile before creating DB, saves source-keyed bids and versioned profile, evaluates with saved snapshots, exports report per assessment. Excel two sheets summary/condition evidence with formula injection sanitization; PDF Korean embedded TTF and final-human-review warning. No existing source/UI production changes.
+## Completed source milestones
+P1-01 validated UTF-8 CSV import, P1-02 3-state rules/evidence, P1-03 versioned SQLite/import audit/backups, P1-04 CLI + report XLSX/PDF. All use local customer-owned source, not static 2025 legacy metrics.
 
-## Tests and evidence
-Linux CPython 3.13.5: 96 PASS, 0 FAIL, 0 SKIP (21 importer +27 eligibility +28 SQLite +20 report/CLI), command cd backend then python -m unittest discover -s tests -v.
-Nine existing source/test files reconstructed from local copies and git hash verified against remote GitHub. Four new P1-04 paths also exact SHA: report.py 676537995c6f697d30cb773062a0b3bc6e6fe585; cli.py 8561fb39bdb1a037ad6bdc48f329d31ab6766a68; test_report.py 17f31db5ce4050b019eb35dc5631ef8e704cd20f; fixtures/sample_profile.json 67d8d2d3d21ecf915d4a2322fd9a585c5f624b88.
-Synthetic two-bid command generated two actual PDFs and two XLSX files. XLSX parsed with XML/ZIP and re-imported by artifact_tool; PDF visibly rendered Korean font; binary embedded NanumGothic checked.
+P2-01 NEW source on the feature branch:
+- backend/viewer.py: 127.0.0.1 only, existing schema-v1 SQLite opened mode=ro and PRAGMA query_only; no database creation, mutation or arbitrary filesystem reading. GET JSON read API for bid list/query, detail/rule evidence and profile IDs. Host/Origin checks, no-store, CSP, no CORS header, no request data log, bound static assets.
+- backend/ui/index.html, ui.css, ui.js: title/agency/no search, category/status/deadline/profile filters, paged table, open/expired checks, evidence detail panel, 7 distinct light/dark themes, responsive shell, theme/favorite localStorage. User text displayed with textContent. Data basis/assessment timestamp included. Latest bid/profile version mismatch causes UNKNOWN/review required instead of showing old PASS.
+- backend/tests/test_viewer.py: five synthetic, no customer data, API/SQL/readonly/Host/Origin/evidence/theme regressions.
+- backend/README.md, NEXT_TASK.md, this STATUS and HANDOFF documentation refreshed.
 
-## Remaining and boundaries
-NOT VERIFIED: Windows 11 machine and native Excel opening, installed product, official tender CSV/API, legal qualification, browser production HTTP/JS/API and Git rename Vercel connection. NOT IMPLEMENTED: P2 live SQLite GUI/7 themes, P3 official API revision identifier, P4 optional AI, P5 Windows package/security, P6 public sale.
-SQLite persistence happens before report creation: disk/font/report failures may leave DB committed. No cross-DB/filesystem atomic guarantee.
-Official source license: ReportLab BSD, NanumGothic SIL OFL. No font files distributed or committed.
-Brand BID OWL KIPRIS and BiddingOwl similarity not cleared; public product sales blocked.
+## Actual verification
+Previous P1: 96 PASS/0 FAIL/0 SKIP with Linux CPython 3.13.5 on 2026-10-26, including two synthetic PDF and XLSX reports. Those 96 were NOT rerun during this P2 session.
+P2 isolated local tests: 5 PASS / 0 FAIL, with a local stand-in import for store.default_database_path because private original repo is not cloned in this runtime. Tested using synthetic schema-compatible SQLite. Python syntax check PASS, Node --check original local ui.js PASS, localhost HTTP response/headers PASS.
+Browser visual tests: NOT VERIFIED. Real Chromium navigation attempted twice, both localhost and routed alternate test host failed with ERR_BLOCKED_BY_ADMINISTRATOR. This is environment access policy, not proven BID OWL bug. The remote files were committed through connected GitHub tools; exact remote P2 checkout/full 101-test combined suite is NOT VERIFIED. Windows 11/native Excel, external actual procurement CSV/API, installation and legal determination remain NOT VERIFIED.
 
-## Deployment/permissions
-Existing legacy Vercel project project08-bid-insight ID prj_YcrN7OdOjKl6M457HelGIItLeeXZ: old READY metadata only, Production URL/SHA/browser not verified. New local Python feature: production deployment NOT APPLICABLE. No changes to main, Vercel, billing, domain, credentials, permissions.
-NEXT P2: UI/search/filter/7 themes. Read HANDOFF→STATUS→AGENTS→REQUIREMENTS→NEXT_TASK then source. User ㄱ resumes.
+## Known limitations / next work
+- P2-01 favorites only filters the CURRENT returned page. Saved browser-local favorites are not complete global database search. Must correct before declaring BASIC UI complete.
+- Current UI is read-only: customer profile updates and assessment rerun are still CLI-driven; no report export action inside viewer. Existing report generation can persist DB before filesystem report succeeds; not cross-resource atomic.
+- Search enumerates bid snapshots; large data performance and concurrent import/watch behavior require benchmarking.
+- UI 7-theme desktop/mobile browser accessibility/visual regression not verified.
+- NEXT P2-02: global favorites + safe profile workflow + full repository 101-test verification + browser/Windows smoke. Later P3 API, P4 optional AI, P5 Windows/security, P6 selling/trademark.
+- Public use brand BID OWL not legally cleared; do not advertise an official bidding qualification or guarantee.
+
+## Product / permissions
+BASIC 59,000 KRW, PRO 149,000 KRW, PREMIUM 299,000 KRW one-time price targets as planned, not validated sales. No user files, secrets, SQLite database, fonts or PDFs are committed. No external transmission, payment, permissions, domains, main or Vercel mutation performed. GitHub writer connected as hibi89, commit author/committer needs final SHA verification after docs.
