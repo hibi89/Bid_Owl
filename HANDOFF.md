@@ -1,60 +1,55 @@
-# BID OWL HANDOFF — P2-08 · 2026-10-27 KST
+# BID OWL HANDOFF — P2-09 · 2026-10-27 KST
 
-## 1. Goal / technology / confirmed product requirements
-Private BID OWL / 비드아울: Windows 11 local-first public-bid screening for SMEs, not legal qualification/automatic tender/award guarantee. BASIC planned KRW 59,000 once: validated CSV, profile, source-evidenced rule PASS/FAIL/UNKNOWN, search/favorites, seven UI themes, XLSX/PDF. PRO planned 149k KRW official procurement API (user key, only while local PC runs); PREMIUM planned 299k optional user-supplied AI API + profitability analysis. Prices and trademark not verified. Technical system: Python 3.11+, SQLite schema v1 with immutable revisions, stdlib XLSX, ReportLab+local permitted Korean TTF PDF, localhost read-only HTTP HTML/CSS/JS browser. No mandatory cloud/paid tool/data egress for BASIC.
+## 1. Purpose, technical system, stable requirements
+BID OWL is a Windows-local SME public procurement screening tool, not legal certification, bidding guarantee or automatic tender submission. BASIC planned one-time KRW 59,000: validated CSV bids, company profile, conservative PASS/FAIL/UNKNOWN and cited original rule evidence, SQLite version history, search/favorites/seven themes, Excel/PDF historical reports. PRO planned KRW 149,000 official Korean procurement API with user-issued key, on-PC-only sync; PREMIUM KRW 299,000 optional user-supplied AI key and profitability. Prices, final legal brand and market demand not verified. Tech: Python 3.11+, SQLite schema v1, stdlib XLSX, ReportLab + locally permitted Korean TTF for PDF; frontend localhost 127.0.0.1 HTML/CSS/JS. No mandatory cloud service or customer data transmission.
 
-## 2. Implementation to date / this turn's changes and rationale
-P1-01 strict importer, P1-02 conservative rule evidence, P1-03 SQLite revision/backup, P1-04 report CLI. P2-01 local readonly viewer/7 themes, P2-02 global favorites readonly POST, P2-03 profile JSON editor + backup-required CLI apply/reassess, P2-04 CAS and query/detail/modal fixes, P2-05 immutable report replay/synthetic smoke, P2-06 XLSX error cleanup and new-company onboarding, P2-07 one-click readonly historical XLSX download.
-P2-08 code committed:
-- backend/viewer.py: _arg accepts individual max_length: 300 for source_id, bid_no, profile; ordinary parameters retain 160 default. Older 160 shared limit hid valid 220/300-character IDs from detail. GET path bound raised from 1024 to 12288 encoded characters to support Unicode/Korean IDs (300 Korean chars per ID may be thousands of percent-encoded ASCII bytes). URL still capped (414 above limit), parse_qs max 12 fields, parameter-binding and Host/Origin/loopback restrictions preserved.
-- backend/bidowl/store.py: optional `expected_profile_version` for assess_and_record; positive-int validation and check under BEGIN IMMEDIATE lock BEFORE evaluation/saving. Stops another process changing company profile mid-batch and giving the current command silently mixed versions.
-- backend/profile_workflow.py: forwards planned revision to each assessment; tracks whether profile update itself committed, so post-commit race is correctly reported as PARTIAL_WRITE with backup even with 0 assessments, not deceptively CONFLICT_NO_WRITE.
-- tests/test_viewer.py +1 method with 220-character **Korean** triple source/bid/profile ID; actual GET with percent encoding plus oversized request 414, direct query and profile list; explicitly commit/close fixture SQLite writer for Windows temp cleanup.
-- tests/test_store.py +1 expected revision conflict/history preservation test.
-- tests/test_profile_workflow.py +1 injected racing post-write conflict with backup retained, history and partial write semantics.
-- STATUS, NEXT_TASK, HANDOFF updated. These are actual committed changes; Python runtime success not asserted.
+## 2. This iteration's implementation, code/files, choices
+Earlier stages: P1 strict CSV/evidence rules/versioned storage/PDF+XLSX CLI; P2-01 local read-only UI; P2-02 global favorites; P2-03 profile edit JSON download and explicit backed-up CLI apply; P2-04 CAS/read-only preview/detail SQL/accessibility; P2-05 historical saved-assessment replay plus synthetic end-to-end smoke; P2-06 incomplete output cleanup/new profile onboarding and Windows QA helper; P2-07 one-click read-only XLSX attachment; P2-08 300-char Korean ID support and profile-reassessment race protection.
+P2-09 NEW:
+- backend/benchmark_local.py: isolated tempfile synthetic Bid dataset 1–10000, DEFAULT 10000; constructs Bid objects (not parsing CSV), imports in a single SQLite transaction with BidOwlStore, saves a fake company and assesses first 200 records by default. Opens viewer.open_database (SQLite URI mode=ro, PRAGMA query_only=ON), benchmarks in perf_counter milliseconds all bids first page, category+q filter, detail by exact key and global favorite; checks counts, rejected DELETE, SQLite size and generates JSON. Deleted temp dir after normal return; DOES NOT touch customer DB, upload data, use API keys or internet.
+- backend/tests/test_benchmark_local.py: 3 SMALL unittest methods: 31-record real SQLite flow, 1-record unassessed flow, invalid counts including bool. Full 10k intentionally NOT part of default unittest discovery.
+- backend/verify_local.ps1: optional `-Benchmark` flag, after full tests/synthetic smoke/optional Node syntax, runs `python benchmark_local.py --records 10000 --assessed 200`; default no flag remains normal verification. Any nonzero exits mark failure.
+- backend/BENCHMARK.md: execution methods, interpretation of each timing and warning that no timings exist until actual run.
+- NEXT_TASK.md, STATUS.md, HANDOFF.md updated.
+Choice: measure the existing 10k query path before speculative SQL/pagination optimizations. Python objects created before timing; no CSV parse, browser DOM or PDF/Excel timing. The benchmark is a helper, not performance certification.
 
-## 3. Actual test commands, passed vs unexecuted
-On an authenticated exact full private checkout under backend:
-  python -m unittest discover -s tests -v
-  python smoke_local.py
-  node --check ui/ui.js
-Windows helper:
-  powershell -ExecutionPolicy Bypass -File .\verify_local.ps1
-GitHub directly inspected eight test source files and identified **131 unique test method definitions** (eligibility27, importer21, profile_workflow12, report21, report_existing10, smoke_local1, store29, viewer10), no duplicate method names in each file. **131 NOT RUN; do not report PASS**. Historical P1 96 PASS Linux 2026-10-26 only on older source; historic mock smoke not full current integration. Exact current remote ui.js V8 Function syntax parse PASS. Static readback checked CAS guard before INSERT, planned version wired, error-classification flag, max_len and bounded URL. No CPython full checkout suite, Windows/Edge browser, native PDF/Excel or actual DB integration executed in this turn. GitHub Actions read-only check found zero existing workflow runs for feature branch; no CI job initiated.
+## 3. Measured verification, unverified, exact commands
+Authenticated GitHub source fetched and test method regex counted 9 files with **134 unique declarations** = benchmark3 + eligibility27 + importer21 + profile workflow12 + report21 + saved report10 + synthetic smoke1 + store29 + viewer10. These are source definitions, **134 NOT EXECUTED/134 NOT PASS**. GitHub latest benchmark and Windows helper source read-back confirmed use of TemporaryDirectory, mode=ro/query_only connection, bounds and `-Benchmark` flag. Exact remote ui.js V8 syntax parse PASS in prior iteration (unchanged this turn). HISTORIC P1 96 PASS Linux CPython on Oct 26 earlier P1 source ONLY. No real current suite or 10k benchmark, no measured milliseconds, no live Windows/Chrome/Excel/PDF tests executed.
+From permitted full private checkout backend dir:
+    python -m pip install -r requirements.txt
+    python -m unittest discover -s tests -v
+    python smoke_local.py
+    node --check ui/ui.js
+    python benchmark_local.py --records 10000 --assessed 200
+Windows optional combined helper:
+    powershell -ExecutionPolicy Bypass -File .\verify_local.ps1 -Benchmark
 
-## 4. Current stage and stop
-P1 source complete; P2-01..08 source implemented, but full QA and real Windows browser interactions pending. P2-08 stops after code tests + handoff + branch/author verification. NEXT P2-09 must prioritize genuine full 131-run test before more unrelated feature work; fix actual failures and rerun. Then Windows 11, Excel/PDF, input path usability, 7 themes and 10k record benchmark. Future P3 official API, P4 opt-in AI, P5 Windows packaging/security, P6 KIPRIS/trademark/sales remain unshipped.
+## 4. Stage/percent, stop point and next
+P1 source complete; P2-01 through P2-09 code present with only static/source testing of new features; full Python QA and Windows customer readiness remain blockers. Earlier high-level estimate roughly 35% of BASIC+PRO+PREMIUM+installer/sales complete, not recalculated or objectively measured this iteration. BASIC is NOT shippable yet: user still runs CLI for import/company DB changes/PDF; browser Excel download and local viewer have not been native-Windows tested. Stop after P2-09 files/docs committed and final main/feature SHA+hibi89 identity checked. P2-10 must execute genuine entire 134-test suite, smoke, 10k benchmark and fix failures FIRST. Then Windows manual proof, full user experience, API/AI/installer/brand gate later.
 
-## 5. Errors, attempts, blockers and non-retry
-Private clone previously failed due sandbox DNS/auth; signed raw.githubusercontent.com and api.github.com download similarly inaccessible from Python/container; authenticated GitHub connector can read/write source but not transparently mount entire private checkout in local container. Do not repeat same failing download or run old /mnt/data/bidowl_p2 stand-in and claim current source tests pass. Prior Chromium localhost attempts were blocked ERR_BLOCKED_BY_ADMINISTRATOR, not proof of app failure; real Windows Edge/Chrome or authorized full checkout is appropriate. No GitHub Actions jobs on feature branch; avoid creating paid GitHub Actions job without permission. Two external-reader questions remain: (1) user Windows testing/browser Blob/XLSX, (2) full Python suite. Keep status unverified until measured.
-SQLite profile and assessments are individually committed; multi-bid reassessment can partially commit if interrupted. Backup before profile mutation retained, no automatic unsafe rollback. XLSX/PDF paired reports are best-effort partial-file cleanup, not crash-atomic.
+## 5. Failures, blockers, prior attempts, avoid-repeat
+Private repo clone from model's Python container failed DNS/auth. Signed raw.githubusercontent.com and api.github.com downloads also DNS unavailable from that container; GitHub connector reads/writes remote source but does not directly mount authenticated checkout into sandbox. Old /mnt/data/bidowl_p2 incomplete mocked stand-in and /mnt/data/Bid_Owl_work/backend empty: never run stand-in and label the result actual GitHub full suite. Chromium localhost previously ERR_BLOCKED_BY_ADMINISTRATOR from platform restriction (not proven app bug). Read-only GitHub Actions query found zero workflow runs on branch in P2-08; avoid creating potentially paid GitHub CI runner without user approval. New benchmarking is only source, not a measured performance result. Python tests and Windows script committed but have not run on target PC. Profile reassessment can commit partially if interrupted, backup retained; output multi-format file cleanup is best effort rather than fully crash-atomic.
 
-## 6. GitHub repository, commits, paths and protected baseline
-Private https://github.com/hibi89/Bid_Owl repo id 1399359397, branch feature/bid-owl-v1-basic-mvp. Starting P2-08 SHA 37e4af25c45906b6614313b016446f86340eaf3a. Source/fixture commits of this task:
-  1e79c67beb7e0eb7b7e549cf4ab4a5a59fbb6559 viewer _arg limits;
-  e546535568d0faedf33d28ab9ef42b89e8ca5146 viewer Korean ID test;
-  fb3768a12c8152842b460d72701a4e3f03408b87 store pinned revision;
-  c371d0b953b2a459f4d93bc2d4f277cd2d09b2bf profile reassessment pin and truthful conflict;
-  6794464ed3696ce4ff0b5340e4068f76f3c41872 store test;
-  6aaf32d46433ef55d9484b5cb2e79d18cdf6340e profile race test;
-  c5966177335ea0ffa5f5dfc04660592d280fdbbf Windows writer fixture close;
-  739291f138d70bea07d2169c93ec44f0dbad1669 raised bounded URL size;
-  e29d154af5b794dfb3adb0c1702823d638016151 Korean GET regression.
-Docs commits follow. Main baseline c888c795bef72734f3f7016e54013b82453f11d8; original legacy rollback 2807a93a3e0deba98840712401fdd6025e6f5610. Must verify final main and feature SHA/author after HANDOFF commit.
+## 6. Repository, protected branches, SHA/commits/files
+Private https://github.com/hibi89/Bid_Owl repo ID 1399359397. Feature branch `feature/bid-owl-v1-basic-mvp`. P2-09 starting feature SHA `4981740128b582ca71ed2820ce6653b23ada4900`. New source commits:
+- `e40ad3f742ceea97b9009e652cdef74798ef74a5`: backend/benchmark_local.py,
+- `70d4a5dba2a9a92a0d19de4358ab9fc39eda5235`: correct timing label at any record count,
+- `156d518940ec972f26a073897c5e50e42b44cb93`: backend/tests/test_benchmark_local.py (+3 methods),
+- `ba19fc20ef0e5b1f0abeea843001e6814a02c5c8`: backend/verify_local.ps1 optional -Benchmark,
+- `6550da84874f47f6a41cfb29019f93b1c8e7b82f`: backend/BENCHMARK.md.
+Docs commits follow, pre-HANDOFF STATUS `ee52bc94be71fe8f05dffa665db92394cd2b0c90`. Final feature HEAD must be fetched after HANDOFF write. Main baseline `c888c795bef72734f3f7016e54013b82453f11d8` (untouched). Original school demo rollback `2807a93a3e0deba98840712401fdd6025e6f5610`. Only changed paths this stage: backend/benchmark_local.py, backend/tests/test_benchmark_local.py, backend/verify_local.ps1, backend/BENCHMARK.md, NEXT_TASK.md, STATUS.md, HANDOFF.md. No main/public code.
 
-## 7. Production, local URL, commands/environment
-New BID OWL localhost Python NOT deployed: N/A public production URL. From backend, `python viewer.py --db ./demo.sqlite3 --port 8765`, browse http://127.0.0.1:8765 on same PC. Historical XLSX local download uses GET /api/report?assessment_id=N; PDF replay still CLI `python report_existing.py --db ./demo.sqlite3 --assessment-id 1 --output ./new-reports --format pdf` with installed licensed local TTF and ReportLab. Existing separate 2025 school static demo Vercel project project08-bid-insight ID prj_YcrN7OdOjKl6M457HelGIItLeeXZ untouched, legacy Production URL/SHA/live HTTP not verified. No Windows native Excel/browser run in this sandbox.
+## 7. Production, local command, URLs/environment
+New Python localhost product not deployed (public production URL N/A). After user explicitly runs `python viewer.py --db ./demo.sqlite3 --port 8765` from backend, browser local URL http://127.0.0.1:8765; HTTP GET /api/report?assessment_id=N returns historical XLSX from readonly SQLite, PDF still explicit CLI with ReportLab/font. Existing legacy 2025 school demo Vercel project project08-bid-insight ID prj_YcrN7OdOjKl6M457HelGIItLeeXZ untouched; deployed URL/SHA/live HTTP unverified. Benchmark only runs with command on an authenticated working checkout and deletes its generated temp DB. Windows 11/Excel/Edge/Chrome not tested in this turn.
 
-## 8. Security, user data, backup and permission rules
-Main school-demo 340/340 static QA and old date are unrelated to new product. Never change main/Vercel/permissions/domain/product launch or force push without explicit permission. Never upload private customer database, CSV, contracts, API keys, credentials, PDF/XLSX, font files or .env to GitHub. Local DB versioned immutable historical evidence; backup_to refuses overwrite; apply requires explicit --apply and unique backup; new reassess pins version. Viewer is read-only on 127.0.0.1 with Host/Origin/CSP/Fetch Metadata checks. No external/paid service or procurement API invoked. BID OWL legal trademark/KIPRIS unresolved, price unvalidated.
+## 8. Originals, backups, secrets and access permissions
+Main school static demo historical 340/340 QA and old countdown unrelated to BID OWL product quality. All work GitHub feature branch, no forced push, original main untouched, no Vercel changes or deployment. No customer CSV/DB/PDF/XLSX, fonts, .env, API credentials/keys or business secrets uploaded to GitHub. Company local apply requires explicit --apply + new backup and expected version CAS; assessments preserve source evidence, report exports cannot silently overwrite existing files. Connected writing author/committer hibi89; verify actual final identity. Brand KIPRIS legal availability and customer sales approval pending. No paid tool/external network call to real procurement service.
 
-## 9. NEXT P2-09 priority and required acceptance
-1. Actual current-branch complete private checkout: run all **131 declared tests**, collect pass/fail/errors/skips; run `python smoke_local.py`; run `node --check ui/ui.js`. Fix failures, only then claim integrated QA. No automated future running without an actual automation.
-2. Synthetic concurrency exercise: another process modifies company v3 after v2 save, verify no assessment silently saves on v3 under planned v2; accurate PARTIAL_WRITE and backup. Verify direct/viewer HTTP long Korean IDs and 414 bound; no DB write.
-3. Windows 11 Edge/Chrome real visit: 7 themes/mobile, keyboard, new/edit JSON Blob downloads, direct XLSX in Excel, PDF with Korean TTF, same-origin/host errors and temporary file cleanup. 10k-list/detail benchmark with grounded measured latency. No claims until run.
-4. BASIC still requires CLI for CSV import, profile apply and PDF; customer-ready packaging/UX unfinished. If considering HTTP mutation, design authentication/CSRF, backup/restore and obtain approval first.
-5. Only after BASIC gate: P3 official customer-key API, P4 customer-opt-in AI, P5 packaging/security, P6 trademark/sales.
+## 9. NEXT P2-10 ordered acceptance and approvals
+1) On authorized **exact current private checkout**, execute all 134 Python tests and synthetic smoke via `python -m unittest discover -s tests -v` and `python smoke_local.py` and `node --check ui/ui.js`. Get real counts/errors and fix actual failing cases before claiming release readiness.
+2) Run `python benchmark_local.py --records 10000 --assessed 200` on Windows, record *actual* import/filter/list/detail/favorite elapsed ms, DB size, Python version and CPU/RAM/SSD environment. Repeat, profile slow queries then optimize. Never invent benchmark performance.
+3) Windows Chrome/Edge: open synthetic local viewer, verify XLSX attachment in real Excel, profile JSON Blob downloads + explicit backup apply, PDF rendering with Korean local TTF, 7 themes, mobile/keyboard, Unicode ID and cross-site boundaries, incomplete backup recovery. No user/customer data as test fixtures.
+4) After BASIC acceptance, P3 official procurement customer API key, P4 optional AI/sensitivity, P5 Windows installation/security, P6 KIPRIS/trademark/pricing/sales. Explicit approval for paid tools, external user-data transfer, prod deployment/main modification/public marketing.
 
-## 10. Last checked date and continuation
-2026-10-27 KST. Remote code and branch source checked via GitHub connector; 131 tests are source inventory, not executions. JS V8 syntax and static guard checks PASS. User ㄱ resumes P2-09. This HANDOFF commit is latest expected HEAD; verify actual SHA and hibi89 author/committer at end.
+## 10. Last update/date/next-turn instruction
+2026-10-27 KST. GitHub connector created source/docs and verified 134 test definitions and fixture-only temp DB. No genuine CPython 134-case run, benchmark 10k execution or Windows browser/Excel/PDF results; these remain open. User sends ㄱ to resume P2-10. After this HANDOFF commit, verify feature and main HEAD, committer identity, changed files and numbers.
