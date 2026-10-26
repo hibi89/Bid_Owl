@@ -1,3 +1,22 @@
+# P2-26 — BASIC MVP one-command importer + report export (2026-10-27 KST)
+
+**Next ㄱ: P2-27 BASIC MVP execution/functional completeness first.** User confirmed planned reuse as KIC hackathon Disclosure Lightning (foreign regulatory filings) but instructed to keep BID OWL on its existing schedule. **Do not expand foreign filings into current MVP**, and keep the normalized evidence/history/export boundary portable. No frontend appearance/CSS or PRO/PREMIUM before BASIC MVP. Only private `hibi89/Bid_Owl` branch `feature/bid-owl-v1-basic-mvp`; protect main/Vercel, no paid CI, customer data or deployment without approval. No routine ZIP/PowerShell tasks for user.
+
+**Actual source P2-26:**
+- `backend/import_local.py` `apply_import` now returns `assessments` list: one `bid_no/assessment_id/status/reused` per bid, including exact ID when valid snapshot reused; `_reusable_assessment_status` returns ID+status rather than status only. This avoids asking user to manually retrieve assessment IDs for reports.
+- Real CLI `python import_local.py --csv ... --profile ... --source-id ... --apply --export-dir DIR [--report-format xlsx|pdf|both]` now exports the saved assessments via **read-only** `report_existing.export_existing` after successful commit. XLSX default; PDF checks reportlab/Korean font before DB writes. Existing report is NEVER overwritten. Successful JSON `IMPORTED_AND_EXPORTED` with `reports`, including the exact saved assessment IDs.
+- A report export failure after successful import is clearly `IMPORTED_EXPORT_FAILED` (exit 2), preserving earlier saved DB/backup and reporting already created output files, NOT falsely reporting `IMPORT_FAILED` or silently rolling back. `--export-dir` without `--apply` is rejected pre-write.
+- `backend/mvp_smoke.py` synthetic acceptance now additionally runs the new one-shot real importer CLI in a separate disposable SQLite and checks two exported XLSX files and matching saved assessment IDs; `backend/tests/test_mvp_smoke.py` asserts that path.
+- `backend/tests/test_import_local.py` +7 new tests: IDs from saved/reused assessments, one-shot XLSX/OOXML and matching IDs, report failure after DB commit, existing output no overwrite, PDF preflight, missing --apply, partial second report failure and first report retained. GitHub test declarations currently **263 across 17 modules** (previous 256 + 7), NOT 263 PASS.
+- Updated `backend/IMPORT.md`, `backend/MVP_ACCEPTANCE.md`, `backend/README.md`, STATUS/HANDOFF/START_HERE/NEXT_TASK to document workflow and reality.
+
+**QA gate:** The assistant verified GitHub source readback and counted test method definitions only. **No authenticated full Python suite, new one-shot MVP smoke or native Windows/Korean PDF/Excel/browser E2E has been run**. Previous 137 Windows cases had 18 WinError32 cleanup failures; repairs unconfirmed. Do NOT claim BASIC MVP is executable end-to-end or release-ready before real run. Previous all-tier subjective estimate ~42% unchanged pending test proof.
+
+**Next P2-27:** seek safe authentic execution of full source/actual MVP E2E without repeated user tasks or paid CI; fix real failures and close first-run GUI/report discoverability (functional only). Reconcile required PDF font/Excel and portable packaging later. The current KIC plan needs only eventual reuse of abstract source adapter and proof/history engine, not immediate feature development.
+
+---
+## Past tasks
+
 # BID OWL NEXT — P2-25 BASIC MVP-first acceptance, 2026-10-27
 
 **NEXT ㄱ => P2-26 BASIC MVP FIRST, not generic hardening.** User explicitly re-confirmed MVP first. User's order: (1) complete a runnable BASIC CSV -> company -> rule screening -> viewer -> XLSX/PDF workflow; (2) compare with original full product design and fill missing features; (3) security/performance/commercial hardening; (4) PRO/PREMIUM afterward. UI aesthetics deferred; no new visual mockups/themes/CSS unless asked. GitHub private `hibi89/Bid_Owl` feature branch `feature/bid-owl-v1-basic-mvp` only; protect main/Vercel, no paid CI, no customer data uploads and no repetitive user ZIP/PowerShell QA requests.
