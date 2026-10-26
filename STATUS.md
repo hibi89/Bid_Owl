@@ -1,3 +1,16 @@
+# BID OWL STATUS — P2-16 policy fingerprint & fail-closed viewer source (2026-10-27 KST)
+
+Private `hibi89/Bid_Owl`, branch `feature/bid-owl-v1-basic-mvp`, main protected. P2-16 added verifiable local source-based SHA-256 policy fingerprints, transactionally attached them to newly recorded assessments, automatically refuses reuse of old/different policy evaluations, and displays legacy historical PASS as current UNKNOWN until rechecked. DB v1 preserved; migration of engine metadata in `import_local.py` and `profile_workflow.py` occurs only after successful existing-DB SQLite backup. Browser remains readonly. Engine resources missing => new assessment fails closed and viewer UNKNOWN.
+
+Modified/new: backend/bidowl/engine_identity.py, backend/bidowl/store.py, backend/import_local.py, backend/profile_workflow.py, backend/viewer.py; tests/test_engine_identity.py, tests/test_import_local.py, tests/test_store.py, tests/test_viewer.py, tests/test_profile_workflow.py, backend/ENGINE_POLICY.md, backend/IMPORT.md and handoff/status docs.
+
+**Verification**: live GitHub source retrieved/inspected; isolated Python sqlite3 in-memory SQL contract 3/3 PASS for missing provenance, matching provenance, and current-reuse query grammar. **189 test methods defined in 14 modules, NOT executed as current full Python suite**; no native Windows retry, no installer, browser visual check or current 10k performance. Prior authentic Windows P2-10 137-run = 119 without error, 18 WinError32 cleanup errors, JS syntax PASS; P2-11 fixes not Windows reverified. Overall product BASIC+PRO+PREMIUM+installer subjective ~40%, not a measured completion metric. BASIC remains not sale ready.
+
+Do not request routine user QA on ㄱ. Next P2-17 legacy CLI provenance/backup integration or BASIC report/restore first-use. No customer data/keys/files/font uploads, no paid runner, no main/Vercel deployment.
+
+---
+## Earlier development history
+
 # BID OWL STATUS — P2-15 assessment reuse + explicit rescoring, 2026-10-27 KST
 
 ## Current release/development state
