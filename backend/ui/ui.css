@@ -22,3 +22,7 @@ body[data-theme="iris"]{--bg:#f7f5fc;--surface:#fff;--sidebar:#ece7f7;--text:#30
 /* P2-07: same-origin, read-only historical Excel download. */
 .report-download{display:inline-flex;align-items:center;min-height:40px;margin:12px 0;padding:9px 14px;border:1px solid var(--accent);border-radius:8px;background:var(--accent);color:var(--surface);font-weight:700;text-decoration:none}
 .report-download:hover,.report-download:focus-visible{background:var(--surface);color:var(--accent)}
+
+/* Demo-only provenance, automatically revealed for the reserved synthetic source. */
+.demo-indicator{padding:12px 16px;margin-top:20px;border:1px solid var(--line);border-left:4px solid var(--warning);border-radius:8px;background:var(--surface);color:var(--text);font-size:13px}
+.demo-indicator strong{color:var(--warning);margin-right:8px}
