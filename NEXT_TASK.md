@@ -1,3 +1,27 @@
+# BID OWL NEXT — P2-21 metadata-first read-only viewer pagination (2026-10-27 KST)
+
+**Next ㄱ => P2-22 BACKEND ONLY.** User rejected two UI mockups and explicitly ordered backend-first; no CSS/design/UI image work until reapproved. User dislikes repeated ZIP and PowerShell manual testing requests. Only edit private `hibi89/Bid_Owl` feature branch `feature/bid-owl-v1-basic-mvp`; preserve main/Vercel; no paid CI, sensitive data transfers or public release. Fetch current GitHub feature/main, START_HERE, AGENTS, REQUIREMENTS, STATUS, HANDOFF.
+
+## P2-21 implemented
+- `backend/viewer.py`: Before change, `query_bids` calls `_latest_rows` for all bids and includes an expensive assessment-correlated subquery/provenance join even on page 1. Now queries just latest bid metadata for all bids, applies same Python casefold keyword, category, deadline, favorite selection and sorting, computes all categories/total, then executes ONE parameterized row-tuple `IN` query for only selected page (up to 100 keys) to load full current assessments, profiles and engine fingerprint provenance. Reorders rows to original page order and preserves output fields. The two stages share readonly SQLite BEGIN/ROLLBACK snapshot and UTC expiration cutoff; never writes the DB. `status`-filtered requests intentionally continue on old full-scan path until correctness-preserving indexed optimization proven. `query_detail` unchanged.
+- `backend/tests/test_viewer.py`: +3 test methods (legacy full-scan parity over 17 different Unicode/keyword/category/expiration/page/profile/status/favorites combinations, verify fast assessment fetch uses only 2 page keys vs legacy status path, no all-row assessment scan for empty favorite/out-of-range page).
+- `backend/benchmark_local.py`: optional `measure_viewer_baseline=True` and CLI `--compare-full-scan`; run same synthetic bid DB through current fast query and original full-assessment scan, verify exact matching full page items/categories/total and return separately measured `all_rows_page_1_ms` and `legacy_full_scan_page_1_ms`. No extra 10k workload unless explicitly requested; opt-in `--with-recovery` from P2-20 remains.
+- `backend/tests/test_benchmark_local.py`: +2 synthetic tests for baseline parity on only 41 bids/7 assessments and invalid flag.
+- `backend/VIEWER_QUERY.md`, `backend/BENCHMARK.md`, README, STATUS, HANDOFF, NEXT_TASK, START_HERE updated.
+
+## Actual evidence vs unverified
+- Authenticated GitHub source fetched/read; **238 Python test declarations across 16 modules** (233+5), **NOT 238 PASS**.
+- Standalone Python/sqlite3 temporary synthetic DB test with 10,000 metadata rows proved parameterized row tuple 30-key IN, sorted page keys and readonly transaction work. This is NOT the full project's 10k benchmark and no target-PC latency is confirmed.
+- Authentic full BID OWL Python 238 suite, Windows native WinError32 issue retest, HTML/Excel/PDF GUI and 10k full benchmark have NOT been run on complete private checkout. GitHub workflow test runs were previously absent. No release readiness claim.
+- Previous all-tier subjective estimate ~42%. Do not automatically change it based on code/test definitions.
+
+## Next P2-22 backend priority
+- Optimize currently slow `status` filter with conservative SQL key restriction or cached assessment indexing, but preserve 100% evidence/stale profile+engine hash/UNKNOWN output correctness. Differential test all PASS/FAIL/UNKNOWN and no-profile, old metadata table, original expired state.
+- Eventually instrument genuine synthetic 10k end-to-end on authorized native Windows without asking user to run routine tests. Packaging/installer, backups, Excel Korean font and original procurement API/AI tiers remain uncompleted. No frontend mockups.
+
+---
+## Historical task progress
+
 # BID OWL — P2-20 backup evidence hash and optional 10k recovery benchmark (2026-10-27 KST)
 
 **Next ㄱ => P2-21 BACKEND ONLY.** User explicitly suspended frontend/UX redesign after seeing unsatisfactory images. Do NOT alter visual UI/CSS or generate further mockups until asked. Work in connected PRIVATE GitHub `hibi89/Bid_Owl` on `feature/bid-owl-v1-basic-mvp`, protect main/Vercel, customer data, proprietary files, paid CI/cloud, releases. User does NOT want routine ZIP downloads/manual PowerShell QA.
