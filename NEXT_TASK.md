@@ -1,3 +1,18 @@
+# BID OWL NEXT — P2-12 autonomous Windows-lock prevention / diagnostic consolidation (2026-10-27 KST)
+
+**Continue on `feature/bid-owl-v1-basic-mvp` only; no user action required for ordinary code tasks.** User has explicitly objected to repeatedly downloading ZIPs and rerunning scripts. Do not request another user-side test in routine ㄱ work; do as much source implementation/static validation as possible independently, and leave native Windows test as an honest release-gate limitation. No paid hosted CI/cloud runner or private-code transfer to third-party project without approval; main and Vercel protected.
+
+**Current changes actually committed:**
+- `backend/tests/test_sqlite_handles.py` (4 new tests) uses Python stdlib AST to reject bare `with sqlite3.connect(...)` / `with open_database(...)` across the entire backend and fixtures that detect known-bad patterns. Does NOT claim to find every possible connection leak. The 3 self-contained AST behavior cases passed in the author's Python sandbox; full-repository scan needs authenticated full checkout.
+- `backend/bidowl/store.py` P2-11 `backup_to` explicitly closes its target; P2-12 `backend/tests/test_store.py` adds **platform-independent** close proof with `unittest.mock.patch` tracing sqlite3.connect, then asserts the observed connection raises `sqlite3.ProgrammingError` after backup. Minimal synthetic connection-spy proof executed and passed on local Python, not whole product test.
+- `backend/qa_runner.py` executes separate synthetic smoke and opt-in 10k benchmark even if one earlier test stage failed. This avoids requiring a complete repeat just to collect independent diagnostics. Overall PASS remains impossible if any invoked mandatory stage FAIL. `backend/tests/test_qa_runner.py` updates failure semantics and adds a distinct smoke-failure-but-benchmark-runs regression; benchmark stays opt-in.
+- `backend/BENCHMARK.md` evidence narrative updated. Latest live GitHub source inventory: **144 declared Python test methods in 11 test files**, NOT 144 PASS. Detailed prior count 137 actual Windows test run: 119 successful, 18 WinError32 temporary SQLite handle cleanup errors, 0 assertion failures, JS PASS, smoke and 10k benchmark SKIPPED on that older run.
+- Inspected the exact current GitHub source across 25 Python files: no line-beginning direct `with sqlite3.connect(...)`, `with open_database(...)` violations observed. This is a lightweight static pattern scan, not complete AST nor CPython execution.
+
+**Next work P2-13 WITHOUT bothering user:** review release blocking BASIC first-use friction and safely implement an isolated local synthetic demo/one-click launcher or other essential local usability task on feature branch; add unit/static tests, preserve readonly browser/mandatory mutation backups, keep no-customer-data/no-cloud. Or advance additional source-level safety regressions. Do not claim Windows 144/144 runtime PASS or 10k timings without authentic results. A future Windows acceptance gate exists but is not the user's routine responsibility.
+
+## Prior historical P2-11 notes follow (preserved for traceability)
+
 # BID OWL NEXT_TASK — Windows SQLite handle QA remediation (2026-10-27 KST)
 
 Repository private `hibi89/Bid_Owl`; only write to `feature/bid-owl-v1-basic-mvp`. On ㄱ inspect actual main/feature HEAD and HANDOFF.md, STATUS.md, AGENTS.md, REQUIREMENTS.md and this file. No main/Vercel/deployment/paid API/customer data upload.
