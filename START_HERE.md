@@ -1,3 +1,5 @@
+> **P2-21 업데이트:** 프론트엔드 미관 보류, 백엔드 목록 조회 성능 개선. 최신 상태는 [backend/VIEWER_QUERY.md](backend/VIEWER_QUERY.md), 실제 성능 측정 경계는 [backend/BENCHMARK.md](backend/BENCHMARK.md). 다음 단계는 P2-22 상태 필터 최적화. 전체 238개 Python 테스트는 정의됐지만 통합 실행은 아직 미확인.
+
 > **최신 사용자 지시:** 프론트엔드 디자인은 보류. UI 재디자인·목업 생성 금지, 백엔드 개발 우선. 2026-10-27 P2-19까지 GitHub 개발 브랜치 반영.
 
 # BID OWL — 새 대화 첫 번째로 읽기
@@ -7,7 +9,7 @@
 ## 즉시 행동
 1. GitHub `main`과 `feature/bid-owl-v1-basic-mvp` HEAD 확인.
 2. `AGENTS.md`, `STATUS.md`, `HANDOFF.md`, `NEXT_TASK.md`, `REQUIREMENTS.md` 순서로 읽기.
-3. 이미 승인된 내용을 다시 묻지 말고 `NEXT_TASK.md`의 **최신 미완료 단계부터** 실제 구현 + 가능한 검증 + 커밋. 2026-10-27 기준 P2-20까지 진행. 백업 전체 공고·판정·규칙 근거 내용 해시 및 복원 후 비교, 선택형 1만 건 복구 벤치마크 구현. 다음은 P2-21의 백엔드 조회 성능 보강. 실제 CSV 등록은 `START_BID_OWL_IMPORT.cmd` / `backend/import_local.py`, 가상 데모는 `START_BID_OWL_DEMO.cmd`.
+3. 이미 승인된 내용을 다시 묻지 말고 `NEXT_TASK.md`의 **최신 미완료 단계부터** 실제 구현 + 가능한 검증 + 커밋. 2026-10-27 기준 P2-21까지 진행. 일반 목록 조회는 메타데이터로 페이지를 먼저 추린 뒤 해당 공고의 판정 근거만 불러온다. 다음 P2-22는 상태 필터 최적화. 실제 CSV 등록은 `START_BID_OWL_IMPORT.cmd` / `backend/import_local.py`, 가상 데모는 `START_BID_OWL_DEMO.cmd`.
 4. 코드 변경은 feature 브랜치에서만, main 교육용 데모는 보존. 차단사항은 기록하고 가능한 작업 진행.
 5. 작업 후 STATUS/HANDOFF 갱신과 정확한 최신 SHA 보고.
 
