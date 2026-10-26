@@ -16,6 +16,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Iterable, Iterator
 
+from .engine_identity import engine_fingerprint
 from .eligibility import EligibilityDecision, evaluate_bid
 from .importer import parse_csv
 from .profile import CompanyProfile
@@ -187,6 +188,13 @@ class BidOwlStore:
                     PRIMARY KEY(assessment_id,position),
                     FOREIGN KEY(assessment_id) REFERENCES assessments(id)
                 );
+                -- Additive provenance for all freshly created databases. Old v1
+                -- databases are migrated only by an explicit backed-up writer.
+                CREATE TABLE assessment_engine_provenance (
+                    assessment_id INTEGER PRIMARY KEY,
+                    engine_hash TEXT NOT NULL CHECK(length(engine_hash) = 64),
+                    FOREIGN KEY(assessment_id) REFERENCES assessments(id) ON DELETE CASCADE
+                );
                 CREATE INDEX idx_assessments_bid ON assessments(source_id,bid_no,id);
                 CREATE INDEX idx_import_runs_source ON import_runs(source_id,id);
                 PRAGMA user_version = 1;
@@ -296,6 +304,9 @@ class BidOwlStore:
             type(expected_profile_version) is not int or expected_profile_version <= 0
         ):
             raise ValueError("expected_profile_version must be a positive integer")
+        # Resolve identity before starting a DB transaction: if packaged
+        # policy sources cannot be verified, do not write unproven PASS results.
+        policy_hash = engine_fingerprint()
         with self._transaction():
             bid_row = self.db.execute("SELECT latest_version FROM bids WHERE source_id=? AND bid_no=?",(source_id,bid_no)).fetchone()
             profile_row = self.db.execute("SELECT latest_version FROM profiles WHERE profile_id=?",(profile_id,)).fetchone()
@@ -324,6 +335,18 @@ class BidOwlStore:
                         assessment_id,position,decision.rule_id,decision.kind,decision.status,
                         decision.reason_code,decision.explanation,decision.source_text,
                         decision.source_locator,int(decision.requires_human_review)))
+            if self.db.execute(
+                "SELECT 1 FROM sqlite_master WHERE type='table' "
+                "AND name='assessment_engine_provenance'"
+            ).fetchone():
+                # Same write transaction as parent assessment; no half-proven
+                # PASS row if provenance insert fails.
+                self.db.execute(
+                    "INSERT INTO assessment_engine_provenance(assessment_id,engine_hash) VALUES (?,?)",
+                    (assessment_id, policy_hash),
+                )
+            # Older v1 databases WITHOUT the table remain unproven and
+            # display UNKNOWN until the backed-up importer upgrades metadata.
         return assessment_id,outcome
 
     def assessment(self, assessment_id: int) -> tuple[sqlite3.Row, tuple[sqlite3.Row,...]] | None:
