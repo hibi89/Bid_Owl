@@ -42,19 +42,31 @@ class QAReportingTests(unittest.TestCase):
         self.assertFalse(stored["browser_tested"])
         self.assertNotIn("local_result_path", stored)
 
-    def test_python_failure_skips_smoke_and_requested_benchmark(self):
+    def test_python_failure_still_collects_independent_smoke_and_benchmark(self):
         failed_suite = dict(self.good_suite, status="FAIL", failures=1)
         with patch("qa_runner._unit_suite", return_value=failed_suite), \
-             patch("qa_runner._synthetic_smoke", side_effect=AssertionError("no smoke on failure")), \
-             patch("qa_runner._benchmark", side_effect=AssertionError("no benchmark on failure")), \
+             patch("qa_runner._synthetic_smoke", return_value={"status": "PASS"}), \
+             patch("qa_runner._benchmark", return_value={"status": "PASS"}), \
              patch("qa_runner._syntax_check", return_value={"status": "SKIP"}), \
              patch("qa_runner._source_revision", return_value=None), \
              contextlib.redirect_stdout(io.StringIO()):
             result = run_qa(benchmark=True, output_dir=self.directory)
         self.assertEqual(result["status"], "FAIL")
-        self.assertEqual(result["synthetic_smoke"]["status"], "SKIP")
-        self.assertEqual(result["synthetic_benchmark"]["status"], "SKIP")
+        self.assertEqual(result["synthetic_smoke"]["status"], "PASS")
+        self.assertEqual(result["synthetic_benchmark"]["status"], "PASS")
         self.assertIsNone(result["git_commit"])
+
+    def test_smoke_failure_does_not_skip_requested_benchmark(self):
+        with patch("qa_runner._unit_suite", return_value=self.good_suite), \
+             patch("qa_runner._synthetic_smoke", return_value={"status": "FAIL"}), \
+             patch("qa_runner._benchmark", return_value={"status": "PASS"}), \
+             patch("qa_runner._syntax_check", return_value={"status": "PASS"}), \
+             patch("qa_runner._source_revision", return_value=None), \
+             contextlib.redirect_stdout(io.StringIO()):
+            result = run_qa(benchmark=True, output_dir=self.directory)
+        self.assertEqual(result["status"], "FAIL")
+        self.assertEqual(result["synthetic_smoke"]["status"], "FAIL")
+        self.assertEqual(result["synthetic_benchmark"]["status"], "PASS")
 
     def test_javascript_failure_is_not_misreported_as_pass(self):
         with patch("qa_runner._unit_suite", return_value=self.good_suite), \
