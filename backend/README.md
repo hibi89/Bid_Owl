@@ -1,3 +1,11 @@
+# P2-25 — 실제 BASIC MVP 고객 등록기 경로 통합
+
+원래 **MVP 먼저 → 전체 설계 대비 기능 확장 → 안정성/보안/상용화** 순서로 복귀. `mvp_smoke.py`는 `cli.py`의 개발용 경로가 아닌 실제 `import_local.prepare_import/apply_import`를 직접 호출해 CSV와 회사 등록, 판정 저장, 읽기 전용 조회, 공고 상세, Excel 보고서, 중복 재가져오기/백업 보존을 종합 검사한다. GUI·테마 디자인은 변경하지 않았고 합성 임시 파일만 사용한다.
+
+`python mvp_smoke.py`는 기본적으로 Excel 경로를 검사한다. `python mvp_smoke.py --require-pdf`는 선택적인 PDF 한글 글꼴/ReportLab 환경까지 반드시 통과하도록 요구한다. 모든 결과는 자체 JSON `BASIC_MVP_SYNTHETIC_E2E_PASS` 또는 실패로 구분하고, 실제 전체 Python 테스트 실행이나 Windows GUI 검증 완료를 의미하지 않는다. 기존 `qa_runner.py`도 이 새 수용 검사를 필수에 포함한다. 상세 기준 [MVP_ACCEPTANCE.md](MVP_ACCEPTANCE.md).
+
+---
+
 # P2-23 — 공고 마감 상태 변경에 따른 판정 무효화
 
 저장된 규칙 평가가 공고·회사·엔진 버전과 같더라도, 평가 당시 마감 여부와 현재 마감 여부가 달라졌으면 **PASS/FAIL을 현재 판정으로 재사용하지 않음**. 목록·상태별 필터·공고 상세 모두 UNKNOWN과 재판정 안내를 표시합니다. 과거 스냅샷/근거는 보존합니다. 테스트용 SQLite도 실제 v1 스키마의 `is_expired` 필드를 맞췄습니다. [VIEWER_QUERY.md](VIEWER_QUERY.md)에 자세한 계약을 기록했습니다. 실제 전체 Python 248개 테스트 및 Windows 실사용 재검증은 미완료입니다.
