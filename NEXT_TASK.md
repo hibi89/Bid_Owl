@@ -1,3 +1,24 @@
+# BID OWL NEXT — P2-17 legacy CLI prewrite safety implementation (2026-10-27 KST)
+
+**Next ㄱ => P2-18 autonomous.** User expects direct GitHub work, no routine ZIP download or PowerShell testing from user. Keep `main` and prior Vercel untouched; only `feature/bid-owl-v1-basic-mvp`. Do not use paid private GitHub CI, public deploy, customer data, or API keys without approval. Inspect actual latest refs and START_HERE, AGENTS, REQUIREMENTS, HANDOFF, STATUS before acting.
+
+## P2-17 source changes
+- `backend/cli.py` (historical CLI CSV -> assessments -> XLSX/PDF) used to mutate an existing SQLite database without backup and update same-ID company profiles without CAS. Now executes preflight checks on selected CSV, validated company JSON (existing `profile_workflow.load_profile_file`), source ID, PDF environment before DB writes. For an existing DB, uses `viewer.open_database` in **read-only mode** for schema/profile preflight and refuses an existing company ID with changed contents. After opening the writer it creates an exclusive, consistent `BidOwlStore.backup_to(_new_backup_path)` before any DB/provenance/import/profile writes. Rechecks profile/version after backup and never silently edits existing profile; brand-new profile created with `expected_version=0`. Legacy v1 missing `assessment_engine_provenance` is migrated with additive table **only after backup**, and all new assessments record current engine hash in a single transaction (via existing store). Assessment uses `expected_profile_version` CAS. New DB uses `open('xb')` against path appearance race. Report writes remain XLSX/PDF and legacy synthetic sample CSV compatibility maintained; this is a distinct workflow from real customer GUI importer `import_local.py` which prohibits demo provenance.
+- Existing DB backup location returned as `backup` in JSON. If report failure occurs after DB writes, report `CLI_PARTIAL_OR_UNCERTAIN`, preserve backup and tell caller to inspect DB and report files instead of implying rollback. `cli.main` catches sqlite3.Error into local machine-readable FAILED JSON instead of an uncaught traceback. No new HTTP write endpoints.
+- Added `backend/tests/test_cli_safe.py` with **9 declarative synthetic tests**: new assessment provenance, repeat backup state, legacy v1 migration only after backup, existing company mismatch refusal, failed backup no further write, report writer partial-failure warning + preserved backup, foreign non-SQLite file unchanged, concurrent new-file path guard, local JSON SQLite error output.
+- Updated `backend/README.md`, `backend/ENGINE_POLICY.md`, NEXT_TASK.md, STATUS.md, HANDOFF.md and START_HERE.md.
+
+## Verification boundary
+Live private GitHub authenticated readback found readonly preflight + backup-before-writes + pinned profile version + provenance DDL + exclusive new file guard in actual source; nine additional tests *defined*. Total **199 Python test functions across 15 files**, NOT run as current full suite in assistant. Historical user Windows P2-10 ran 137 tests and hit 18 WinError 32; subsequent repairs remain unverified on Windows. GitHub workflow history for this feature branch showed 0 runs, so no automated hosted PASS. Do not claim Python current PASS, native Windows, complete backup/restore, PDF font, 10k benchmark, or sale readiness. Prior overall BASIC+PRO+PREMIUM/install estimate about 40% subjective, not recalculated.
+
+## Next P2-18 priority
+- Harden existing DB open/create race in `BidOwlStore` (opt-in require-existing SQLite mode=rw + no implicit blank DB initialization); legacy CLI and real importer should use it on existing paths to guarantee no silently recreated DB after preview. Add safe synthetic tests. If no safe and backward-compatible path, make other BASIC workflow improvements.
+- Improve first-use saved report export/backups, data migration and real onboarding, with accurate regression QA.
+- Eventually run authentic native Windows full suite, browser Excel/PDF + locale/fonts + 10k timings. Do not send routine manual commands to user on ㄱ. PRO official customer-key data API/PREMIUM AI, installer, trademark + paid sales are later and not verified.
+
+---
+## Prior task history
+
 # BID OWL NEXT — P2-16 engine fingerprint auto-invalidation complete in source (2026-10-27 KST)
 
 **Next ㄱ => P2-17 autonomous.** User explicitly does NOT want repeated ZIP downloads and manual PowerShell tests. Work directly in connected private GitHub `hibi89/Bid_Owl` feature/bid-owl-v1-basic-mvp, preserve main + legacy Vercel, no paid runner/customer data/API keys. Read START_HERE/HANDOFF/STATUS/AGENTS/REQUIREMENTS first and verify latest feature/main heads.
