@@ -44,6 +44,20 @@ class BenchmarkLocalTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "measure_recovery"):
             run_benchmark(records=1, assessed=0, measure_recovery="yes")
 
+    def test_comparison_matches_legacy_full_scan_on_synthetic_rows(self):
+        result = run_benchmark(
+            records=41, assessed=7, measure_viewer_baseline=True,
+        )
+        self.assertEqual(result["status"], "SYNTHETIC_BENCH_COMPLETE")
+        self.assertTrue(result["viewer_baseline_compared"])
+        self.assertIn("legacy_full_scan_page_1_ms", result["timings_ms"])
+        self.assertIn("all_rows_page_1_ms", result["timings_ms"])
+        self.assertGreaterEqual(result["timings_ms"]["legacy_full_scan_page_1_ms"], 0)
+
+    def test_comparison_mode_requires_real_bool(self):
+        with self.assertRaisesRegex(ValueError, "measure_viewer_baseline"):
+            run_benchmark(records=1, assessed=0, measure_viewer_baseline="true")
+
     def test_invalid_limits_rejected_before_file_creation(self):
         for records, assessed in ((0,0), (10001,0), (3,-1),
                                   (3,4), (True,0), (3,False)):
