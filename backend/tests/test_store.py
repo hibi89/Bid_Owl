@@ -15,6 +15,7 @@ from pathlib import Path
 
 from bidowl.engine_identity import engine_fingerprint
 from bidowl import Bid, BidOwlStore, CSVImportError, CompanyProfile, Requirement, SchemaVersionError
+from bidowl.store import database_file_identity
 
 KST = timezone(timedelta(hours=9))
 T = datetime(2026,10,26,13,0,tzinfo=KST)
@@ -51,6 +52,71 @@ class StoreTests(unittest.TestCase):
         self.path=Path(self.temp.name)/'local.sqlite3'
         self.store=BidOwlStore(self.path)
         self.addCleanup(self.store.close)
+
+    def test_strict_existing_open_never_creates_missing_db_or_parent(self):
+        missing = Path(self.temp.name) / "missing-parent" / "absent.sqlite3"
+        with self.assertRaises(sqlite3.OperationalError):
+            BidOwlStore(missing, must_exist=True)
+        self.assertFalse(missing.exists())
+        self.assertFalse(missing.parent.exists())
+
+    def test_strict_open_refuses_empty_preexisting_file_without_schema_creation(self):
+        empty = Path(self.temp.name) / "empty.sqlite3"
+        empty.write_bytes(b"")
+        before = database_file_identity(empty)
+        with self.assertRaises(SchemaVersionError):
+            BidOwlStore(empty, must_exist=True, expected_identity=before)
+        self.assertEqual(database_file_identity(empty), before)
+        with closing(sqlite3.connect(empty)) as reader:
+            self.assertEqual(reader.execute(
+                "SELECT COUNT(*) FROM sqlite_master WHERE type='table'"
+            ).fetchone()[0], 0)
+
+    def test_strict_existing_valid_open_with_matching_file_identity(self):
+        identity = database_file_identity(self.path)
+        with BidOwlStore(self.path, must_exist=True, expected_identity=identity) as store:
+            self.assertEqual(store.db.execute("PRAGMA user_version").fetchone()[0], 1)
+        self.assertEqual(database_file_identity(self.path), identity)
+
+    def test_strict_open_rejects_replaced_valid_database_at_same_path(self):
+        original = Path(self.temp.name) / "original.sqlite3"
+        replacement = Path(self.temp.name) / "replacement.sqlite3"
+        with BidOwlStore(original):
+            pass
+        identity = database_file_identity(original)
+        with BidOwlStore(replacement):
+            pass
+        import os
+        os.replace(replacement, original)
+        with self.assertRaisesRegex(ValueError, "identity changed"):
+            BidOwlStore(original, must_exist=True, expected_identity=identity)
+        with BidOwlStore(original, must_exist=True):
+            pass
+
+    def test_strict_open_detects_deletion_between_identity_check_and_connect(self):
+        original = Path(self.temp.name) / "between-checks.sqlite3"
+        with BidOwlStore(original):
+            pass
+        identity = database_file_identity(original)
+        native_connect = sqlite3.connect
+
+        def delete_at_connect(*args, **kwargs):
+            original.unlink()
+            return native_connect(*args, **kwargs)
+
+        with patch("bidowl.store.sqlite3.connect", side_effect=delete_at_connect):
+            with self.assertRaises(sqlite3.OperationalError):
+                BidOwlStore(original, must_exist=True, expected_identity=identity)
+        self.assertFalse(original.exists())
+
+    def test_explicitly_reserved_new_file_can_initialize_in_mode_rw(self):
+        reserved = Path(self.temp.name) / "reserved.sqlite3"
+        with reserved.open("xb"):
+            pass
+        identity = database_file_identity(reserved)
+        with BidOwlStore(reserved, expected_identity=identity) as store:
+            self.assertEqual(store.db.execute("PRAGMA user_version").fetchone()[0], 1)
+        self.assertTrue(reserved.is_file())
 
     def test_schema_version_foreign_keys(self):
         self.assertEqual(self.store.db.execute('PRAGMA user_version').fetchone()[0],1)
