@@ -50,6 +50,17 @@ def _check_source_id(value: str) -> str:
 
 
 def _check_real_inputs(bids: tuple, profile: CompanyProfile) -> None:
+    # Match the existing profile_workflow local JSON file boundary for
+    # GUI-built profiles too; the dataclass itself is intentionally permissive.
+    if len(profile.profile_id) > 300 or (
+        profile.region is not None and len(profile.region) > 300
+    ):
+        raise ValueError("Profile ID and region must not exceed 300 characters")
+    for values in (profile.categories, profile.licenses):
+        if values is not None and (
+            len(values) > 100 or any(len(value) > 300 for value in values)
+        ):
+            raise ValueError("Profile lists are limited to 100 entries of 300 characters")
     if not bids:
         raise ValueError("CSV contains no valid tenders")
     if profile.profile_id.startswith("SYNTHETIC-"):
@@ -155,7 +166,11 @@ def apply_import(plan: ImportPlan) -> dict:
     if not isinstance(plan, ImportPlan):
         raise TypeError("Expected an ImportPlan from prepare_import")
     # Input file may be changed after preview; require identical bytes.
+    if plan.csv_path.stat().st_size > MAX_CSV_BYTES:
+        raise ValueError("CSV grew beyond 10 MiB since preview")
     actual = plan.csv_path.read_bytes()
+    if len(actual) > MAX_CSV_BYTES:
+        raise ValueError("CSV grew beyond 10 MiB since preview")
     if hashlib.sha256(actual).hexdigest() != plan.csv_sha256:
         raise ValueError("CSV changed after preview; review it again before importing")
     if plan.db_path.exists() != plan.existing_db:
@@ -252,7 +267,10 @@ def run_gui() -> int:
     import tkinter as tk
     from tkinter import filedialog, messagebox
 
-    root = tk.Tk()
+    try:
+        root = tk.Tk()
+    except tk.TclError as exc:
+        raise RuntimeError("Graphical desktop unavailable; use CLI --csv --profile --source-id") from exc
     root.title("BID OWL — 로컬 CSV 가져오기")
     root.minsize(575, 480)
     fields = {}
