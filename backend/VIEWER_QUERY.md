@@ -1,3 +1,15 @@
+## P2-22 — PASS·FAIL·UNKNOWN 상태 검색 최적화
+
+기존 P2-21 메타데이터 우선 방식에 **상태 필터**도 포함했습니다. `query_bids`는 현재 공고 메타데이터를 읽고 키워드·카테고리·마감 상태·즐겨찾기를 먼저 좁힌 후, `_status_for_candidate_keys`로 남은 공고의 **최소 판정 현재성 정보**만 조회합니다. 공고 200건씩 최대 402개의 SQLite 바인딩 변수로 나누기 때문에 오래된 SQLite 파라미터 제한에도 대응합니다.
+
+현재 상태가 PASS 또는 FAIL이려면 최신 공고 버전, 프로필 버전, 해당 프로필의 최신 평가, 저장된 규칙 엔진 SHA-256이 모두 맞아야 합니다. 하나라도 부족하면 UNKNOWN으로 분류합니다. 엔진 지문 테이블이 없는 구형 DB, 판정이 아예 없는 공고, 다른 프로필을 마지막에 평가한 공고 모두 보수적으로 처리합니다. 전체 판정·근거·상세 payload는 **상태 필터를 통과한 현재 페이지(최대 100건)**에 대해서만 조회합니다. SQL에 사용자 문자열을 삽입하지 않고 바인딩 파라미터로 처리합니다.
+
+정렬·범주 목록·페이지·영문/한글 Unicode casefold·마감일·즐겨찾기 결과는 기존 `_latest_rows` 전체 평가 조회와 동일하게 유지하는 것을 목표로 회귀 테스트를 추가했습니다. 한 DB 읽기 트랜잭션 안에서 메타데이터 필터, 상태 판정, 페이지 상세를 모두 읽으며 호출자가 이미 시작한 트랜잭션은 종료하지 않습니다.
+
+`backend/tests/test_viewer.py`에서 신규 7개 테스트 메서드: 상태 필터 비교, 구형/불일치 엔진 지문, 425건/3개 묶음, 즐겨찾기, 빈 즐겨찾기, 2개 회사 프로필, 호출자 소유 트랜잭션. `backend/benchmark_local.py --compare-full-scan`는 PASS와 UNKNOWN 페이지도 과거 전체 조회 방식과 **동일한 원본 데이터**로 비교하고 별도 시간을 기록합니다. 1만 건 합성 SQLite의 상태 분류 SQL을 독립적으로 50묶음 실행해 10,000/10,000 기준 결과 일치를 확인했으나, 이는 **BID OWL 전체 소스 실행이 아님**. 현재 Python 테스트 함수 245개 정의, 전수 실행 검증과 Windows 실제 성능 측정은 남아 있습니다.
+
+---
+
 # BID OWL P2-21 — local viewer query behavior and performance
 
 The Windows/local browser remains read-only and binds only to 127.0.0.1. This change is backend-only: no CSS, layout, product tiers, private customer files or live procurement API changes.
