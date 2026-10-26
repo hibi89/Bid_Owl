@@ -1,23 +1,21 @@
-# BID OWL STATUS — P2-06 · 2026-10-27 KST
+# BID OWL STATUS — P2-07 · 2026-10-27 KST
 
-## Branch/production source
-Private hibi89/Bid_Owl (repo ID 1399359397), only feature/bid-owl-v1-basic-mvp changed. Feature starting HEAD 4c7cdcb169cf1fb68f4ea9f4f63dd91bfad15341; main baseline c888c795bef72734f3f7016e54013b82453f11d8. Recheck after HANDOFF. Legacy restore SHA 2807a93a3e0deba98840712401fdd6025e6f5610. Existing main and Vercel project project08-bid-insight/prj_YcrN7OdOjKl6M457HelGIItLeeXZ untouched. No new Python localhost app production deployment (N/A); legacy deployed URL/SHA/live HTTP not verified.
+## Repository, protected source and scope
+Private hibi89/Bid_Owl repo ID 1399359397, active branch feature/bid-owl-v1-basic-mvp, start HEAD 53d7485c67d2212baf3ca213b6d8d21b0996607a. Main start c888c795bef72734f3f7016e54013b82453f11d8; legacy original rollback 2807a93a3e0deba98840712401fdd6025e6f5610. Main/Vercel not touched; new Python app production deployment N/A. Existing Vercel static-demo project project08-bid-insight/prj_YcrN7OdOjKl6M457HelGIItLeeXZ untouched and live URL unverified. Recheck final feature/main SHAs after HANDOFF.
 
-## Implemented source
-P1 importer + evidence-backed PASS/FAIL/UNKNOWN rule engine + immutable SQLite revision/backups + CLI PDF/XLSX. P2-01 local readonly SQLite UI/7 themes, P2-02 server-side global readonly favorites query, P2-03 JSON profile edit+backed-up CLI apply/reassess, P2-04 readonly preview/version race protection/SQL detail lookup/accessibility, P2-05 immutable assessment report replay with synthetic full-stack local diagnostic.
+## Implemented code and decisions
+Prior P1-01..04 importer+rule-backed PASS/FAIL/UNKNOWN+versioned local SQLite+CLI PDF/XLSX. P2-01 read-only localhost viewer and 7 themes, P2-02 global favorites read-only JSON POST, P2-03 backed-up company profile edits and JSON form, P2-04 SQLite version CAS/read-only preview/detail SQL/modal fix, P2-05 saved assessment report replay CLI and synthetic smoke, P2-06 incomplete XLSX/dual-output error cleanup and new-company onboarding.
 
-P2-06:
-- backend/bidowl/report.py: incomplete exclusive-created XLSX archive is deleted when ZIP/XML generation raises, without deleting any pre-existing path.
-- backend/report_existing.py: if --format both creates XLSX then PDF export fails, cleans up generated XLSX sibling. Not a true atomic two-file filesystem transaction on power loss.
-- backend/tests/test_report.py +1 and backend/tests/test_report_existing.py +2 fault-injection regressions, demonstrating intended behavior when executed (not yet run).
-- backend/ui/index.html and backend/ui/ui.js: create-company onboarding form exports JSON locally with explicit --create --apply --backup CLI instructions. Does NOT open browser DB write API; null/unknown fields default conservatively. backend/tests/test_viewer.py adds static onboarding assertions to existing test.
-- backend/verify_local.ps1: future actual Windows checkout test runner, stops on failed unittest/synthetic smoke; Node check if installed. backend/REPORT_REPLAY.md updated.
-- NEXT_TASK, STATUS, HANDOFF updated.
+P2-07:
+- backend/viewer.py new `render_saved_xlsx(conn,id)` loads exact immutable historical assessment via saved evidence SnapshotReader, generates XLSX within self-cleaning TemporaryDirectory, caps response at 16 MiB. `GET /api/report?assessment_id=N` returns binary with fixed Content-Disposition filename and XLSX MIME type, no-store/nosniff, strict positive integer, only one param, localhost Host/Origin checks and cross-site Fetch-Metadata rejection; DB `mode=ro` and `PRAGMA query_only=ON`; NO SQLite writes or permanent report files.
+- backend/ui/ui.js and backend/ui/ui.css show keyboard-accessible one-click Excel download in evidence drawer for stored assessment IDs and retain conservative stale-assessment warning. No direct PDF download until local font/report rendering browser validation; PDF remains via CLI.
+- backend/tests/test_report_existing.py two new real synthetic-DB / HTTP response methods (XLSX valid ZIP bytes, immutable DB, headers, rejection paths); backend/smoke_local.py extended to download and verify ZIP bytes; backend/REPORT_REPLAY.md documents functionality.
+- NEXT_TASK, STATUS and HANDOFF updated.
 
-## Verified measured facts vs gaps
-GitHub test sources fetched and counts inspected: **126 defined methods** = eligibility27 + importer21 + profile workflow11 + report21 + report_existing8 + smoke_local1 + store28 + viewer9. These are merely TEST DEFINITIONS, **126 NOT EXECUTED** on current private repo. Source `backend/ui/ui.js` V8 Function syntax parse PASS; output from latest GitHub ref inspected. New Python regression tests and workflow not actually run, so no claimed pass results. Historic P1 96 PASS on 2026-10-26 Linux and historical isolated P2 checks not equivalent to current branch.
-Private full checkout not present in Python container (prior private clone, signed raw, DNS/auth failures). Do not repeat same failed network method or treat old stand-in files as exact GitHub branch. No Windows real Edge/Chrome/7 theme preview, native Excel/ReportLab PDF outputs or actual 10k-bid benchmark this turn. Browser prior sandbox ERR_BLOCKED_BY_ADMINISTRATOR. KIPRIS trademark, official procurement data and real legal eligibility unverified.
+## Measured checks vs unverified
+Fetched actual GitHub branch test files and counted 128 declared Python test methods: eligibility27, importer21, profile workflow11, report21, report existing10, smoke1, store28, viewer9. These are **only declared methods; 128 integrated Python test runs NOT EXECUTED** in a full authenticated checkout. Current GitHub ui.js V8 Function constructor syntax parse PASS. No actual HTTP ZIP/Browser/Windows/full SQLite test run this turn. Historic P1 Linux 96 PASS in prior Oct 26 P1 baseline, not applicable to P2-07 changes. Previous partial stand-in /mnt/data/bidowl_p2 not a checkout; /mnt/data/Bid_Owl_work/backend is empty. Private clone/download DNS/auth failed previously; avoid claiming tests of outdated stand-in. Real Chrome/Edge localhost previously blocked ERR_BLOCKED_BY_ADMINISTRATOR in this environment, not proven app defect.
+No real native Excel/PDF visual, 10k-bid performance, KIPRIS brand, official tenders, installer, Windows 11 user acceptance or revenue verification. Client DB/docs/credentials never uploaded.
 
-## Current next steps
-P2-07 priority: authentic private full checkout `python -m unittest discover -s tests -v`, `python smoke_local.py`, `node --check ui/ui.js`; Windows users can run `backend/verify_local.ps1`. Fix actual failures. Then real PDF and Excel, full 7 themes/mobile/focus/Blob profile create, 10k search and version-conflict/backup restore. BASIC product not ready for customer sale: profile mutation and report generation still require explicit CLI. Following P3 official API, P4 opt-in AI, P5 Windows installer/security, P6 brand/KIPRIS sales gate. Planned 59k/149k/299k KRW pricing not validated.
-No customer DBs, docs, API credentials, reports, fonts or private info shared, no service fees, no Vercel/main changes or user machine mutation. Author connected hibi89; recheck feature commit author after HANDOFF.
+## Next stage
+P2-08 run actual 128 Python unittests plus smoke_local.py in genuine checkout, repair failures, test web XLSX download and profile JSON editing on Windows native browser, verify PDF/Excel, mobile/7 themes, run 10k-bid benchmark and backup recovery on synthetic databases. CLI remains for import/profile mutation/PDF; one-click paid UX not yet finished. P3 PRO official user-key API, P4 opt-in AI, P5 Windows packaging/security, P6 trademark and public sale gate follow separately; planned BASIC 59k/PRO149k/PREMIUM299k prices not validated.
+No main/Vercel/deployments/paid external services/permissions changed. Connected GitHub account hibi89. Final commit/author verification pending after HANDOFF.
