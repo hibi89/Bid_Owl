@@ -18,6 +18,7 @@ class BasicMvpAcceptanceTests(unittest.TestCase):
         self.assertEqual(result["status"], "BASIC_MVP_SYNTHETIC_E2E_PASS")
         self.assertEqual(result["bids"], 2)
         self.assertEqual(result["reports"], 2)
+        self.assertEqual(result["one_shot_reports"], 2)
         self.assertEqual(result["format"], "xlsx")
         self.assertEqual(result["assessments_saved"], 2)
         self.assertEqual(result["assessments_reused_on_repeat"], 2)
