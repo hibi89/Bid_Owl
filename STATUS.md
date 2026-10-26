@@ -1,3 +1,27 @@
+# BID OWL STATUS — P2-13 disposable first-run demo, 2026-10-27 KST
+
+## Stage / actual GitHub work
+Repo: private `hibi89/Bid_Owl`; branch `feature/bid-owl-v1-basic-mvp` (started `6a7d1369c255936c01eaf6f1e51eed4720635c2a`). The protected `main` school demo and Vercel are unchanged. This iteration added an isolated **Windows one-click synthetic demo** to lower BASIC's first-use friction.
+
+Implemented:
+1. Root `START_BID_OWL_DEMO.cmd` forwards to `backend/START_DEMO.cmd`; Python 3.11+, no ReportLab/official API/key/cloud required.
+2. `backend/demo_local.py` validates packaged `fixtures/sample_bids.csv` has only `DEMO-`/source `DEMO_ONLY` bids and `fixtures/sample_profile.json` has `SYNTHETIC-` profile. Builds assessments + 2 bids in a **fresh temporary SQLite**, with existing-file overwrite protection. Opens read-only loopback viewer on random local port, optionally auto-opens browser; Ctrl+C normal shutdown and temporary removal. Abnormal OS/process interruption may leave temp files; no deletion guarantee.
+3. UI `backend/ui/index.html` + `ui.js` + `ui.css` displays synthetic warning in every 7-theme mode whenever rows from `BIDOWL_SYNTHETIC_DEMO` source appear; no new writable HTTP endpoint.
+4. `backend/tests/test_demo_local.py` adds 8 synthetic tests: import/provenance/assessments, file overwrite guard, modified CSV marker rejection, changed company rejection, readonly HTTP loopback, temporary cleanup via fake server, invalid port, banner/launchers.
+5. `backend/DEMO.md` + root README/START_HERE/backend README and status/next/handoff updated. Legacy root BID INSIGHT readme and historical QA data retained, explicitly distinguished.
+
+## Verification: measured vs source-only
+- Exact GitHub `backend/ui/ui.js` fetched and passed V8 JavaScript **syntax parse**. Static source inspection confirmed demo provenance sentinel, read-only viewer route, temporary DB context and guarded existing path; these are **not Python integrated test executions**.
+- Python tests defined **152** in 12 test files after addition; **full current branch Python 152-run NOT EXECUTED**. Previous user Windows actual run (older 137-test source) was `137 ran; 18 WinError 32 cleanup errors; 0 assertion failures; 119 successful; JS syntax PASS; downstream smoke/10k SKIP`. P2-11 SQLite handle fixes plus P2-12 AST regression remain unconfirmed by a fresh native Windows suite.
+- The new demo server, CMD double-click, Windows browser/Excel/PDF, 10k synthetic measurements and packaged installer were not run on user's Windows in this iteration. Do not claim runtime PASS, sale-ready BASIC or guaranteed temp file deletion.
+- All-tier completion ~35% remains **subjective previous estimate**, not re-scored by adding a demo.
+
+## Next
+P2-14: reduce real BASIC CSV+company CLI friction with a safe explicit local wizard/importer while preserving backups, input validation, separate live/customer DB from demo and 127.0.0.1 read-only HTTP. User has requested AI perform routine work without repeated ZIP downloads/manual tests; continue GitHub source work and verifiable static checks. Final native Windows QA is a future release acceptance gate, not an immediate request.
+No customer CSV/SQLite/PDF/XLSX/secret/keys/fonts uploaded, no paid CI or external service, no production/main action. Author/committer and final feature/main SHA must be queried after HANDOFF commit.
+
+---
+
 # BID OWL STATUS — P2-12 autonomous QA hardening, 2026-10-27 KST
 
 **Latest live-source state:** 144 Python test method definitions in 11 files; **not yet executed as a current 144-case suite**. First real Windows P2-10 ZIP run: 137 ran, 119 without error, 18 WinError 32 locked SQLite temporary files, 0 assertion failures. Current code fixes from P2-11 and P2-12 not yet native-Windows-rerun. Overall all-tier subjective completion estimate remains ~35%.
