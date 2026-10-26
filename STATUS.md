@@ -1,3 +1,14 @@
+# BID OWL STATUS — P2-18 SQLite original-file preservation (2026-10-27 KST)
+
+**Implemented, feature branch only:** DB writer can now require existing `mode=rw` SQLite and strictly validated v1 schema; caller pins dev/inode/size/mtime file identity after readonly preview. `BidOwlStore` validates expected identity before and after SQLite connect. New DB initializations must first reserve file with `xb` and pass its exact expected file identity. Integrated into real GUI `import_local.py`, legacy report CLI `cli.py`, company edit `profile_workflow.py`. Mode=ro viewer remains untouched. Never treat deleted existing path as a reason to create a blank DB, or silently write to a swapped foreign DB. Backups still precede mutations and are not overwritten.
+
+**New regression sources:** six `test_store`, three `test_import_local`, two `test_cli_safe`, two `test_profile_workflow`: +13 methods, **212 Python test methods defined across 15 modules** total. Real stdlib `sqlite3` isolated temp-directory contract **4/4 PASS**, not full repo. No native Windows full suite/browser/report/installer/10k measured; historical 137-case Windows run had 18 WinError32 before prior fixes. Full current 212-suite NOT executed, no claim that it passes. No private-code deployment, no customer content/keys or paid runner used.
+
+**Important limitation:** This is not an OS file lock or complete multi-process race protection. Path can mutate after checks, inode can be reused, WAL/OneDrive/network paths have different behavior; release needs authentic Windows isolation/recovery QA. Product overall previously ~42% subjective estimate; BASIC+PRO+PREMIUM+packaging, no arbitrary progress inflation. BASIC production sale remains blocked by native installer, real E2E, font/Excel, backup restore, reliability and legal clearance. Next P2-19: safe guided backups and manual restore options.
+
+---
+## Earlier STATUS history
+
 # BID OWL STATUS — P2-17 legacy CLI prewrite safety source (2026-10-27 KST)
 
 Implemented on private feature branch `feature/bid-owl-v1-basic-mvp`: historical `backend/cli.py` report-producing writer now validates before write, preflights existing v1 SQLite in readonly mode, refuses same-ID company changes, backs up existing DB non-destructively BEFORE migrating policy metadata or importing bids, pins profile versions and writes new current-engine-hash assessments, reserves new DB with exclusive file creation. Report failure after writes raises explicit `CLI_PARTIAL_OR_UNCERTAIN` and preserves backup; SQLite errors from main become JSON `FAILED` with code 2. No HTTP write or public data transmission. Old synthetic CLI reports and BASIC GUI importer remain distinct. `backend/tests/test_cli_safe.py` added **9 synthetic tests defined**, covering backup, policy provenance, legacy table migration, errors, foreign data protection and races. Documentation updated.
