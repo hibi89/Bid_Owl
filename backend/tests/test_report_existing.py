@@ -1,9 +1,12 @@
 """P2-05 synthetic saved-assessment export tests, requiring no PDF font."""
 from __future__ import annotations
 
+import http.client
+import io
 import json
 import sqlite3
 import tempfile
+import threading
 import unittest
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -12,7 +15,7 @@ from unittest.mock import patch
 
 from bidowl import Bid, BidOwlStore, CompanyProfile, Requirement
 from report_existing import SnapshotReader, export_existing, main
-from viewer import open_database
+from viewer import open_database, make_server, render_saved_xlsx
 
 
 class ExistingReportTests(unittest.TestCase):
@@ -116,6 +119,58 @@ class ExistingReportTests(unittest.TestCase):
             self.assertEqual(r.get_bid("sample","ONE",1).bid_no,"ONE")
             with self.assertRaises(sqlite3.OperationalError):
                 conn.execute("DELETE FROM assessments")
+
+    def test_readonly_download_renders_valid_historical_xlsx_bytes(self):
+        with open_database(self.db) as conn:
+            payload = render_saved_xlsx(conn,self.first)
+            self.assertTrue(payload.startswith(b'PK'))
+            with ZipFile(io.BytesIO(payload)) as archive:
+                self.assertIsNone(archive.testzip())
+                self.assertIn('xl/worksheets/sheet1.xml', archive.namelist())
+            with self.assertRaises(sqlite3.OperationalError):
+                conn.execute("UPDATE assessments SET status='FAIL'")
+        with BidOwlStore(self.db) as store:
+            self.assertEqual(store.assessment(self.first)[0]['status'],'PASS')
+
+    def test_http_download_content_disposition_and_host_validation(self):
+        server=make_server(self.db,0)
+        worker=threading.Thread(target=server.serve_forever,daemon=True)
+        worker.start()
+        self.addCleanup(worker.join,2)
+        self.addCleanup(server.server_close)
+        self.addCleanup(server.shutdown)
+        host=f'127.0.0.1:{server.server_port}'
+        def get(path, headers=None):
+            connection=http.client.HTTPConnection('127.0.0.1',server.server_port,timeout=5)
+            try:
+                connection.request('GET',path,headers={'Host':host,**(headers or {})})
+                response=connection.getresponse()
+                return response.status,dict(response.getheaders()),response.read()
+            finally:
+                connection.close()
+        good=f'/api/report?assessment_id={self.first}'
+        status,headers,data=get(good,{'Sec-Fetch-Site':'same-origin'})
+        self.assertEqual(status,200)
+        self.assertIn('spreadsheetml.sheet',headers['Content-Type'])
+        self.assertIn('attachment; filename=',headers['Content-Disposition'])
+        self.assertEqual(headers['X-Content-Type-Options'],'nosniff')
+        with ZipFile(io.BytesIO(data)) as archive:
+            self.assertIsNone(archive.testzip())
+            self.assertIn('xl/worksheets/sheet2.xml',archive.namelist())
+        self.assertEqual(get(good,{'Host':'evil.example'})[0],403)
+        self.assertEqual(get(good,{'Sec-Fetch-Site':'cross-site'})[0],403)
+        for path,expected in (
+            ('/api/report',400),
+            ('/api/report?assessment_id=0',400),
+            ('/api/report?assessment_id=abc',400),
+            ('/api/report?assessment_id=999999',404),
+            (good+'&format=pdf',400),
+            ('/api/report?assessment_id=1&assessment_id=2',400),
+        ):
+            with self.subTest(path=path):
+                self.assertEqual(get(path)[0],expected)
+        with BidOwlStore(self.db) as store:
+            self.assertEqual(store.db.execute('SELECT COUNT(*) FROM assessments').fetchone()[0],1)
 
     def test_command_main_json_exit_code(self):
         result = main([
