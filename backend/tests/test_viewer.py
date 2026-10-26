@@ -11,7 +11,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from urllib.parse import urlencode
 
-from viewer import make_server, open_database, query_bids, query_detail, query_profiles
+from viewer import make_server, open_database, query_bids, query_detail, query_profiles, query_favorites
 
 
 class ViewerTests(unittest.TestCase):
@@ -118,6 +118,64 @@ class ViewerTests(unittest.TestCase):
         self.assertEqual(get('GET','/api/bids',{'Origin':'http://evil.example'})[0],403)
         self.assertEqual(get('POST','/api/bids')[0],405)
         self.assertEqual(get('GET','/api/detail?'+urlencode({'source_id':'TEST','bid_no':'A'}))[0],200)
+
+    def test_global_favorites_filter_before_pagination(self):
+        with open_database(self.path) as conn:
+            # B is not among first two open bids but must still be found globally.
+            all_page = query_bids(conn, {'page':['1'], 'page_size':['1']})
+            self.assertNotEqual(all_page['items'][0]['bid_no'], 'B')
+            saved = [['TEST', 'B'], ['TEST', 'C']]
+            response = query_favorites(conn, {'favorites': saved, 'filters': {'page':'1', 'page_size':'1'}})
+            self.assertEqual(response['total'], 2)
+            self.assertEqual(response['items'][0]['bid_no'], 'C')
+            next_page = query_favorites(conn, {'favorites': saved, 'filters': {'page':'2', 'page_size':'1'}})
+            self.assertEqual(next_page['items'][0]['bid_no'], 'B')
+            checked = query_favorites(conn, {'favorites': saved, 'filters': {'status':'UNKNOWN'}})
+            self.assertEqual([b['bid_no'] for b in checked['items']], ['C'])
+            self.assertEqual(query_favorites(conn, {'favorites': [], 'filters': {}})['total'], 0)
+            for invalid in (
+                {'favorites':[['TEST','B']], 'filters': {'sort':'DROP TABLE bids'}},
+                {'favorites': [['TEST']], 'filters': {}},
+                {'favorites': [[11,'B']], 'filters': {}},
+                {'favorites': [['TEST','B']]*1001, 'filters': {}},
+                {'favorites': 'TEST', 'filters': {}},
+                {'favorites': [], 'filters': {'page':1}},
+            ):
+                with self.subTest(invalid=repr(invalid)[:60]), self.assertRaises(ValueError):
+                    query_favorites(conn, invalid)
+            self.assertEqual(conn.execute('SELECT COUNT(*) FROM bids').fetchone()[0], 3)
+
+    def test_http_favorites_query_same_origin_and_bounded_body(self):
+        server = make_server(self.path, 0)
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        self.addCleanup(thread.join, 2)
+        self.addCleanup(server.server_close)
+        self.addCleanup(server.shutdown)
+        url = '/api/bids/favorites'
+        host = f'127.0.0.1:{server.server_port}'
+        base = {'Host': host, 'Origin': f'http://{host}', 'Content-Type':'application/json'}
+        def post(payload, headers=None):
+            con = http.client.HTTPConnection('127.0.0.1', server.server_port, timeout=3)
+            con.request('POST', url, body=payload, headers=headers if headers is not None else base)
+            response = con.getresponse()
+            result = (response.status, response.read())
+            con.close()
+            return result
+        body = json.dumps({'favorites':[['TEST','B']], 'filters': {'page':'1', 'page_size':'30'}}).encode()
+        status, raw = post(body)
+        self.assertEqual(status, 200)
+        self.assertEqual(json.loads(raw)['total'], 1)
+        self.assertEqual(json.loads(raw)['items'][0]['bid_no'], 'B')
+        self.assertEqual(post(body, {**base, 'Origin':'http://evil.example'})[0], 403)
+        self.assertEqual(post(body, {k:v for k,v in base.items() if k!='Origin'})[0], 403)
+        self.assertEqual(post(body, {**base, 'Host':'evil.example'})[0], 403)
+        self.assertEqual(post(body, {**base, 'Content-Type':'text/plain'})[0], 415)
+        self.assertEqual(post(b'{no-json')[0], 400)
+        self.assertEqual(post(body, {**base, 'Content-Length':'1048577'})[0], 413)
+        self.assertEqual(post(body, {**base, 'Content-Length':'0'})[0], 413)
+        self.assertEqual(post(json.dumps({'favorites': [['TEST','B']]*1001, 'filters':{}}).encode())[0], 400)
+        self.assertEqual(post(body, {**base, 'Host':host})[0], 200)
 
     def test_all_seven_themes_and_safe_render_path(self):
         ui=Path(__file__).resolve().parents[1]/'ui'
