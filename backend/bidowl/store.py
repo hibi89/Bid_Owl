@@ -288,13 +288,22 @@ class BidOwlStore:
     def import_runs(self, source_id: str) -> tuple[sqlite3.Row, ...]:
         return tuple(self.db.execute("SELECT * FROM import_runs WHERE source_id=? ORDER BY id",(source_id,)).fetchall())
 
-    def assess_and_record(self, source_id: str, bid_no: str, profile_id: str, *, checked_at: datetime | None = None) -> tuple[int,EligibilityDecision]:
+    def assess_and_record(self, source_id: str, bid_no: str, profile_id: str, *,
+                          checked_at: datetime | None = None,
+                          expected_profile_version: int | None = None) -> tuple[int,EligibilityDecision]:
         # Evaluate + save against the SAME stored revisions under write lock.
+        if expected_profile_version is not None and (
+            type(expected_profile_version) is not int or expected_profile_version <= 0
+        ):
+            raise ValueError("expected_profile_version must be a positive integer")
         with self._transaction():
             bid_row = self.db.execute("SELECT latest_version FROM bids WHERE source_id=? AND bid_no=?",(source_id,bid_no)).fetchone()
             profile_row = self.db.execute("SELECT latest_version FROM profiles WHERE profile_id=?",(profile_id,)).fetchone()
             if bid_row is None or profile_row is None:
                 raise KeyError("bid or profile not found")
+            if (expected_profile_version is not None
+                    and profile_row["latest_version"] != expected_profile_version):
+                raise ValueError("Profile version mismatch during assessment")
             bid = self.get_bid(source_id,bid_no,bid_row["latest_version"])
             profile = self.get_profile(profile_id,profile_row["latest_version"])
             outcome = evaluate_bid(bid,profile,checked_at=checked_at)
