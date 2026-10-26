@@ -95,9 +95,9 @@ def _latest_rows(conn: sqlite3.Connection, profile_id: str = "", only_key: tuple
     return result
 
 
-def _arg(query: dict, name: str, default: str = "") -> str:
+def _arg(query: dict, name: str, default: str = "", *, max_length: int = 160) -> str:
     value = query.get(name, [default])
-    if len(value) != 1 or len(value[0]) > 160:
+    if len(value) != 1 or not isinstance(value[0], str) or len(value[0]) > max_length:
         raise ValueError(f"Invalid query argument: {name}")
     return value[0].strip()
 
@@ -106,7 +106,8 @@ def query_bids(conn: sqlite3.Connection, query: dict, *, favorite_keys: set[tupl
     search = _arg(query, "q").casefold()
     if len(search) > 120:
         raise ValueError("Search is limited to 120 characters")
-    category, status, deadline, profile = [_arg(query, field) for field in ("category", "status", "deadline", "profile")]
+    category, status, deadline = [_arg(query, field) for field in ("category", "status", "deadline")]
+    profile = _arg(query, "profile", max_length=300)
     if status not in ("", "PASS", "FAIL", "UNKNOWN") or deadline not in ("", "open", "expired"):
         raise ValueError("Unsupported filter")
     try:
@@ -136,7 +137,9 @@ def query_bids(conn: sqlite3.Connection, query: dict, *, favorite_keys: set[tupl
 
 
 def query_detail(conn: sqlite3.Connection, query: dict) -> dict:
-    source_id, bid_no, profile = [_arg(query, field) for field in ("source_id", "bid_no", "profile")]
+    source_id, bid_no, profile = [
+        _arg(query, field, max_length=300) for field in ("source_id", "bid_no", "profile")
+    ]
     if not source_id or not bid_no:
         raise ValueError("source_id and bid_no required")
     row = next(iter(_latest_rows(conn, profile, (source_id, bid_no))), None)
