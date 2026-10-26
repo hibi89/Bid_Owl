@@ -107,6 +107,150 @@ class ViewerTests(unittest.TestCase):
             self.assertFalse(rows["A"]["engine_fresh"])
             self.assertEqual(rows["B"]["status"], "FAIL")
 
+    def test_metadata_paging_is_exactly_equivalent_to_legacy_full_scan(self):
+        from viewer import _latest_rows
+
+        # Multiple sources, deadlines, Unicode casefold, ties and pages.
+        with closing(sqlite3.connect(self.path)) as writer:
+            for i in range(65):
+                source = "SYN" if i % 2 else "TEST"
+                number = f"PAGE-{i:03d}"
+                payload = {
+                    "bid_no": number,
+                    "title": ("한글 AI 테스트" if i % 3 else "Straße 공공 용역"),
+                    "agency": "한국 공공기관",
+                    "category": ("IT" if i % 2 else "교육"),
+                    "bid_deadline": self.deadline if i % 5 else self.old_deadline,
+                    "budget": i * 101,
+                    "source_ref": "SYNTHETIC",
+                }
+                writer.execute(
+                    "INSERT INTO bids VALUES (?,?,?)", (source, number, 1),
+                )
+                writer.execute(
+                    "INSERT INTO bid_versions VALUES (?,?,?,?)",
+                    (source, number, 1, json.dumps(payload, ensure_ascii=False)),
+                )
+            writer.commit()
+
+        def expected_full_scan(conn, filters, favorites=None):
+            profile = filters.get("profile", "P1")
+            page = int(filters.get("page", "1"))
+            page_size = int(filters.get("page_size", "30"))
+            rows = _latest_rows(conn, profile)
+            categories = sorted({
+                str(row["category"]) for row in rows if row["category"]
+            })
+            if favorites is not None:
+                rows = [
+                    row for row in rows
+                    if (row["source_id"], row["bid_no"]) in favorites
+                ]
+            q = filters.get("q", "").strip().casefold()
+            if q:
+                rows = [
+                    row for row in rows
+                    if q in " ".join(
+                        str(row[key]) for key in
+                        ("title", "agency", "bid_no", "source_id")
+                    ).casefold()
+                ]
+            category = filters.get("category", "").strip()
+            if category:
+                rows = [row for row in rows if row["category"] == category]
+            status = filters.get("status", "").strip()
+            if status:
+                rows = [row for row in rows if row["status"] == status]
+            deadline = filters.get("deadline", "").strip()
+            if deadline:
+                rows = [
+                    row for row in rows
+                    if row["expired"] == (deadline == "expired")
+                ]
+            rows.sort(key=lambda row: (
+                row["expired"], row["deadline"] or "",
+                row["source_id"], row["bid_no"],
+            ))
+            return {
+                "items": rows[(page - 1) * page_size:page * page_size],
+                "total": len(rows),
+                "categories": categories,
+                "page": page,
+                "page_size": page_size,
+            }
+
+        favorites = {("TEST", "A"), ("SYN", "PAGE-001"),
+                     ("TEST", "PAGE-002"), ("MISSING", "VOID")}
+        cases = [
+            ({}, None),
+            ({"page_size": "1", "page": "2"}, None),
+            ({"page_size": "7", "page": "6"}, None),
+            ({"page_size": "4", "page": "999"}, None),
+            ({"q": "AI"}, None),
+            ({"q": "STRASSE"}, None),
+            ({"q": "공공"}, None),
+            ({"category": "IT", "q": "한글"}, None),
+            ({"category": "교육", "deadline": "expired"}, None),
+            ({"deadline": "open", "page_size": "6"}, None),
+            ({"profile": "P1", "page_size": "3"}, None),
+            ({"profile": "not-a-profile"}, None),
+            ({"status": "PASS"}, None),
+            ({"status": "UNKNOWN", "category": "IT"}, None),
+            ({"page_size": "1", "page": "2"}, favorites),
+            ({"q": "AI", "deadline": "open"}, favorites),
+            ({"page_size": "20"}, set()),
+        ]
+        with closing(open_database(self.path)) as conn:
+            for filters, favorites_for_case in cases:
+                with self.subTest(filters=filters, favorites=favorites_for_case):
+                    before = expected_full_scan(conn, filters, favorites_for_case)
+                    output = query_bids(
+                        conn, {key: [value] for key, value in filters.items()},
+                        favorite_keys=favorites_for_case,
+                    )
+                    for key in ("items", "total", "categories",
+                                "page", "page_size"):
+                        self.assertEqual(output[key], before[key])
+                    self.assertFalse(conn.in_transaction)
+
+    def test_non_status_page_loads_only_selected_assessment_keys(self):
+        from unittest.mock import patch
+        import viewer
+
+        with closing(open_database(self.path)) as conn:
+            original = viewer._latest_rows
+            with patch("viewer._latest_rows", wraps=original) as observed:
+                result = query_bids(
+                    conn, {"page": ["1"], "page_size": ["2"]}
+                )
+            self.assertEqual(result["total"], 3)
+            self.assertEqual(observed.call_count, 1)
+            self.assertEqual(len(observed.call_args.kwargs["candidate_keys"]), 2)
+            self.assertFalse(conn.in_transaction)
+            with patch("viewer._latest_rows", wraps=original) as observed:
+                result = query_bids(conn, {"status": ["PASS"]})
+            self.assertEqual(result["total"], 1)
+            self.assertEqual(observed.call_count, 1)
+            self.assertNotIn("candidate_keys", observed.call_args.kwargs)
+
+    def test_empty_page_and_no_favorites_never_request_full_assessment_scan(self):
+        from unittest.mock import patch
+        import viewer
+
+        with closing(open_database(self.path)) as conn:
+            original = viewer._latest_rows
+            with patch("viewer._latest_rows", wraps=original) as observed:
+                output = query_bids(
+                    conn, {"page": ["999"], "page_size": ["1"]},
+                    favorite_keys=set(),
+                )
+            self.assertEqual(output["total"], 0)
+            self.assertEqual(output["items"], [])
+            self.assertEqual(output["categories"], ["IT", "교육"])
+            self.assertEqual(observed.call_count, 1)
+            self.assertEqual(observed.call_args.kwargs["candidate_keys"], [])
+            self.assertFalse(conn.in_transaction)
+
     def test_filters_and_stale_assessment_are_conservative(self):
         with closing(open_database(self.path)) as c:
             data=query_bids(c,{})
