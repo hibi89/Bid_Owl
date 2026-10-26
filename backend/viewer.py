@@ -99,7 +99,7 @@ def _latest_rows(conn: sqlite3.Connection, profile_id: str = "", only_key: tuple
     for row in rows:
         bid = json.loads(row["payload"])
         deadline = _timestamp(bid.get("bid_deadline"))
-        policy_fresh = row["engine_hash"] == engine_hash
+        policy_fresh = bool(engine_hash is not None and row["engine_hash"] == engine_hash)
         fresh = bool(row["assessment_id"] and row["assessment_bid_version"] == row["latest_version"]
                      and row["profile_version"] == row["latest_profile_version"]
                      and policy_fresh)
