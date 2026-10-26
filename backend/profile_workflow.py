@@ -13,7 +13,7 @@ from dataclasses import asdict
 from pathlib import Path
 
 from bidowl import BidOwlStore, CompanyProfile
-from bidowl.store import default_database_path
+from bidowl.store import database_file_identity, default_database_path
 
 MAX_PROFILE_BYTES = 65536
 MAX_REASSESS = 10000
@@ -103,10 +103,14 @@ def execute(
 
     # Preview itself opens exactly one mode=ro connection. Apply preflights
     # schema read-only before it acquires a separate write-capable store.
+    expected_identity = database_file_identity(db) if apply else None
     if apply:
         with ReadOnlyProfileStore(db):
             pass
-    with (BidOwlStore(db) if apply else ReadOnlyProfileStore(db)) as store:
+        if database_file_identity(db) != expected_identity:
+            raise ValueError("Database changed during profile preflight; retry")
+    with (BidOwlStore(db, must_exist=True, expected_identity=expected_identity)
+          if apply else ReadOnlyProfileStore(db)) as store:
         existing_row = store.db.execute(
             "SELECT latest_version FROM profiles WHERE profile_id=?", (profile.profile_id,)
         ).fetchone()
