@@ -86,14 +86,15 @@ class BackupRecoveryTests(unittest.TestCase):
 
     def test_foreign_schema_v1_rejected(self):
         self.backup.unlink()
-        with sqlite3.connect(self.backup) as conn:
+        with contextlib.closing(sqlite3.connect(self.backup)) as conn:
             conn.execute("CREATE TABLE unrelated(secret TEXT)")
             conn.execute("PRAGMA user_version=1")
+            conn.commit()
         with self.assertRaisesRegex(ValueError, "Missing BID OWL"):
             prepare_recovery(self.backup, self.recovered)
 
     def test_legacy_without_policy_metadata_preserved_but_is_unknown(self):
-        with sqlite3.connect(self.backup) as conn:
+        with contextlib.closing(sqlite3.connect(self.backup)) as conn:
             conn.execute("DROP TABLE assessment_engine_provenance")
         plan = prepare_recovery(self.backup, self.recovered)
         self.assertFalse(plan.policy_provenance)
@@ -106,8 +107,9 @@ class BackupRecoveryTests(unittest.TestCase):
 
     def test_backup_content_change_after_preview_blocks_restore(self):
         plan = prepare_recovery(self.backup, self.recovered)
-        with sqlite3.connect(self.backup) as conn:
+        with contextlib.closing(sqlite3.connect(self.backup)) as conn:
             conn.execute("CREATE TABLE added_after_preview(n INTEGER)")
+            conn.commit()
         with self.assertRaisesRegex(ValueError, "changed since preview"):
             restore_to_new_file(plan)
         self.assertFalse(self.recovered.exists())
@@ -152,7 +154,7 @@ class BackupRecoveryTests(unittest.TestCase):
         self.assertTrue(self.backup.is_file())
 
     def test_foreign_key_corruption_detected_in_readonly_preview(self):
-        with sqlite3.connect(self.backup) as conn:
+        with contextlib.closing(sqlite3.connect(self.backup)) as conn:
             conn.execute("PRAGMA foreign_keys=OFF")
             conn.execute("DELETE FROM profiles")
             conn.commit()
