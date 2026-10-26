@@ -28,7 +28,7 @@ class ViewerTests(unittest.TestCase):
         CREATE TABLE profiles(profile_id TEXT,latest_version INTEGER);
         CREATE TABLE profile_versions(profile_id TEXT,version INTEGER,payload TEXT);
         CREATE TABLE assessments(id INTEGER,source_id TEXT,bid_no TEXT,bid_version INTEGER,
-          profile_id TEXT,profile_version INTEGER,status TEXT,checked_at TEXT,requires_human_review INTEGER,data_as_of TEXT);
+          profile_id TEXT,profile_version INTEGER,status TEXT,checked_at TEXT,requires_human_review INTEGER,data_as_of TEXT,is_expired INTEGER NOT NULL);
         CREATE TABLE rule_assessments(assessment_id INTEGER,position INTEGER,rule_id TEXT,kind TEXT,
           status TEXT,reason_code TEXT,explanation TEXT,source_text TEXT,source_locator TEXT,requires_human_review INTEGER);
         CREATE TABLE assessment_engine_provenance(assessment_id INTEGER PRIMARY KEY, engine_hash TEXT NOT NULL);
@@ -49,8 +49,8 @@ class ViewerTests(unittest.TestCase):
         c.execute('INSERT INTO profiles VALUES (?,?)',('P1',1))
         c.execute('INSERT INTO profile_versions VALUES (?,?,?)',('P1',1,json.dumps({'profile_id':'P1','region':'부산','categories':['IT'], 'licenses':None, 'staff_count':0,'experience_total_krw':None},ensure_ascii=False)))
         for row in [(1,'A',1,'PASS'),(2,'B',1,'FAIL'),(3,'C',1,'PASS')]:
-            c.execute('INSERT INTO assessments VALUES (?,?,?,?,?,?,?,?,?,?)',
-                      (row[0],'TEST',row[1],row[2],'P1',1,row[3],now.isoformat(),0,now.isoformat()))
+            c.execute('INSERT INTO assessments VALUES (?,?,?,?,?,?,?,?,?,?,?)',
+                      (row[0],'TEST',row[1],row[2],'P1',1,row[3],now.isoformat(),0,now.isoformat(),int(row[1] == 'B')))
         c.execute('INSERT INTO rule_assessments VALUES (?,?,?,?,?,?,?,?,?,?)',
                   (1,0,'r1','license_all','PASS','MATCH','면허 조건 충족','자격조건 원문','공고문 p.3',0))
         for assessment_id in (1,2,3):
@@ -321,16 +321,19 @@ class ViewerTests(unittest.TestCase):
                     ("BATCH", bid_no, 1, json.dumps(payload, ensure_ascii=False)))
                 if i % 3 == 0:
                     aid = 1000 + i
-                    writer.execute("INSERT INTO assessments VALUES (?,?,?,?,?,?,?,?,?,?)",
+                    writer.execute("INSERT INTO assessments VALUES (?,?,?,?,?,?,?,?,?,?,?)",
                         (aid, "BATCH", bid_no, 1, "P1", 1,
-                         "FAIL" if i % 2 else "PASS", now.isoformat(), 0, now.isoformat()))
+                         "FAIL" if i % 2 else "PASS", now.isoformat(), 0, now.isoformat(), 0))
                     writer.execute("INSERT INTO assessment_engine_provenance VALUES (?,?)",
                                    (aid, engine_fingerprint()))
             writer.commit()
         with closing(open_database(self.path)) as conn:
             from viewer import _status_for_candidate_keys
             keys = [("BATCH", f"BIG-{i:04d}") for i in range(425)]
-            statuses = _status_for_candidate_keys(conn, keys, "P1")
+            statuses = _status_for_candidate_keys(
+                conn, keys, "P1",
+                expected_expiry={key: False for key in keys},
+            )
             self.assertEqual(len(statuses), 425)
             self.assertEqual(statuses[("BATCH", "BIG-0000")], "PASS")
             self.assertEqual(statuses[("BATCH", "BIG-0003")], "FAIL")
@@ -375,10 +378,10 @@ class ViewerTests(unittest.TestCase):
             writer.execute("INSERT INTO profile_versions VALUES (?,?,?)", (
                 "P2", 1, json.dumps({"profile_id": "P2"})
             ))
-            writer.execute("INSERT INTO assessments VALUES (?,?,?,?,?,?,?,?,?,?)", (
+            writer.execute("INSERT INTO assessments VALUES (?,?,?,?,?,?,?,?,?,?,?)", (
                 300, "TEST", "A", 1, "P2", 1, "FAIL",
                 datetime.now(timezone.utc).isoformat(), 0,
-                datetime.now(timezone.utc).isoformat(),
+                datetime.now(timezone.utc).isoformat(), 0,
             ))
             writer.execute("INSERT INTO assessment_engine_provenance VALUES (?,?)",
                            (300, engine_fingerprint()))
@@ -466,10 +469,10 @@ class ViewerTests(unittest.TestCase):
             writer.execute('INSERT INTO profiles VALUES (?,?)',(profile,1))
             writer.execute('INSERT INTO profile_versions VALUES (?,?,?)',
                            (profile,1,json.dumps({'profile_id':profile})))
-            writer.execute('INSERT INTO assessments VALUES (?,?,?,?,?,?,?,?,?,?)',
+            writer.execute('INSERT INTO assessments VALUES (?,?,?,?,?,?,?,?,?,?,?)',
                 (400,source,number,1,profile,1,'UNKNOWN',
                  datetime.now(timezone.utc).isoformat(),1,
-                 datetime.now(timezone.utc).isoformat()))
+                 datetime.now(timezone.utc).isoformat(), 0))
             writer.commit()
         with closing(open_database(self.path)) as conn:
             detail=query_detail(conn,{'source_id':[source],'bid_no':[number],
