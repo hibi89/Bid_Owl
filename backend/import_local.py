@@ -183,6 +183,13 @@ def apply_import(plan: ImportPlan) -> dict:
         raise ValueError("Database/profile changed since preview; retry")
     backup = None
     started_writing = False
+    # sqlite3.connect() creates absent files without exclusivity.
+    # Reserve a truly new DB with O_EXCL ("xb") so a file appearing
+    # between read-only preflight and open cannot be silently adopted.
+    if not plan.existing_db:
+        plan.db_path.parent.mkdir(parents=True, exist_ok=True)
+        with plan.db_path.open("xb"):
+            pass
     try:
         with BidOwlStore(plan.db_path) as store:
             if plan.existing_db:
