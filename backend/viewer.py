@@ -155,6 +155,22 @@ def query_profiles(conn: sqlite3.Connection) -> dict:
     return {"profiles": [{"profile_id": r["profile_id"], "version": r["latest_version"]} for r in rows]}
 
 
+def query_profile(conn: sqlite3.Connection, query: dict) -> dict:
+    identifiers = query.get("profile_id", [])
+    if len(identifiers) != 1 or not isinstance(identifiers[0], str):
+        raise ValueError("Exactly one profile_id required")
+    profile_id = identifiers[0]
+    if not profile_id.strip() or len(profile_id) > 300:
+        raise ValueError("Invalid profile_id")
+    row = conn.execute("""SELECT v.payload,p.latest_version FROM profiles p
+        JOIN profile_versions v ON p.profile_id=v.profile_id AND p.latest_version=v.version
+        WHERE p.profile_id=?""", (profile_id,)).fetchone()
+    if row is None:
+        raise LookupError("Profile not found")
+    profile = json.loads(row["payload"])
+    return {"profile": profile, "version": row["latest_version"], "read_only": True}
+
+
 MAX_FAVORITES = 1000
 MAX_FAVORITES_BODY = 1024 * 1024
 FAVORITE_FILTERS = {"q", "category", "status", "deadline", "profile", "page", "page_size"}
@@ -215,7 +231,7 @@ class ViewerHandler(BaseHTTPRequestHandler):
             except OSError:
                 self._json(500, {"error": "Missing bundled UI asset"})
             return
-        if parsed.path not in ("/api/bids", "/api/detail", "/api/profiles"):
+        if parsed.path not in ("/api/bids", "/api/detail", "/api/profiles", "/api/profile"):
             self._json(404, {"error": "Not found"})
             return
         try:
@@ -225,6 +241,8 @@ class ViewerHandler(BaseHTTPRequestHandler):
                     payload = query_bids(conn, query)
                 elif parsed.path == "/api/detail":
                     payload = query_detail(conn, query)
+                elif parsed.path == "/api/profile":
+                    payload = query_profile(conn, query)
                 else:
                     payload = query_profiles(conn)
             self._json(200, payload)
