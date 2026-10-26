@@ -91,6 +91,58 @@ class LocalImportTests(unittest.TestCase):
             self.assertEqual(current.db.execute("SELECT COUNT(*) FROM assessments").fetchone()[0], 2)
         self.assertEqual(self.csv.read_bytes().count(b"SYNTHETIC_TEST"), 2)
 
+    def test_engine_change_never_reuses_old_pass(self):
+        initial = apply_import(self.prepare())
+        self.assertEqual(initial["assessments_saved"], 2)
+        with BidOwlStore(self.db) as store:
+            store.db.execute(
+                "UPDATE assessment_engine_provenance SET engine_hash=?",
+                ("0" * 64,),
+            )
+        changed = apply_import(self.prepare())
+        self.assertEqual(changed["assessments_saved"], 2)
+        self.assertEqual(changed["assessments_reused"], 0)
+        self.assertTrue(changed["backup"])
+        with BidOwlStore(self.db) as store:
+            self.assertEqual(store.db.execute(
+                "SELECT COUNT(*) FROM assessments"
+            ).fetchone()[0], 4)
+            self.assertEqual(store.db.execute(
+                "SELECT COUNT(DISTINCT engine_hash) FROM assessment_engine_provenance"
+            ).fetchone()[0], 2)
+        again = apply_import(self.prepare())
+        self.assertEqual(again["assessments_saved"], 0)
+        self.assertEqual(again["assessments_reused"], 2)
+
+    def test_legacy_v1_engine_metadata_migrates_only_after_backup(self):
+        apply_import(self.prepare())
+        with BidOwlStore(self.db) as store:
+            store.db.execute("DROP TABLE assessment_engine_provenance")
+        plan = self.prepare()
+        self.assertEqual(plan_summary(plan)["status"], "PREVIEW_NO_WRITE")
+        with BidOwlStore(self.db) as store:
+            self.assertIsNone(store.db.execute(
+                "SELECT 1 FROM sqlite_master WHERE name='assessment_engine_provenance'"
+            ).fetchone())
+        migrated = apply_import(plan)
+        self.assertEqual(migrated["assessments_saved"], 2)
+        self.assertEqual(migrated["assessments_reused"], 0)
+        self.assertTrue(migrated["backup"])
+        with BidOwlStore(migrated["backup"]) as before:
+            self.assertIsNone(before.db.execute(
+                "SELECT 1 FROM sqlite_master WHERE name='assessment_engine_provenance'"
+            ).fetchone())
+            self.assertEqual(before.db.execute(
+                "SELECT COUNT(*) FROM assessments"
+            ).fetchone()[0], 2)
+        with BidOwlStore(self.db) as after:
+            self.assertIsNotNone(after.db.execute(
+                "SELECT 1 FROM sqlite_master WHERE name='assessment_engine_provenance'"
+            ).fetchone())
+            self.assertEqual(after.db.execute(
+                "SELECT COUNT(*) FROM assessments"
+            ).fetchone()[0], 4)
+
     def test_noop_reimport_preserves_immutable_assessment_ids(self):
         first = apply_import(self.prepare())
         with BidOwlStore(self.db) as store:
