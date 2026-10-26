@@ -193,13 +193,18 @@ class BidOwlStore:
                 COMMIT;
             """)
 
-    def save_profile(self, profile: CompanyProfile) -> int:
+    def save_profile(self, profile: CompanyProfile, *, expected_version: int | None = None) -> int:
         if not isinstance(profile, CompanyProfile):
             raise TypeError("profile must be CompanyProfile")
+        if expected_version is not None and (type(expected_version) is not int or expected_version < 0):
+            raise ValueError("expected_version must be a nonnegative integer or None")
         data = _profile_payload(profile)
         digest = _digest(data)
         with self._transaction():
             old = self.db.execute("SELECT latest_version FROM profiles WHERE profile_id=?", (profile.profile_id,)).fetchone()
+            actual_version = int(old["latest_version"]) if old else 0
+            if expected_version is not None and actual_version != expected_version:
+                raise ValueError("Profile version mismatch during save; refresh and retry")
             if old:
                 version = old["latest_version"]
                 prev = self.db.execute("SELECT digest FROM profile_versions WHERE profile_id=? AND version=?", (profile.profile_id,version)).fetchone()
