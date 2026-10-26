@@ -1,23 +1,24 @@
-# BID OWL NEXT_TASK — 2026-10-26 KST
+# BID OWL NEXT_TASK — 2026-10-27 KST
 
-Repo hibi89/Bid_Owl private; feature branch feature/bid-owl-v1-basic-mvp. main at c888c795bef72734f3f7016e54013b82453f11d8 preserved. User ㄱ advances to the first incomplete task.
+## Current branch / resume
+Repo: hibi89/Bid_Owl (private). Work branch: feature/bid-owl-v1-basic-mvp. Keep main and old Vercel untouched. Resume command [Bid_Owl 깃헙 레포지토리 보고 작업이어가셈] or ㄱ. Before any further changes read HANDOFF -> STATUS -> AGENTS -> REQUIREMENTS -> this file -> actual source and latest HEAD.
 
-## Completed verified stages
-P1-01: CSV validation and import, 21 tests.
-P1-02: profile and 3-state evidence-gated evaluator, 27 tests.
-P1-03: local SQLite versioning/rollback/audit/backup, 28 tests.
-P1-04: real local CLI flow + PDF/XLSX files + user source evidence, 20 tests.
-Full locally reconstructed code suite was compared with GitHub exact blob SHA and run together: 96 PASS / 0 FAIL. Synthetic CSV 2 rows generated PDF 2 / XLSX 2. Korean font rendered, XLSX OOXML parsed and imported. See STATUS and HANDOFF for verification scope.
-Pending: actual Windows device, Microsoft Excel native opening, official procurement input, installed Windows product, external API, Production web app, legal review.
+## Completed / observed
+- P1-01 CSV strict importer (21), P1-02 conservative 3-state eligibility (27), P1-03 SQLite revisions/audit (28), P1-04 CLI + XLSX/PDF (20). Combined P1 96 passed on Linux at 2026-10-26; not a commercial Windows verification.
+- P2-01 added backend/viewer.py (127.0.0.1 only; SQLite mode=ro, query_only; GET-only APIs), backend/ui/index.html/ui.css/ui.js, backend/tests/test_viewer.py. Search/title/agency/number, category/status/deadline/profile filters, paging, detail evidence, stale assessment downgrade to UNKNOWN, 7 CSS themes, browser-local favorites, mobile CSS. UI uses textContent, not unsafe bid HTML injection.
+- P2 tests: 5/5 locally with synthetic schema-compatible SQLite fixture; Node syntax of locally tested JS passed. HTTP API, Host/Origin checks and static file response tested. **Exact GitHub checkout combined tests/real browser NOT VERIFIED.** Chromium blocked localhost and alternate test host twice with ERR_BLOCKED_BY_ADMINISTRATOR in this environment. Never claim an application failure from this alone.
+- P2-01 code baseline on this branch before docs: 2ff7a22082b2e37362d0935dee32fa292566eecb. GitHub current HEAD must be read again after subsequent doc commits.
 
-## NEXT: P2 BASIC usable UI, localhost bridge, 7 themes
-1. Confirm current feature HEAD and docs. Keep old static educational main unchanged. Do not display old 2025 precomputed result or 340/340 as live status.
-2. Build safe localhost-only Python read bridge for SQLite-derived bids, company profiles and current assessments. Avoid unrestricted filesystem paths or network exposure; keep customer data local and requests read-only.
-3. Search by bid title/agency/no, field/category, deadline, evaluation status. Show data timestamp, per-rule evidence, UNKNOWN review status, favorites and deadline risk.
-4. Seven theme tokens: cloud, obsidian, midnight, graphite, emerald, sand, iris per DESIGN_SYSTEM.md. Mobile responsive.
-5. Test supported backend and JS; actual browser where possible. No production deploy without approval.
-6. Windows smoke test using Python/ReportLab/local TTF/native Excel and SQLite reopen/backup before commercial readiness.
+## NEXT P2-02: polish and close BASIC UI gaps
+1. Confirm latest branch SHA and read actual remote files, compare against tested local source. Run full python -m unittest discover -s tests -v on full checkout, and Node --check ui/ui.js.
+2. Replace current-page-only favorites checkbox with correctly **global, paginated favorites** (prefer persistent local SQLite store with an explicit safe write-path design/backup, or a client-side aggregated read-only approach; compare before implementation). Do not pretend it already works across all pages.
+3. Add local profile editing/import UX (currently CLI JSON), sensible open/expired flags, missing-data UX and re-assessment workflow preserving saved historical reports. Do not enable arbitrary write API without reviewing threat model.
+4. Real browser desktop/mobile visual regression, keyboard accessibility, 7-theme focus contrast and responsive detail panel; Windows 11 real machine smoke when available.
+5. Run 101 expected legacy+P2 regression tests (expected count, not measured). Inspect Vercel/project status only as needed; P2 local Python is NOT DEPLOYED.
+6. Complete STATUS/HANDOFF with actual SHA, verification and next task. Keep customer private data, DB files, PDFs, keys, fonts out of GitHub.
 
-Future: P3 official procurement API amendments/quotas, P4 opt-in AI, P5 Windows installer/security, P6 trademark/Kmong launch gate.
+## Later stages
+P3 official government procurement API and revisions with approved key; P4 optional AI with explicit consent and cost; P5 Windows packaging/security/real user files; P6 trademark KIPRIS/marketing/Kmong launch gate. No public sale, paid service, external upload, main change, Vercel production change without approval.
 
-A storage commit and separate report generation are not cross-resource atomic. If PDF/Excel fails after DB save, explain partial output; do not present it as fully recovered. No real customer data or API secrets ever enter GitHub.
+## Current blockers / honest limitations
+Customer Windows/browser and native Excel not tested. Official API and licensing/legal procurement rules not checked; brand BID OWL legal availability unresolved. Favorites currently per browser/per visible results page, not global. Browser navigation blocked by this environment, not proof of UI malfunction. Legacy 340/340 and demo 2025 bid results remain unrelated to real new product.
