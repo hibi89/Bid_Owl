@@ -248,7 +248,9 @@ class ViewerHandler(BaseHTTPRequestHandler):
         if origin and origin not in {f"http://{host}"}:
             self._json(403, {"error": "Forbidden origin"})
             return
-        if len(self.path) > 1024:
+        # Three valid 300-character Korean identifiers can exceed 8 KiB
+        # after percent encoding. Still cap the request target strictly.
+        if len(self.path) > 12288:
             self._json(414, {"error": "URL too long"})
             return
         parsed = urlsplit(self.path)
