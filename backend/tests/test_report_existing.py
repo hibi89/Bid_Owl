@@ -8,6 +8,7 @@ import unittest
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from zipfile import ZipFile
+from unittest.mock import patch
 
 from bidowl import Bid, BidOwlStore, CompanyProfile, Requirement
 from report_existing import SnapshotReader, export_existing, main
@@ -71,6 +72,29 @@ class ExistingReportTests(unittest.TestCase):
             export_existing(db_path=self.db,assessment_id=self.first,
                             output_dir=self.destination,format="xlsx")
         self.assertEqual(name.read_bytes(), b"KEEP")
+
+    def test_combined_export_cleans_first_file_after_pdf_failure(self):
+        # Force failure AFTER the XLSX writer has completed successfully.
+        with patch("report_existing.check_pdf_support", return_value=Path("/synthetic.ttf")):
+            with patch("report_existing.write_pdf", side_effect=RuntimeError("synthetic PDF error")):
+                with self.assertRaisesRegex(RuntimeError, "synthetic PDF error"):
+                    export_existing(db_path=self.db, assessment_id=self.first,
+                        output_dir=self.destination, format="both")
+        self.assertFalse((self.destination / f"bidowl_review_{self.first:08d}.xlsx").exists())
+        self.assertFalse((self.destination / f"bidowl_review_{self.first:08d}.pdf").exists())
+        with BidOwlStore(self.db) as store:
+            self.assertEqual(store.db.execute("SELECT count(*) FROM assessments").fetchone()[0], 1)
+
+    def test_preexisting_pdf_is_never_replaced_on_both(self):
+        self.destination.mkdir()
+        filename=self.destination / f"bidowl_review_{self.first:08d}.pdf"
+        filename.write_bytes(b"KEEP-SENTINEL")
+        with patch("report_existing.check_pdf_support", return_value=Path("/synthetic.ttf")):
+            with self.assertRaises(FileExistsError):
+                export_existing(db_path=self.db, assessment_id=self.first,
+                    output_dir=self.destination, format="both")
+        self.assertEqual(filename.read_bytes(), b"KEEP-SENTINEL")
+        self.assertFalse((self.destination / f"bidowl_review_{self.first:08d}.xlsx").exists())
 
     def test_missing_assessment_and_invalid_id_do_not_create_output(self):
         with self.assertRaises(KeyError):
