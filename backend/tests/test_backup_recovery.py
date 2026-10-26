@@ -107,6 +107,21 @@ class BackupRecoveryTests(unittest.TestCase):
             restore_to_new_file(plan)
         self.assertFalse(self.recovered.exists())
 
+    def test_sidecar_appearing_during_hash_aborts_preview(self):
+        from backup_recovery import _file_hash
+        sidecar = Path(str(self.backup) + "-wal")
+
+        def create_sidecar(path):
+            result = _file_hash(path)
+            if path == self.backup:
+                sidecar.write_bytes(b"synthetic newly-active journal")
+            return result
+
+        with patch("backup_recovery._file_hash", side_effect=create_sidecar):
+            with self.assertRaisesRegex(ValueError, "sidecar appeared"):
+                prepare_recovery(self.backup, self.recovered)
+        self.assertFalse(self.recovered.exists())
+
     def test_backup_shm_sidecar_is_rejected_before_destination_created(self):
         sidecar = Path(str(self.backup) + "-shm")
         sidecar.write_bytes(b"synthetic shared memory")
