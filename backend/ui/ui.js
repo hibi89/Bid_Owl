@@ -74,6 +74,84 @@ async function openDetail(item,button){state.focus=button;$('drawer').hidden=fal
     host.append(node('p','disclaimer',data.notice));
   }catch(err){$('detail-content').replaceChildren(node('p','warn','근거 조회 오류: '+err.message));}
 }
+
+function field(form,label,value,type='text'){
+  const box=node('label','profile-field',label); const control=node('input');
+  control.type=type;control.value=value===null||value===undefined?'':String(value);
+  if(type==='text')control.maxLength=300;
+  box.append(control);form.append(box);return control;
+}
+function listField(form,label,current){
+  const box=node('label','profile-field',label);
+  const mode=node('select');mode.setAttribute('aria-label',label+' 입력 상태');
+  for(const [text,val] of [['정보 없음 (UNKNOWN)','unknown'],['없음이 확인됨','empty'],['목록 입력','values']])mode.add(new Option(text,val));
+  const value=node('input');value.type='text';value.placeholder='쉼표로 구분하여 입력';value.maxLength=8192;
+  mode.value=current===null?'unknown':current.length?'values':'empty';
+  if(Array.isArray(current))value.value=current.join(', ');
+  const change=()=>{value.disabled=mode.value!=='values';};mode.addEventListener('change',change);change();
+  box.append(mode,value);form.append(box);return {mode,value};
+}
+function profileList(field){
+  if(field.mode.value==='unknown')return null;
+  if(field.mode.value==='empty')return [];
+  const items=field.value.value.split(',').map(x=>x.trim()).filter(Boolean);
+  if(!items.length||items.length>100||items.some(x=>x.length>300)||new Set(items).size!==items.length){
+    throw Error('목록은 중복 없는 1~100개 항목을 쉼표로 구분해 입력하세요.');
+  }
+  return items;
+}
+function profileNumber(input,name){
+  const value=input.value.trim();if(!value)return null;
+  if(!/^(0|[1-9][0-9]*)$/.test(value))throw Error(name+'은 음수가 아닌 정수여야 합니다.');
+  const parsed=Number(value);
+  if(!Number.isSafeInteger(parsed))throw Error(name+'의 숫자가 너무 큽니다.');
+  return parsed;
+}
+async function openProfileEditor(button){
+  const id=$('profile').value;
+  if(!id){note('먼저 편집할 회사 프로필을 선택하세요.',true);$('profile').focus();return;}
+  state.focus=button;$('drawer').hidden=false;$('overlay').hidden=false;document.body.classList.add('drawer-open');
+  $('detail-content').replaceChildren(node('p','','저장된 회사 프로필을 읽고 있습니다.'));$('drawer').focus();
+  try{
+    const data=await request('/api/profile?'+new URLSearchParams({profile_id:id}).toString());
+    const p=data.profile,host=$('detail-content');host.replaceChildren();
+    host.append(node('h2','','회사 프로필 편집 파일'));
+    host.append(node('p','warn','이 화면에서는 SQLite를 직접 수정하지 않습니다. JSON을 내려받은 뒤 로컬 명령으로 변경을 적용해야 합니다. 먼저 미리보기 결과를 확인하세요.'));
+    const form=node('form','profile-form');const pid=node('p','', '프로필 ID: '+p.profile_id+' · 현재 버전 '+data.version);form.append(pid);
+    const region=field(form,'사업장 소재지',p.region);
+    const categories=listField(form,'업종 / 카테고리',p.categories);
+    const licenses=listField(form,'면허 / 자격',p.licenses);
+    const staff=field(form,'인력 수',p.staff_count,'text');
+    const experience=field(form,'실적 합계 (KRW)',p.experience_total_krw,'text');
+    const message=node('p','subline','정보가 불명확하면 빈칸 또는 정보 없음으로 유지하세요. 임의로 PASS를 만들지 마세요.');
+    form.append(message);
+    const download=node('button','','편집 JSON 내려받기');download.type='submit';form.append(download);
+    const result=node('p','', '');result.setAttribute('role','status');form.append(result);
+    form.addEventListener('submit',(event)=>{
+      event.preventDefault();
+      try{
+        const rawRegion=region.value.trim();
+        const profile={profile_id:p.profile_id,region:rawRegion||null,
+          categories:profileList(categories),licenses:profileList(licenses),
+          staff_count:profileNumber(staff,'인력 수'),experience_total_krw:profileNumber(experience,'실적 합계')};
+        const content=JSON.stringify(profile,null,2);
+        const filename='bidowl_profile_'+p.profile_id.replace(/[^a-zA-Z0-9_-]/g,'_').slice(0,60)+'.json';
+        const href=URL.createObjectURL(new Blob([content],{type:'application/json;charset=utf-8'}));
+        const a=node('a');a.href=href;a.download=filename;document.body.append(a);a.click();a.remove();
+        setTimeout(()=>URL.revokeObjectURL(href),1000);
+        result.textContent='JSON 파일을 생성했습니다. 파일을 저장한 후 아래 명령으로 미리보기 및 적용을 진행하세요.';
+      }catch(err){result.textContent='입력 오류: '+err.message;}
+    });
+    host.append(form,node('h3','','로컬 명령으로 적용하기'));
+    const command='python profile_workflow.py --db "DB_PATH" --profile-file "'+
+      'DOWNLOADED_JSON" --expected-version '+data.version+' --reassess';
+    const apply=command+' --apply --backup "NEW_BACKUP_PATH.sqlite3"';
+    host.append(node('p','','① 먼저 미리보기 (DB 수정 없음)'),node('pre','command',command),
+      node('p','','② 결과 확인 후 명시적으로 적용 (백업 필수)'),node('pre','command',apply),
+      node('p','disclaimer','파일은 PC에만 저장됩니다. 명령의 DB_PATH/다운로드 경로/새 백업 경로를 실제 경로로 바꿔 실행하세요. 오류나 도중 중단 시 백업을 보존하세요.'));
+  }catch(err){$('detail-content').replaceChildren(node('p','warn','프로필 조회 실패: '+err.message));}
+}
+
 function closeDetail(){$('drawer').hidden=true;$('overlay').hidden=true;document.body.classList.remove('drawer-open');if(state.focus?.isConnected)state.focus.focus();}
 async function loadProfiles(){try{const data=await request('/api/profiles');for(const p of data.profiles)$('profile').add(new Option(p.profile_id+' (v'+p.version+')',p.profile_id));}catch{note('회사 프로필 목록 조회 실패',true);}}
 let delay;
@@ -82,6 +160,7 @@ $('search').addEventListener('input',()=>{clearTimeout(delay);delay=setTimeout((
 $('prev').addEventListener('click',()=>{if(state.page>1){state.page--;loadBids();}});
 $('next').addEventListener('click',()=>{if(state.page<state.pages){state.page++;loadBids();}});
 $('theme').addEventListener('change',()=>{const val=$('theme').value;if(themes.has(val)){document.body.dataset.theme=val;try{localStorage.setItem('bidowl-theme',val);}catch{}}});
+$('edit-profile').addEventListener('click',()=>openProfileEditor($('edit-profile')));
 $('close').addEventListener('click',closeDetail);$('overlay').addEventListener('click',closeDetail);
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('drawer').hidden)closeDetail();if(e.key==='Tab'&&!$('drawer').hidden){const x=$('drawer').querySelectorAll('button:not([disabled]),a[href],input,select');if(!x.length)return;const first=x[0],last=x[x.length-1];if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}}});
 loadPreferences();loadProfiles().then(loadBids);
