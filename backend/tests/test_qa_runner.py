@@ -10,7 +10,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from qa_runner import run_qa
+from qa_runner import _synthetic_smoke, run_qa
 
 
 class QAReportingTests(unittest.TestCase):
@@ -67,6 +67,29 @@ class QAReportingTests(unittest.TestCase):
         self.assertEqual(result["status"], "FAIL")
         self.assertEqual(result["synthetic_smoke"]["status"], "FAIL")
         self.assertEqual(result["synthetic_benchmark"]["status"], "PASS")
+
+    def test_both_real_importer_mvp_and_legacy_smoke_are_required(self):
+        legacy = {"status": "SYNTHETIC_E2E_PASS"}
+        basic = {"status": "BASIC_MVP_SYNTHETIC_E2E_PASS"}
+        with patch("smoke_local.run_smoke", return_value=legacy) as old, \\
+             patch("mvp_smoke.run_mvp_smoke", return_value=basic) as new:
+            result = _synthetic_smoke()
+        self.assertEqual(result["status"], "PASS")
+        self.assertEqual(result["synthetic_result"]["basic_mvp"], basic)
+        self.assertEqual(result["synthetic_result"]["legacy_cli"], legacy)
+        old.assert_called_once_with()
+        new.assert_called_once_with()
+
+    def test_mvp_failure_marks_qa_smoke_failed_even_if_legacy_passes(self):
+        with patch("smoke_local.run_smoke",
+                   return_value={"status": "SYNTHETIC_E2E_PASS"}), \\
+             patch("mvp_smoke.run_mvp_smoke",
+                   side_effect=RuntimeError("MVP_IMPORT_BROKEN")):
+            result = _synthetic_smoke()
+        self.assertEqual(result["status"], "FAIL")
+        self.assertEqual(result["synthetic_result"]["basic_mvp"]["status"], "FAILED")
+        self.assertIn("MVP_IMPORT_BROKEN",
+                      result["synthetic_result"]["basic_mvp"]["reason"])
 
     def test_javascript_failure_is_not_misreported_as_pass(self):
         with patch("qa_runner._unit_suite", return_value=self.good_suite), \
