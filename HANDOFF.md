@@ -1,3 +1,23 @@
+# BID OWL HANDOFF — P2-20 complete, next P2-21 (2026-10-27 KST)
+
+## User policy
+User says `ㄱ` to autonomously continue private GitHub feature development and dislikes repetitive manual ZIP/Windows PowerShell testing. User explicitly deferred frontend/visual design after rejecting two mockups. **DO NOT touch UI aesthetics or regenerate images** absent explicit request. Protect `hibi89/Bid_Owl` main and historic Vercel. Only work in `feature/bid-owl-v1-basic-mvp`; no paid GitHub CI, public launch, customer DB/API keys or fonts in repo.
+
+## P2-20 changes
+1. `backend/backup_recovery.py`: added full evidence content SHA-256 over 7 mandatory v1 tables (`profiles,profile_versions,bids,bid_versions,import_runs,assessments,rule_assessments`) plus optional `assessment_engine_provenance`. Hash is deterministic with per-cell type tags (including NULL and BLOB), table labels and rowid ordering. The readonly source inspection executes `BEGIN`, full integrity and foreign-key check, table counts and streaming evidence hash in one snapshot, then releases read transaction. Checks raw backup file SHA and filesystem identity and journal/WAL/SHM sidecars before and after. `RecoveryPlan.evidence_sha256` is checked on re-preflight and after SQLite backup restore; a new DB with identical counts but different values is rejected. Existing customer source and active DB are not touched, new destination uses exclusive creation, no in-place replacement or automatic activation. This is best-effort consistency, not a cryptographic signature/authenticated backup or cross-process locking.
+2. `backend/tests/test_backup_recovery.py`: +5 definition tests (hash preserved on normal restore, changed destination field with same record counts caught/cleaned, changed source field with same counts blocked, existing -shm sidecar refused, -wal appearing while hashing refused).
+3. `backend/benchmark_local.py`: new `run_benchmark(..., measure_recovery=False)` and CLI opt-in `--with-recovery`. Extends 10k synthetic benchmark by timing `sqlite_backup_ms`, `recovery_validate_and_hash_ms`, `recovery_copy_verify_ms` and checking recovered row counts and evidence hash. Only opt-in, no 10k hidden in normal unit tests. `backend/tests/test_benchmark_local.py`: +2 tests (31 bids/5 assessments full recovery, non-bool flag rejection).
+4. Backend docs `RECOVERY.md`, `BENCHMARK.md`, `README.md`; NEXT_TASK, STATUS, HANDOFF, START_HERE updated. No frontend code changed.
+
+## Verified vs unverified
+Authenticated private GitHub source reread and counted **233 Python `test_*` definitions in 16 modules** (before 226). This is a declaration count, NOT 233 actual tests passing. Local standalone Python/sqlite3 contract content-hash tests **5/5 PASS**, plus microbenchmark of 10,000 synthetic SQLite rows+200 simple assessments in an isolated model Linux sandbox, NOT the actual full private BID OWL app and NOT Windows. No full current branch test suite, Windows file lock retest, program 10k import/viewer/backup test, PDF/Excel real fonts, installer/packaging or name clearance executed. Historical user Windows suite was 137 run, 18 WinError32 temp cleanup errors, no assertion failures; source fixes since remain unverified there. Subjective all-tier product estimate ~42%; don't inflate artificially.
+
+## GitHub and continuation
+P2-20 began feature `e8cef0769c969cf172c77191c7ea175a1500a4ee`; original main `c888c795bef72734f3f7016e54013b82453f11d8` and legacy Vercel remain protected. AFTER writing this HANDOFF, fetch feature/main heads and compare changed paths; do not guess current SHA. Next `ㄱ` => **P2-21 BACKEND ONLY**: analyze viewer `_latest_rows/query_bids` full 10k scan + JSON load and implement safe performance/correctness improvements, with differential filtered/favorites/expiry/profile-status tests. Genuine 10k performance and Windows acceptance still needed but user not asked for routine QA.
+
+---
+## Previous handoffs
+
 # BID OWL HANDOFF — P2-19 safe backup validation and new-file restore, 2026-10-27 KST
 
 ## User's immediate decision and work policy
