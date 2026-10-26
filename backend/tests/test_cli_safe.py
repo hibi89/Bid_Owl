@@ -142,6 +142,42 @@ class LegacyCLISafetyTests(unittest.TestCase):
         self.assertEqual(parsed["status"], "FAILED")
         self.assertIn("SYNTHETIC_DB_ERROR", parsed["reason"])
 
+    def test_cli_deleted_db_during_writer_open_is_not_recreated(self):
+        execute(self.params())
+        original_store = BidOwlStore
+
+        def delete_before_writer(*args, **kwargs):
+            self.db.unlink()
+            return original_store(*args, **kwargs)
+
+        with patch("cli.BidOwlStore", side_effect=delete_before_writer):
+            with self.assertRaises(FileNotFoundError):
+                execute(self.params())
+        self.assertFalse(self.db.exists())
+        self.assertFalse((self.db.parent / "backups").exists())
+
+    def test_cli_replaced_valid_db_after_readonly_preflight_is_refused(self):
+        import os
+        execute(self.params())
+        replacement = self.db.parent / "new-owner.sqlite3"
+        with BidOwlStore(replacement):
+            pass
+        original_preflight = __import__("cli")._preflight_existing_db
+
+        def swap_after_preflight(*args, **kwargs):
+            result = original_preflight(*args, **kwargs)
+            os.replace(replacement, self.db)
+            return result
+
+        with patch("cli._preflight_existing_db", side_effect=swap_after_preflight):
+            with self.assertRaisesRegex(ValueError, "Database changed"):
+                execute(self.params())
+        self.assertFalse((self.db.parent / "backups").exists())
+        with BidOwlStore(self.db, must_exist=True) as other:
+            self.assertEqual(other.db.execute(
+                "SELECT COUNT(*) FROM assessments"
+            ).fetchone()[0], 0)
+
     def test_new_database_appearing_during_preflight_is_not_adopted(self):
         sentinel = b"ANOTHER_PROCESS_WROTE_THIS"
         def race(*_args, **_kwargs):
