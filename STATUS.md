@@ -1,3 +1,18 @@
+# BID OWL STATUS — P2-21 faster metadata-first local viewer (2026-10-27 KST)
+
+User directive: front-end visual design deferred; BACKEND ONLY.
+
+**Implemented on feature branch:** `backend/viewer.py` normal listing/search/category/deadline/favorites no longer loads correlated saved assessment/provenance for every stored bid. It reads latest bid metadata, uses the original Unicode Python casefold and exact filters/sort, selects page keys, then joins full assessment/provenance for only those keys with a single parameterized IN query. A single readonly transaction prevents mixing bid metadata and assessments from different commits. Existing result shape, engine-fingerprint checks, UNKNOWN-first semantics and status-filter fallback preserved. No UI markup/CSS edits, database schema migration, secrets or network writes.
+
+**Tests and benchmark:** `test_viewer.py` +3 test methods covering parity vs historical full scan across 17 filter scenarios and bounded assessments; `test_benchmark_local.py` +2 small synthetic comparison tests. `benchmark_local.py --compare-full-scan` is optional and separately times fast vs legacy page 1 on same synthetic input, failing if results differ. Docs `backend/VIEWER_QUERY.md` and `backend/BENCHMARK.md` explain behavior. Total private GitHub **238 Python test method definitions/16 modules**, not actual suite PASS.
+
+**Verification actually performed:** isolated Python `sqlite3` with 10,000 synthetic bid metadata rows demonstrated tuple parameter binding for page of 30, nonmutating readonly transaction and sort. It was **not** the true BID OWL complete program run, and no speedup percentage or Windows performance can be claimed. Real Python suite, Windows GUI/Excel/PDF, 10k actual benchmark, installer, prior WinError32 regression fixes remain unverified. Prior 137 executed Windows tests had 18 WinError32 cleanup errors. BASIC still not commercially validated, PRO/PREMIUM unimplemented. Previously overall ~42% subjective, unchanged.
+
+**Next P2-22:** backend status-filter performance correctness and actual measured QA. Frontend remains deferred, main/Vercel untouched, no customer data/cloud costs or routine user-run commands.
+
+---
+## Prior status snapshots
+
 # BID OWL STATUS — P2-20 (2026-10-27 KST)
 
 Frontend aesthetics deferred at user's request; this stage changed backend and tests/docs only.
