@@ -1,6 +1,8 @@
 """Legacy CLI safety regressions, using ONLY bundled synthetic fixtures."""
 from __future__ import annotations
 
+import contextlib
+import io
 import json
 import sqlite3
 import tempfile
@@ -11,7 +13,7 @@ from unittest.mock import patch
 
 from bidowl import BidOwlStore
 from bidowl.engine_identity import engine_fingerprint
-from cli import execute
+from cli import execute, main
 
 
 class LegacyCLISafetyTests(unittest.TestCase):
@@ -125,6 +127,20 @@ class LegacyCLISafetyTests(unittest.TestCase):
             execute(self.params())
         self.assertEqual(self.db.read_bytes(), sentinel)
         self.assertFalse((self.db.parent / "backups").exists())
+
+    def test_sqlite_failure_is_machine_readable_json_not_uncaught_traceback(self):
+        command = [
+            "--csv", str(self.csv), "--profile", str(self.profile),
+            "--source-id", "SYNTHETIC-CLI", "--db", str(self.db),
+            "--output", str(self.output), "--format", "xlsx",
+        ]
+        with patch("cli.execute", side_effect=sqlite3.DatabaseError("SYNTHETIC_DB_ERROR")):
+            with contextlib.redirect_stderr(io.StringIO()) as errors:
+                code = main(command)
+        self.assertEqual(code, 2)
+        parsed = json.loads(errors.getvalue())
+        self.assertEqual(parsed["status"], "FAILED")
+        self.assertIn("SYNTHETIC_DB_ERROR", parsed["reason"])
 
     def test_new_database_appearing_during_preflight_is_not_adopted(self):
         sentinel = b"ANOTHER_PROCESS_WROTE_THIS"
