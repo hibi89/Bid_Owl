@@ -5,7 +5,7 @@
 ## 즉시 행동
 1. GitHub `main`과 `feature/bid-owl-v1-basic-mvp` HEAD 확인.
 2. `AGENTS.md`, `STATUS.md`, `HANDOFF.md`, `NEXT_TASK.md`, `REQUIREMENTS.md` 순서로 읽기.
-3. 이미 승인된 내용을 다시 묻지 말고 `NEXT_TASK.md`의 **최신 미완료 단계부터** 실제 구현 + 가능한 검증 + 커밋. 2026-10-27 기준 P2-14까지 진행하며 실제 CSV 등록은 `START_BID_OWL_IMPORT.cmd` / `backend/import_local.py`, 가상 데모는 `START_BID_OWL_DEMO.cmd`.
+3. 이미 승인된 내용을 다시 묻지 말고 `NEXT_TASK.md`의 **최신 미완료 단계부터** 실제 구현 + 가능한 검증 + 커밋. 2026-10-27 기준 P2-15까지 진행하며 현재 단계는 재등록 판정 스냅샷 재사용·안전한 강제 재평가를 포함. 실제 CSV 등록은 `START_BID_OWL_IMPORT.cmd` / `backend/import_local.py`, 가상 데모는 `START_BID_OWL_DEMO.cmd`.
 4. 코드 변경은 feature 브랜치에서만, main 교육용 데모는 보존. 차단사항은 기록하고 가능한 작업 진행.
 5. 작업 후 STATUS/HANDOFF 갱신과 정확한 최신 SHA 보고.
 
@@ -35,3 +35,8 @@
 - 개발 브랜치 최상위 `START_BID_OWL_IMPORT.cmd`: Tkinter 파일 선택, 회사 프로필 입력, 사전 검증·확인 후 기존 DB 백업과 명시적 저장.
 - 백엔드 `backend/import_local.py` CLI 기본 동작은 PREVIEW_NO_WRITE; 실제 저장은 `--apply`. `backend/IMPORT.md` 참고.
 - 사용자에게 반복적인 ZIP/PowerShell QA를 시키지 말고 AI가 가능한 개발·정적 검증을 수행한다. 진짜 Windows 런타임 검증은 나중 출시 관문으로 표기.
+
+## P2-15 재등록 평가 및 다음 P2-16
+- `backend/import_local.py` 동일 공고와 동일 회사 버전·마감 상태이면 과거 판정 재사용, 변경 시 새 스냅샷 추가. GUI 전체 재평가 체크 및 CLI `--force-reassess`.
+- 평가 엔진 코드 버전 변화는 아직 자동 비교하지 못하므로 코드 업데이트 후 강제 재평가가 필요. P2-16 우선순위는 **평가 엔진 변경 시 캐시 자동 무효화**, 구버전 스냅샷은 과거 근거로만 보관.
+- GitHub 테스트 선언 178개, 실 Python 전체 PASS 아님. 형에게 반복 다운로드나 Windows QA 요청하지 않기.
