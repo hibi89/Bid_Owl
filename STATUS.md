@@ -1,3 +1,13 @@
+# P2-23 (2026-10-27 KST) — 마감 시점 변경에 따른 판정 무효화
+
+**실제 코드 변경:** `backend/viewer.py`의 일반·상태별 공고 검색에서 저장된 `assessments.is_expired`와 현 시점 마감 상태를 비교하도록 수정. 공고 및 프로필 버전·규칙 엔진 해시가 같아도 평가 이후 공고가 마감되거나 기한이 연장되어 상태가 달라지면 PASS/FAIL을 현재 결과로 표시하지 않는다. 과거 `snapshot_status`와 근거는 유지, 현재 상태 UNKNOWN/수동 재검토/상세 evidence_is_current=false. 기존 200건 상태 일괄 조회에도 동일 조건 적용.
+
+**검증:** 실제 BID OWL v1 컬럼에 맞게 `tests/test_viewer.py` 가상 평가 스키마/INSERT를 보정하고, 마감 전후·연장 전후 회귀 테스트 3개 추가. GitHub 원격 테스트 정의 총 **248개/16파일**, 전수 테스트 **미실행**. 별도 독립 Python/sqlite3 5/5 조건 통과(이것이 프로젝트 전체 테스트 통과를 의미하지 않음). 현재 컨테이너에서 GitHub private clone/DNS 불가; 전체 Python 실행과 Windows WinError32 재확인 보류. 기존 42% 추정치 유지, BASIC 판매 준비 검증 완료 아님.
+
+**다음 P2-24:** 백엔드 코드 실제 테스트/날짜 경계 추가 검수. 사용자가 디자인을 보류했으므로 프론트엔드 변경 금지. 개발은 private `hibi89/Bid_Owl` feature 브랜치만, main/Vercel 보존. 고객 데이터/키/유료 러너 사용 금지. 사용자의 ㄱ은 다음 작업 진행 신호.
+
+---
+
 # BID OWL STATUS — P2-22 backend PASS/FAIL/UNKNOWN fast filtering (2026-10-27 KST)
 
 **Implemented in private feature branch:** `backend/viewer.py` status filters now share metadata-first paging. Keyword/casefold/category/deadline/favorites filter the metadata before fetching lightweight newest assessment/currentness rows in bounded SQL batches of 200 bids. Policy fingerprint, company version, bid revision and missing evidence conservatively determine PASS/FAIL/UNKNOWN. Only page-selected <=100 bids fetch full assessment + provenance data. Single readonly DB transaction and UTC expiration cutoff maintain consistent page results. No frontend aesthetic/JS/CSS changes, database writes, customer uploads or main/Vercel edits.
