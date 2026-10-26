@@ -61,3 +61,25 @@ Implementation choice:
 - Browser-local identifiers + bounded read-only POST: chosen for lowest initial cost/risk and accurate global pagination.
 
 New tests in backend/tests/test_viewer.py cover global filtering across pages, UNKNOWN+filters, empty sets, malicious/invalid input, POST origin/type/size bounds and SQLite immutability. **They are committed but were not executed as part of the full remote checkout this session.** Verified separately: actual committed JS source parses with the JavaScript function compiler (no execution), and the new Python helper snippet passes local ast.parse. A connector-source byte inspection confirmed expected GitHub files. Raw private source download from this execution environment failed DNS resolution, so the combined expected 103 tests (96 prior + 7 P2) are **NOT VERIFIED**. Browser/Windows actual usage remains unverified. Do not claim P2-02 fully integrated until a real repo checkout runs the tests.
+
+## P2-03 local company-profile revision — preview, backup, apply
+
+The browser can show the selected saved company profile using the same-PC read-only `GET /api/profile?profile_id=...` endpoint. "프로필 편집 파일 만들기" opens a local form for region/categories/licenses/staff/experience. UNKNOWN (`null`) and verified empty lists (`[]`) are distinct. **Downloading JSON does not update SQLite**. No browser write API was added.
+
+From `backend`, use an existing database and downloaded JSON file (first preview):
+
+    python profile_workflow.py --db ./demo.sqlite3 --profile-file ./company-edited.json --expected-version 1 --reassess
+
+After reviewing the preview and selecting a **new backup filename that does not yet exist**, apply:
+
+    python profile_workflow.py --db ./demo.sqlite3 --profile-file ./company-edited.json --expected-version 1 --reassess --apply --backup ./before-profile-change.sqlite3
+
+For a new company, add `--create` and omit the expected version (default 0). The DB file must already exist. This program does not create databases, contact network services or install anything. The backup must be different from the source and cannot overwrite an existing file. Profile edits create an immutable new version (if changed). Re-assessment, when explicitly requested, evaluates all locally stored bids against the newly saved profile and adds immutable assessment snapshots. This may be expensive: at most 10,000 bids per run, with optional `--max-reassess` to refuse larger batches. An unassessed profile revision causes old assessment status to become UNKNOWN on the read-only viewer, until rechecked.
+
+The `--apply` route saves a consistent backup **before** mutation. The existing SQLite engine commits profile and each assessment sequentially, not atomically as a batch: an interrupted multi-bid assessment may be PARTIAL. A partial-write error reports the backup filename and count of previously committed assessments; inspect before an operator chooses to restore. No automatic rollback falsely claims otherwise.
+
+Comparison considered:
+- **Browser POST mutations**: one-click UX but new CSRF/authentication surface, backup lifecycle, and migration decisions. Deferred pending security approval and real Windows/browser verification.
+- **Local CLI with explicit --apply/backup**: modest usability cost, no remotely reachable write endpoint, can reuse existing revisioning and provenance. Selected for this stage.
+
+The new `tests/test_profile_workflow.py` includes 8 synthetic regression methods for preview-no-write, backup/no-overwrite, version conflict, validated JSON, creation and partial-write failure. `tests/test_viewer.py` adds 1 read-only profile query method. Expected total when run in a full checkout: **112 tests** (96 prior P1 + 8 viewer + 8 profile workflow). **Do not report 112 PASS yet:** this session verified connected GitHub code presence and actual JavaScript syntax, but not full Python execution, end-to-end browser, native Windows, or data restoration on real customer DB. The earlier 96 P1 and 5 P2 PASS are historical measurements, not combined proof for this commit.
