@@ -21,7 +21,7 @@ from pathlib import Path
 from bidowl import BidOwlStore, CompanyProfile, CSVImportError, parse_csv
 from bidowl.engine_identity import engine_fingerprint
 from bidowl.schema import MAX_CSV_BYTES
-from bidowl.store import default_database_path
+from bidowl.store import database_file_identity, default_database_path
 from profile_workflow import load_profile_file
 from viewer import make_server, open_database
 
@@ -39,6 +39,7 @@ class ImportPlan:
     existing_db: bool
     existing_profile_version: int
     profile_action: str
+    db_identity: tuple[int, int, int, int] | None = None
 
 
 def _check_source_id(value: str) -> str:
@@ -126,12 +127,17 @@ def prepare_import(
     bids = parse_csv(csv_bytes).require_valid()
     _check_real_inputs(bids, profile)
     destination = Path(db_path).expanduser().resolve() if db_path is not None else default_database_path()
+    initial_identity = database_file_identity(destination) if destination.exists() else None
     present, version, action = _existing_db_state(destination, profile)
+    after_identity = database_file_identity(destination) if destination.exists() else None
+    if initial_identity != after_identity or present != (initial_identity is not None):
+        raise ValueError("Database changed while preparing preview; retry")
     return ImportPlan(
         db_path=destination, source_id=source_id, csv_path=source,
         csv_sha256=hashlib.sha256(csv_bytes).hexdigest(), bids=tuple(bids),
         profile=profile, existing_db=present,
         existing_profile_version=version, profile_action=action,
+        db_identity=initial_identity,
     )
 
 
@@ -216,14 +222,20 @@ def apply_import(plan: ImportPlan, *, force_reassess: bool = False) -> dict:
         raise ValueError("CSV grew beyond 10 MiB since preview")
     if hashlib.sha256(actual).hexdigest() != plan.csv_sha256:
         raise ValueError("CSV changed after preview; review it again before importing")
-    if plan.db_path.exists() != plan.existing_db:
+    current_identity = database_file_identity(plan.db_path) if plan.db_path.exists() else None
+    if (current_identity is None) != (not plan.existing_db):
         raise ValueError("Database creation/deletion detected since preview; retry")
+    if current_identity != plan.db_identity:
+        raise ValueError("Database replaced or modified since preview; retry")
     # A second read-only preflight catches changed profile/version/schema.
     current_db, version, action = _existing_db_state(plan.db_path, plan.profile)
     if (current_db, version, action) != (
         plan.existing_db, plan.existing_profile_version, plan.profile_action
     ):
         raise ValueError("Database/profile changed since preview; retry")
+    final_identity = database_file_identity(plan.db_path) if plan.db_path.exists() else None
+    if final_identity != plan.db_identity:
+        raise ValueError("Database changed during apply preflight; retry")
     backup = None
     started_writing = False
     # sqlite3.connect() creates absent files without exclusivity.
@@ -233,8 +245,13 @@ def apply_import(plan: ImportPlan, *, force_reassess: bool = False) -> dict:
         plan.db_path.parent.mkdir(parents=True, exist_ok=True)
         with plan.db_path.open("xb"):
             pass
+    expected_identity = (plan.db_identity if plan.existing_db
+                         else database_file_identity(plan.db_path))
     try:
-        with BidOwlStore(plan.db_path) as store:
+        with BidOwlStore(
+            plan.db_path, must_exist=plan.existing_db,
+            expected_identity=expected_identity,
+        ) as store:
             if plan.existing_db:
                 backup = store.backup_to(_new_backup_path(plan.db_path))
             # This is an additive v1 table, never created merely by opening
