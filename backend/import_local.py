@@ -189,7 +189,7 @@ def _reusable_assessment_status(
     return None
 
 
-def apply_import(plan: ImportPlan) -> dict:
+def apply_import(plan: ImportPlan, *, force_reassess: bool = False) -> dict:
     """Explicitly called only after review/consent. Fail closed on changed DB.
 
     A backup protects an existing DB before the first persistent mutation.
@@ -198,6 +198,8 @@ def apply_import(plan: ImportPlan) -> dict:
     """
     if not isinstance(plan, ImportPlan):
         raise TypeError("Expected an ImportPlan from prepare_import")
+    if type(force_reassess) is not bool:
+        raise ValueError("force_reassess must be a boolean")
     # Input file may be changed after preview; require identical bytes.
     if plan.csv_path.stat().st_size > MAX_CSV_BYTES:
         raise ValueError("CSV grew beyond 10 MiB since preview")
@@ -248,12 +250,14 @@ def apply_import(plan: ImportPlan) -> dict:
             reused_assessments = 0
             for bid in plan.bids:
                 checked_at = datetime.now(timezone.utc)
-                previous_status = _reusable_assessment_status(
-                    store, source_id=plan.source_id, bid_no=bid.bid_no,
-                    profile_id=plan.profile.profile_id,
-                    profile_version=profile_version,
-                    is_expired=bid.is_expired(checked_at),
-                )
+                previous_status = None
+                if not force_reassess:
+                    previous_status = _reusable_assessment_status(
+                        store, source_id=plan.source_id, bid_no=bid.bid_no,
+                        profile_id=plan.profile.profile_id,
+                        profile_version=profile_version,
+                        is_expired=bid.is_expired(checked_at),
+                    )
                 if previous_status is not None:
                     reused_assessments += 1
                     counts[previous_status] += 1
@@ -385,6 +389,12 @@ def run_gui() -> int:
     tk.Button(root, text="기존 회사 JSON 불러오기 (선택)", command=load_company_json).grid(
         row=9, column=0, columnspan=3, pady=9
     )
+    force_var = tk.BooleanVar(root, value=False)
+    tk.Checkbutton(
+        root,
+        text="저장된 판정도 모두 재평가 (규칙 엔진 업데이트 후 권장)",
+        variable=force_var,
+    ).grid(row=12, column=0, columnspan=3, padx=12, sticky="w")
     confirmed = {"db": None, "status": "CANCELLED"}
 
     def submit():
@@ -403,7 +413,7 @@ def run_gui() -> int:
             )
             if not messagebox.askyesno("검증 완료 — 적용 확인", confirmation, parent=root):
                 return
-            result = apply_import(plan)
+            result = apply_import(plan, force_reassess=force_var.get())
             counts = result["eligibility_counts"]
             confirmed["status"] = "IMPORTED"
             confirmed["db"] = plan.db_path
@@ -443,8 +453,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--source-id", help="Stable source ID, required for CLI")
     parser.add_argument("--db", help="Local BID OWL SQLite destination (default OS-local app data)")
     parser.add_argument("--apply", action="store_true", help="Commit after preflight and backup; CLI preview by default")
+    parser.add_argument("--force-reassess", action="store_true", help="Regenerate all assessments after rules-engine upgrades")
     args = parser.parse_args(argv)
-    if not any((args.csv, args.profile, args.source_id, args.db, args.apply)):
+    if not any((args.csv, args.profile, args.source_id, args.db, args.apply, args.force_reassess)):
         try:
             return run_gui()
         except (ImportError, OSError, RuntimeError) as exc:
@@ -457,7 +468,7 @@ def main(argv: list[str] | None = None) -> int:
             csv_path=args.csv, profile=load_profile_file(args.profile),
             source_id=args.source_id, db_path=args.db,
         )
-        outcome = apply_import(plan) if args.apply else plan_summary(plan)
+        outcome = apply_import(plan, force_reassess=args.force_reassess) if args.apply else plan_summary(plan)
         print(json.dumps(outcome, ensure_ascii=False, indent=2))
         return 0
     except CSVImportError as exc:
