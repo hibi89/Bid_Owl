@@ -38,3 +38,16 @@ Windows 11 authorized private checkout verification from backend:
 This runs the full unittest suite, then the synthetic local end-to-end test and optional Node syntax validation. It prints a completion notice only after invoked checks return successful exit codes; it does NOT check native Excel/PDF appearance or live government bids. PowerShell script has been committed, not executed on Windows in this session.
 
 Current GitHub source declares **126 Python test methods** in eight test files, confirmed by reading code. Do not call that 126 passing tests until `verify_local.ps1` or `python -m unittest discover -s tests -v` actually completes against an authenticated checkout. No new app deployment or GitHub main changes.
+
+
+## P2-07 direct local Excel download (source implemented)
+
+With `python viewer.py --db ./demo.sqlite3 --port 8765` running on 127.0.0.1, open a previously assessed bid's details. The "Excel (.xlsx) 직접 다운로드" link now calls:
+
+    GET http://127.0.0.1:8765/api/report?assessment_id=1
+
+This is a **read-only** path: it accepts only a positive, bounded persisted assessment ID, opens the local DB in `mode=ro` with `PRAGMA query_only=ON`, reconstructs the immutable original version/evidence, writes the generated XLSX only into a self-cleaning temporary directory, then responds with XLSX binary and a fixed Content-Disposition attachment filename. The response has `Cache-Control: no-store`, `nosniff` and existing localhost Host/Origin checks. When Fetch Metadata is present, explicit cross-site requests are refused; browser same-origin downloads work through a normal link. Maximum generated file size is 16 MiB. No arbitrary download directory path or file upload is accepted from HTTP, and no permanent report is created by this new route.
+
+PDF still uses the existing explicit CLI `report_existing.py --format pdf`, because its local ReportLab/Korean-font dependency and browser handling have not been validated. The detail drawer retains that CLI example.
+
+New regression methods in `tests/test_report_existing.py` test actual synthesized XLSX byte signatures, ZIP contents, DB read-only enforcement, localhost HTTP attachment headers, nonexistent IDs, invalid parameters and cross-site/host rejection. `smoke_local.py` now exercises HTTP attachment bytes too. All source/tests are committed but full Python execution in an exact private checkout is still pending. Do not call the number of declared test definitions PASS.
