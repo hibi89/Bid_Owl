@@ -52,7 +52,7 @@ def _timestamp(text: str | None) -> datetime | None:
         return None
 
 
-def _latest_rows(conn: sqlite3.Connection, profile_id: str = "") -> list[dict]:
+def _latest_rows(conn: sqlite3.Connection, profile_id: str = "", only_key: tuple[str, str] | None = None) -> list[dict]:
     # All selected user fields are parameter bound. Read-only connection is mandatory.
     rows = conn.execute("""
         SELECT b.source_id,b.bid_no,b.latest_version,v.payload,
@@ -66,8 +66,10 @@ def _latest_rows(conn: sqlite3.Connection, profile_id: str = "") -> list[dict]:
              WHERE x.source_id=b.source_id AND x.bid_no=b.bid_no
                AND (?='' OR x.profile_id=?) ORDER BY x.id DESC LIMIT 1)
           LEFT JOIN profiles p ON p.profile_id=a.profile_id
+        {where_clause}
         ORDER BY b.source_id,b.bid_no
-    """, (profile_id, profile_id)).fetchall()
+    """.format(where_clause="WHERE b.source_id=? AND b.bid_no=?" if only_key else ""),
+        (profile_id, profile_id, *only_key) if only_key else (profile_id, profile_id)).fetchall()
     now = datetime.now(timezone.utc)
     result = []
     for row in rows:
@@ -136,8 +138,7 @@ def query_detail(conn: sqlite3.Connection, query: dict) -> dict:
     source_id, bid_no, profile = [_arg(query, field) for field in ("source_id", "bid_no", "profile")]
     if not source_id or not bid_no:
         raise ValueError("source_id and bid_no required")
-    row = next((row for row in _latest_rows(conn, profile)
-                if row["source_id"] == source_id and row["bid_no"] == bid_no), None)
+    row = next(iter(_latest_rows(conn, profile, (source_id, bid_no))), None)
     if row is None:
         raise LookupError("Bid not found")
     rules = []
