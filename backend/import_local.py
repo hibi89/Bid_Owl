@@ -156,6 +156,35 @@ def _new_backup_path(db_path: Path) -> Path:
     )
 
 
+def _reusable_assessment_status(
+    store: BidOwlStore, *, source_id: str, bid_no: str,
+    profile_id: str, profile_version: int, is_expired: bool,
+) -> str | None:
+    """Reuse only a snapshot matching both revisions and today's expiry.
+
+    A bid can pass its deadline without a data revision. An assessment from
+    before that boundary must be regenerated, not silently reused.
+    """
+    row = store.db.execute("""
+        SELECT b.latest_version, a.bid_version, a.profile_version,
+               a.status, a.is_expired
+        FROM bids b
+        LEFT JOIN assessments a ON a.id = (
+            SELECT x.id FROM assessments x
+            WHERE x.source_id = b.source_id AND x.bid_no = b.bid_no
+              AND x.profile_id = ?
+            ORDER BY x.id DESC LIMIT 1
+        )
+        WHERE b.source_id = ? AND b.bid_no = ?
+    """, (profile_id, source_id, bid_no)).fetchone()
+    if (row is not None and row["status"] in ("PASS", "FAIL", "UNKNOWN")
+            and row["bid_version"] == row["latest_version"]
+            and row["profile_version"] == profile_version
+            and bool(row["is_expired"]) == is_expired):
+        return str(row["status"])
+    return None
+
+
 def apply_import(plan: ImportPlan) -> dict:
     """Explicitly called only after review/consent. Fail closed on changed DB.
 
@@ -211,11 +240,26 @@ def apply_import(plan: ImportPlan) -> dict:
                 file_sha256=plan.csv_sha256,
             )
             counts = {"PASS": 0, "FAIL": 0, "UNKNOWN": 0}
+            saved_assessments = 0
+            reused_assessments = 0
             for bid in plan.bids:
+                checked_at = datetime.now(timezone.utc)
+                previous_status = _reusable_assessment_status(
+                    store, source_id=plan.source_id, bid_no=bid.bid_no,
+                    profile_id=plan.profile.profile_id,
+                    profile_version=profile_version,
+                    is_expired=bid.is_expired(checked_at),
+                )
+                if previous_status is not None:
+                    reused_assessments += 1
+                    counts[previous_status] += 1
+                    continue
                 _, outcome = store.assess_and_record(
                     plan.source_id, bid.bid_no, plan.profile.profile_id,
                     expected_profile_version=profile_version,
+                    checked_at=checked_at,
                 )
+                saved_assessments += 1
                 counts[outcome.status] += 1
     except BaseException as exc:
         if started_writing:
@@ -239,7 +283,8 @@ def apply_import(plan: ImportPlan) -> dict:
             "revised": imported.revised,
             "unchanged": imported.unchanged,
         },
-        "assessments_saved": len(plan.bids),
+        "assessments_saved": saved_assessments,
+        "assessments_reused": reused_assessments,
         "eligibility_counts": counts,
         "notice": "Rule screening only; check the original tender before any bid.",
     }
@@ -359,7 +404,7 @@ def run_gui() -> int:
             confirmed["status"] = "IMPORTED"
             confirmed["db"] = plan.db_path
             show = (
-                f"저장 완료: {result['assessments_saved']:,}건\n"
+                f"새 판정 {result['assessments_saved']:,}건 · 기존 판정 재사용 {result['assessments_reused']:,}건\n"
                 f"PASS {counts['PASS']} / FAIL {counts['FAIL']} / UNKNOWN {counts['UNKNOWN']}\n"
                 f"백업: {result['backup'] or '기존 DB 없음'}\n\n"
                 "공고 화면을 바로 열겠습니까? (이 창 이후 종료는 콘솔 Ctrl+C)"
