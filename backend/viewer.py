@@ -154,16 +154,85 @@ def _arg(query: dict, name: str, default: str = "", *, max_length: int = 160) ->
     return value[0].strip()
 
 
+def _status_for_candidate_keys(
+    conn: sqlite3.Connection, keys: list[tuple[str, str]],
+    profile_id: str,
+) -> dict[tuple[str, str], str]:
+    """Evaluate only minimal currentness metadata, in bounded SQL batches.
+
+    Follows _latest_rows exactly: latest matching assessment, bid/profile
+    revisions, verified policy hash. Missing provenance/source => UNKNOWN.
+    Caller holds the readonly snapshot shared with page selection.
+    """
+    if not keys:
+        return {}
+    has_provenance = bool(conn.execute(
+        "SELECT 1 FROM sqlite_master WHERE type='table' "
+        "AND name='assessment_engine_provenance'"
+    ).fetchone())
+    try:
+        policy_hash = engine_fingerprint()
+    except OSError:
+        policy_hash = None
+    policy_column = "ep.engine_hash" if has_provenance else "NULL AS engine_hash"
+    policy_join = (
+        "LEFT JOIN assessment_engine_provenance ep ON ep.assessment_id=a.id"
+        if has_provenance else ""
+    )
+    statuses = {}
+    # 200 row-pairs uses 402 bound variables, under older SQLite limits.
+    for offset in range(0, len(keys), 200):
+        chunk = keys[offset:offset + 200]
+        placeholders = ",".join("(?,?)" for _ in chunk)
+        statement = """
+            SELECT b.source_id,b.bid_no,b.latest_version,
+                   a.id AS assessment_id,a.status,
+                   a.bid_version AS assessed_bid_version,
+                   a.profile_version,p.latest_version AS current_profile_version,
+                   {policy_column}
+              FROM bids b
+              LEFT JOIN assessments a ON a.id = (
+                SELECT x.id FROM assessments x
+                 WHERE x.source_id=b.source_id AND x.bid_no=b.bid_no
+                   AND (?='' OR x.profile_id=?)
+                 ORDER BY x.id DESC LIMIT 1
+              )
+              LEFT JOIN profiles p ON p.profile_id=a.profile_id
+              {policy_join}
+             WHERE (b.source_id,b.bid_no) IN ({placeholders})
+        """.format(
+            policy_column=policy_column, policy_join=policy_join,
+            placeholders=placeholders,
+        )
+        params = (profile_id, profile_id, *(
+            value for key in chunk for value in key
+        ))
+        for row in conn.execute(statement, params):
+            fresh = bool(
+                row["assessment_id"]
+                and row["assessed_bid_version"] == row["latest_version"]
+                and row["profile_version"] == row["current_profile_version"]
+                and policy_hash is not None
+                and row["engine_hash"] == policy_hash
+            )
+            statuses[(row["source_id"], row["bid_no"])] = (
+                row["status"] if fresh else "UNKNOWN"
+            )
+    return statuses
+
+
 def _query_without_status(
     conn: sqlite3.Connection, *, profile: str, search: str, category: str,
     deadline: str, page: int, page_size: int,
     favorite_keys: set[tuple[str, str]] | None,
+    status: str = "",
 ) -> dict:
     """Metadata-first paging with exact legacy Python filters and ordering.
 
     SQL retrieves bid payloads and does NOT join correlated assessments for
-    all 10k bids. Only page keys subsequently load provenance. Status-filter
-    queries intentionally retain the legacy full-scan path.
+    all 10k bids. For status filters, a bounded secondary query loads only
+    minimal currentness fields for matching candidates. The complete
+    assessment/provenance is loaded for the selected page only.
     """
     own_snapshot = not conn.in_transaction
     if own_snapshot:
@@ -199,6 +268,16 @@ def _query_without_status(
             if deadline and expired != (deadline == "expired"):
                 continue
             metadata.append((expired, due or "", source_id, bid_no))
+        if status:
+            candidate_keys = [(source, number)
+                              for _, _, source, number in metadata]
+            candidate_status = _status_for_candidate_keys(
+                conn, candidate_keys, profile
+            )
+            metadata = [
+                item for item in metadata
+                if candidate_status[(item[2], item[3])] == status
+            ]
         metadata.sort()
         total = len(metadata)
         keys = [(source, number) for _, _, source, number in
@@ -234,29 +313,11 @@ def query_bids(conn: sqlite3.Connection, query: dict, *, favorite_keys: set[tupl
         raise ValueError("Page parameters must be integers") from exc
     if not 1 <= page <= 10000 or not 1 <= page_size <= 100:
         raise ValueError("Page parameters outside accepted range")
-    if not status:
-        return _query_without_status(
-            conn, profile=profile, search=search, category=category,
-            deadline=deadline, page=page, page_size=page_size,
-            favorite_keys=favorite_keys,
-        )
-    rows = _latest_rows(conn, profile)
-    categories = sorted({str(row["category"]) for row in rows if row["category"]})
-    if favorite_keys is not None:
-        rows = [r for r in rows if (r["source_id"], r["bid_no"]) in favorite_keys]
-    if search:
-        rows = [r for r in rows if search in " ".join(str(r[k]) for k in ("title","agency","bid_no","source_id")).casefold()]
-    if category:
-        rows = [r for r in rows if r["category"] == category]
-    if status:
-        rows = [r for r in rows if r["status"] == status]
-    if deadline:
-        rows = [r for r in rows if r["expired"] == (deadline == "expired")]
-    rows.sort(key=lambda r: (r["expired"], r["deadline"] or "", r["source_id"], r["bid_no"]))
-    total = len(rows)
-    return {"items": rows[(page-1)*page_size:page*page_size], "total": total, "page": page,
-            "page_size": page_size, "categories": categories, "generated_at": datetime.now(timezone.utc).isoformat(),
-            "notice": "사용자 로컬 SQLite 조회. 자격 판정은 참고용이며 최종 공고 원문 확인 필수."}
+    return _query_without_status(
+        conn, profile=profile, search=search, category=category,
+        deadline=deadline, page=page, page_size=page_size,
+        favorite_keys=favorite_keys, status=status,
+    )
 
 
 def query_detail(conn: sqlite3.Connection, query: dict) -> dict:
