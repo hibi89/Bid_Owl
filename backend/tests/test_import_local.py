@@ -315,6 +315,59 @@ class LocalImportTests(unittest.TestCase):
             apply_import(plan)
         self.assertEqual(self.db.read_bytes(), b"NEVER_OVERWRITE")
 
+    def test_existing_db_replaced_after_preview_is_rejected_without_backup(self):
+        import os
+        apply_import(self.prepare())
+        plan = self.prepare()
+        different = self.root / "new-owner.sqlite3"
+        with BidOwlStore(different) as store:
+            store.save_profile(self.company, expected_version=0)
+        os.replace(different, self.db)
+        with self.assertRaisesRegex(ValueError, "replaced or modified"):
+            apply_import(plan)
+        self.assertFalse((self.root / "backups").exists())
+        with BidOwlStore(self.db) as other:
+            self.assertEqual(other.db.execute(
+                "SELECT COUNT(*) FROM assessments"
+            ).fetchone()[0], 0)
+
+    def test_existing_db_deleted_during_writer_open_is_not_recreated(self):
+        apply_import(self.prepare())
+        plan = self.prepare()
+        original_store = BidOwlStore
+
+        def remove_before_open(*args, **kwargs):
+            self.db.unlink()
+            return original_store(*args, **kwargs)
+
+        with patch("import_local.BidOwlStore", side_effect=remove_before_open):
+            with self.assertRaises(FileNotFoundError):
+                apply_import(plan)
+        self.assertFalse(self.db.exists())
+        self.assertFalse((self.root / "backups").exists())
+
+    def test_existing_db_swapped_after_apply_preflight_is_rejected(self):
+        import os
+        apply_import(self.prepare())
+        plan = self.prepare()
+        replacement = self.root / "different.sqlite3"
+        with BidOwlStore(replacement) as store:
+            store.save_profile(self.company, expected_version=0)
+        original_store = BidOwlStore
+
+        def swap_before_writer(*args, **kwargs):
+            os.replace(replacement, self.db)
+            return original_store(*args, **kwargs)
+
+        with patch("import_local.BidOwlStore", side_effect=swap_before_writer):
+            with self.assertRaisesRegex(ValueError, "identity changed"):
+                apply_import(plan)
+        self.assertFalse((self.root / "backups").exists())
+        with BidOwlStore(self.db) as other:
+            self.assertEqual(other.db.execute(
+                "SELECT COUNT(*) FROM assessments"
+            ).fetchone()[0], 0)
+
     def test_new_file_racing_after_preflight_is_never_adopted(self):
         plan = self.prepare()
 
