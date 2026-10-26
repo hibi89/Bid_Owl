@@ -57,7 +57,7 @@ def run_benchmark(*, records: int = 10000, assessed: int = 200) -> dict:
     with tempfile.TemporaryDirectory(prefix="bidowl-benchmark-only-") as scratch:
         db = Path(scratch) / "only-synthetic.sqlite3"
         with BidOwlStore(db) as store:
-            imported = timed("import_10k_ms", lambda: store.import_bids(
+            imported = timed("import_bids_ms", lambda: store.import_bids(
                 data, source_id=SOURCE), timings)
             if imported.inserted != records:
                 raise AssertionError("Synthetic insert count mismatch")
