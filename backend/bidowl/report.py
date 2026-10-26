@@ -166,15 +166,22 @@ def write_xlsx(report: ReviewReport, destination: str | Path) -> Path:
     <Relationship Id="rId1" Type="{office_rels}/worksheet" Target="worksheets/sheet1.xml"/>
     <Relationship Id="rId2" Type="{office_rels}/worksheet" Target="worksheets/sheet2.xml"/>
     <Relationship Id="rId3" Type="{office_rels}/styles" Target="styles.xml"/></Relationships>'''
-    with dest.open("xb") as stream:
-        with ZipFile(stream, "w", ZIP_DEFLATED) as out:
-            out.writestr("[Content_Types].xml", content_types)
-            out.writestr("_rels/.rels", pkgrels)
-            out.writestr("xl/workbook.xml", ET.tostring(workbook, encoding="utf-8", xml_declaration=True))
-            out.writestr("xl/_rels/workbook.xml.rels", bookrels)
-            out.writestr("xl/styles.xml", styles)
-            out.writestr("xl/worksheets/sheet1.xml", _sheet_xml(summary))
-            out.writestr("xl/worksheets/sheet2.xml", _sheet_xml(rule_rows))
+    created = False
+    try:
+        with dest.open("xb") as stream:
+            created = True  # Exclusive creation succeeded; only our file may be cleaned up.
+            with ZipFile(stream, "w", ZIP_DEFLATED) as out:
+                out.writestr("[Content_Types].xml", content_types)
+                out.writestr("_rels/.rels", pkgrels)
+                out.writestr("xl/workbook.xml", ET.tostring(workbook, encoding="utf-8", xml_declaration=True))
+                out.writestr("xl/_rels/workbook.xml.rels", bookrels)
+                out.writestr("xl/styles.xml", styles)
+                out.writestr("xl/worksheets/sheet1.xml", _sheet_xml(summary))
+                out.writestr("xl/worksheets/sheet2.xml", _sheet_xml(rule_rows))
+    except BaseException:
+        if created:
+            dest.unlink(missing_ok=True)
+        raise
     return dest
 
 
