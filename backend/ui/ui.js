@@ -50,6 +50,7 @@ async function loadBids(){
   try{const data=await findBids();if(seq!==state.seq)return;
     const totalPages=Math.max(1,Math.ceil(data.total/data.page_size));
     if(state.page>totalPages){state.page=totalPages;return loadBids();}
+    if(data.items.some(item=>item.source_id==='BIDOWL_SYNTHETIC_DEMO'))$('demo-indicator').hidden=false;
     const body=$('results');body.replaceChildren();state.items=data.items;state.pages=Math.max(1,Math.ceil(data.total/data.page_size));
     for(const item of data.items) body.append(rowFor(item));
     if(!data.items.length){const cell=node('td','', '조건에 맞는 공고가 없습니다.');cell.colSpan=6;const tr=node('tr');tr.append(cell);body.append(tr);}
