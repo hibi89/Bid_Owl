@@ -9,6 +9,7 @@ from pathlib import Path
 from unittest.mock import patch
 from datetime import datetime, timedelta, timezone
 
+from bidowl.engine_identity import engine_fingerprint
 from bidowl import Bid, BidOwlStore, CompanyProfile, Requirement
 from profile_workflow import execute, load_profile_file, main
 
@@ -37,6 +38,36 @@ class ProfileWorkflowTests(unittest.TestCase):
 
     def run_flow(self, **kwargs):
         return execute(db_path=self.db, profile_path=self.profile_file, expected_version=1, **kwargs)
+
+    def test_legacy_profile_edit_migrates_provenance_after_backup(self):
+        with BidOwlStore(self.db) as store:
+            store.db.execute("DROP TABLE assessment_engine_provenance")
+        backup = self.root / "legacy-profile-backup.sqlite3"
+        result = self.run_flow(apply=True, backup_path=backup, reassess=True)
+        self.assertEqual(result["assessments_saved"], 1)
+        with BidOwlStore(backup) as old:
+            self.assertIsNone(old.db.execute(
+                "SELECT name FROM sqlite_master "
+                "WHERE name='assessment_engine_provenance'"
+            ).fetchone())
+            self.assertEqual(old.assessment(self.old_id)[0]["status"], "PASS")
+        with BidOwlStore(self.db) as new:
+            self.assertIsNotNone(new.db.execute(
+                "SELECT name FROM sqlite_master "
+                "WHERE name='assessment_engine_provenance'"
+            ).fetchone())
+            latest = new.db.execute(
+                "SELECT id FROM assessments ORDER BY id DESC LIMIT 1"
+            ).fetchone()[0]
+            policy = new.db.execute(
+                "SELECT engine_hash FROM assessment_engine_provenance "
+                "WHERE assessment_id=?", (latest,),
+            ).fetchone()[0]
+            self.assertEqual(policy, engine_fingerprint())
+            self.assertIsNone(new.db.execute(
+                "SELECT engine_hash FROM assessment_engine_provenance "
+                "WHERE assessment_id=?", (self.old_id,),
+            ).fetchone())
 
     def test_preview_never_changes_file_or_reassesses(self):
         before = self.db.read_bytes()
