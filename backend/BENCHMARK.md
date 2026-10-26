@@ -1,3 +1,11 @@
+## P2-22 — 상태 필터 PASS·UNKNOWN 비교
+
+`--compare-full-scan`가 이제 일반 첫 페이지뿐 아니라 `status=PASS`, `status=UNKNOWN`의 페이지도 과거 `_latest_rows` 기반 전체 검색과 직접 비교합니다. 시간 측정 키는 `legacy_status_pass_scan_ms`, `status_pass_page_1_ms`, `legacy_status_unknown_scan_ms`, `status_unknown_page_1_ms`입니다. 내용·총 건수 하나라도 달라지면 벤치마크를 실패로 처리합니다. 일반 테스트는 합성 41건만 사용하므로 1만 건 성능 실행을 암묵적으로 시작하지 않습니다.
+
+별도 모델 환경의 단순 SQLite 가상 데이터 10,000건 상태 조회 SQL은 50개 묶음으로 참조 결과와 일치했지만, 실제 BID OWL의 10k 응답 시간이나 Windows 성능 향상을 입증하지 않습니다. 전체 GitHub 코드로 실행한 결과가 확보되기 전에는 속도 개선율을 기재하지 않습니다.
+
+---
+
 ## P2-21 — metadata-first viewer page and explicit historical comparison
 
 Default `query_bids` listing without a status filter now reads current bid metadata, applies **the same Python Unicode casefold/category/deadline/favorite filters and ordering**, then queries complete assessment/provenance only for the selected page (max 100 bid keys). Historical status filters intentionally retain the prior full-assessment scan until future indexed validation. A single readonly transaction is used to hold both page-selection and assessment lookup on the same DB snapshot.
