@@ -1,3 +1,24 @@
+# BID OWL HANDOFF — P2-19 safe backup validation and new-file restore, 2026-10-27 KST
+
+## User's immediate decision and work policy
+User finds proposed UI designs visually unacceptable. **Do NOT redesign frontend, generate UI mocks or touch CSS on next ㄱ**; user explicitly says frontend will be resolved later, backend matters now. User's ㄱ signals autonomous GitHub code/test/doc work, no repeated ZIP download/PowerShell QA demands. Continue private `hibi89/Bid_Owl`, branch `feature/bid-owl-v1-basic-mvp`, protect main and Vercel, no paid runner, customer file/API key exposure, public release/production mutation.
+
+## New P2-19 code
+- `backend/backup_recovery.py`: new standalone Python stdlib offline CLI; `prepare_recovery(source, destination)` validates *already-existing* SQLite backup with ro URI, BID OWL schema v1 user_version and all 7 tables, PRAGMA full integrity_check, FK check, counts of 4 key tables, SHA-256 and OS identity. Preview has **no filesystem writes** to destination. Refuses backup with '-wal' or '-journal' sidecar to avoid raw inconsistent copies. Return dataclass `RecoveryPlan` pinning source identity+SHA+counts.
+- `restore_to_new_file(plan)`: explicit only `--apply`, re-preflight, refuses overwrite and source==destination, calls destination.open('xb') to reserve never-existing path, destination SQLite mode=rw, SQLite Connection.backup source -> target, postcopy source checksum+identity and restored file integrity/FK/count/provenance verification, no original file changes, automatic in-place activation/overwrite NEVER. On exception may remove only original reserved output if device/inode still match and inode !=0; if can't safely determine path owner, leaves file for manual inspection. No OS-level serialization promise.
+- CLI command: `python backup_recovery.py --source BACKUP --destination NEW_SQLITE` = JSON `RECOVERY_PREVIEW_NO_WRITE`; append `--apply` = `RESTORED_TO_NEW_FILE`; failures `RECOVERY_FAILED` exit 2.
+- Tests `backend/tests/test_backup_recovery.py`: 14 methods, fake packaged CSV and company, old-v1 missing provenance => UNKNOWN, unsafe existing output refusal, corrupt/foreign schema, changed source, cleanup/error/race, foreign key, CLI. Explicit contextlib.closing(SQLite) to avoid Windows handle leaks.
+- Docs `backend/RECOVERY.md`, project NEXT_TASK.md / STATUS.md / HANDOFF.md / START_HERE / backend README updated. Development branch starts P2-19 at `1553950c3eb264eec1588c7243fc059737a22658`, main baseline `c888c795bef72734f3f7016e54013b82453f11d8`.
+
+## Validation and remaining work
+GitHub authentically checked **226 test definitions across 16 files**, not actual 226 PASS. Separate local stdlib Python SQLite recovery behavior 8/8 PASS on synthetic tmp DB, NOT the full private GitHub module. No native Windows rerun; previous real 137 tests had 18 WinError32 handle/TemporaryDirectory cleanup errors; fixes unverified. Need genuine recovery tests, 10k scaling, Windows locks / XLSX/PDF / installer, then customer API PRO, AI PREMIUM and KIPRIS brand checks. Last all-tier estimate ~42% subjective; do not raise without evidence.
+
+## Next ㄱ
+P2-20 BACKEND ONLY. Improve backup recovery robustness, measured synthetic 10k performance and data consistency, or closed gaps in existing SQLite WAL and concurrency. Keep original database safe; do not auto-replace it. Follow user instruction no frontend redesign. Refresh GitHub feature/main HEAD, handoff docs before action.
+
+---
+## Historical HANDOFF
+
 # BID OWL HANDOFF — P2-18 strict file identity and no-create writer (2026-10-27 KST)
 
 User's `ㄱ` means autonomously continue source dev in connected private GitHub `hibi89/Bid_Owl`, `feature/bid-owl-v1-basic-mvp`. They explicitly dislike repeated ZIP downloads/PowerShell testing. Do NOT ask user to run routine QA; make GitHub commits and perform feasible isolated/static tests yourself. Protect main/legacy Vercel, privacy, API keys, no paid runner/public deploy.
