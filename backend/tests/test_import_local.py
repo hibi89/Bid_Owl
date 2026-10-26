@@ -572,6 +572,37 @@ class LocalImportTests(unittest.TestCase):
                 store.db.execute("SELECT COUNT(*) FROM assessments").fetchone()[0], 2,
             )
 
+    def test_second_report_failure_preserves_first_file_and_import_evidence(self):
+        from report_existing import export_existing as real_export
+        export_dir = self.root / "partial-exports"
+        argv = self._cli_input_arguments() + [
+            "--apply", "--export-dir", str(export_dir),
+        ]
+        calls = {"count": 0}
+
+        def fail_second(**kwargs):
+            calls["count"] += 1
+            if calls["count"] == 2:
+                raise RuntimeError("SYNTHETIC_SECOND_REPORT_FAILURE")
+            return real_export(**kwargs)
+
+        with patch("import_local.export_existing", side_effect=fail_second):
+            with contextlib.redirect_stderr(io.StringIO()) as stderr:
+                self.assertEqual(main(argv), 2)
+        result = json.loads(stderr.getvalue())
+        self.assertEqual(result["status"], "IMPORTED_EXPORT_FAILED")
+        self.assertEqual(result["assessments_saved"], 2)
+        self.assertEqual(len(result["reports"]), 1)
+        first = Path(result["reports"][0]["files"][0])
+        self.assertTrue(first.exists())
+        self.assertGreater(first.stat().st_size, 0)
+        self.assertIn("SYNTHETIC_SECOND_REPORT_FAILURE", result["export_error"])
+        with BidOwlStore(self.db, must_exist=True) as store:
+            self.assertEqual(
+                store.db.execute("SELECT COUNT(*) FROM assessments").fetchone()[0], 2
+            )
+        self.assertEqual(len(list(export_dir.glob("*.xlsx"))), 1)
+
     def test_pdf_missing_dependency_refused_before_import_or_output(self):
         target = self.root / "client"
         argv = self._cli_input_arguments() + [
