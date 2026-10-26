@@ -101,9 +101,11 @@ def execute(
     if apply and Path(backup_path).expanduser().resolve() == db:
         raise ValueError("Backup must differ from the active database")
 
-    # Schema validation must not initialize an existing unrelated/blank SQLite file.
-    with ReadOnlyProfileStore(db):
-        pass
+    # Preview itself opens exactly one mode=ro connection. Apply preflights
+    # schema read-only before it acquires a separate write-capable store.
+    if apply:
+        with ReadOnlyProfileStore(db):
+            pass
     with (BidOwlStore(db) if apply else ReadOnlyProfileStore(db)) as store:
         existing_row = store.db.execute(
             "SELECT latest_version FROM profiles WHERE profile_id=?", (profile.profile_id,)
