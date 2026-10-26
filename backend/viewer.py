@@ -11,6 +11,7 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
+from bidowl.engine_identity import engine_fingerprint
 from bidowl.store import default_database_path
 
 UI = Path(__file__).resolve().parent / "ui"
@@ -54,12 +55,25 @@ def _timestamp(text: str | None) -> datetime | None:
 
 
 def _latest_rows(conn: sqlite3.Connection, profile_id: str = "", only_key: tuple[str, str] | None = None) -> list[dict]:
+    # Old schema-v1 databases can lack engine provenance: never imply a
+    # historical PASS is current in that case. No DB schema edits in viewer.
+    has_provenance = bool(conn.execute(
+        "SELECT 1 FROM sqlite_master WHERE type='table' "
+        "AND name='assessment_engine_provenance'"
+    ).fetchone())
+    engine_hash = engine_fingerprint()
+    policy_column = "ep.engine_hash" if has_provenance else "NULL AS engine_hash"
+    policy_join = (
+        "LEFT JOIN assessment_engine_provenance ep ON ep.assessment_id=a.id"
+        if has_provenance else ""
+    )
     # All selected user fields are parameter bound. Read-only connection is mandatory.
     rows = conn.execute("""
         SELECT b.source_id,b.bid_no,b.latest_version,v.payload,
                a.id assessment_id,a.status,a.checked_at,a.bid_version assessment_bid_version,
                a.profile_id,a.profile_version,a.requires_human_review,a.data_as_of assessment_data_as_of,
-               p.latest_version latest_profile_version
+               p.latest_version latest_profile_version,
+               {policy_column}
           FROM bids b JOIN bid_versions v
             ON v.source_id=b.source_id AND v.bid_no=b.bid_no AND v.version=b.latest_version
           LEFT JOIN assessments a ON a.id=(
@@ -67,17 +81,23 @@ def _latest_rows(conn: sqlite3.Connection, profile_id: str = "", only_key: tuple
              WHERE x.source_id=b.source_id AND x.bid_no=b.bid_no
                AND (?='' OR x.profile_id=?) ORDER BY x.id DESC LIMIT 1)
           LEFT JOIN profiles p ON p.profile_id=a.profile_id
+          {policy_join}
         {where_clause}
         ORDER BY b.source_id,b.bid_no
-    """.format(where_clause="WHERE b.source_id=? AND b.bid_no=?" if only_key else ""),
+    """.format(
+        where_clause="WHERE b.source_id=? AND b.bid_no=?" if only_key else "",
+        policy_column=policy_column, policy_join=policy_join,
+    ),
         (profile_id, profile_id, *only_key) if only_key else (profile_id, profile_id)).fetchall()
     now = datetime.now(timezone.utc)
     result = []
     for row in rows:
         bid = json.loads(row["payload"])
         deadline = _timestamp(bid.get("bid_deadline"))
+        policy_fresh = row["engine_hash"] == engine_hash
         fresh = bool(row["assessment_id"] and row["assessment_bid_version"] == row["latest_version"]
-                     and row["profile_version"] == row["latest_profile_version"])
+                     and row["profile_version"] == row["latest_profile_version"]
+                     and policy_fresh)
         status = row["status"] if fresh else "UNKNOWN"
         result.append({
             "source_id": row["source_id"], "bid_no": row["bid_no"], "title": bid.get("title", ""),
@@ -86,10 +106,13 @@ def _latest_rows(conn: sqlite3.Connection, profile_id: str = "", only_key: tuple
             "data_as_of": bid.get("data_as_of"), "source_ref": bid.get("source_ref"),
             "bid_version": row["latest_version"], "expired": deadline is None or deadline <= now,
             "status": status, "snapshot_status": row["status"], "assessment_fresh": fresh,
+            "engine_fresh": policy_fresh,
             "assessment_id": row["assessment_id"], "checked_at": row["checked_at"],
             "profile_id": row["profile_id"],
             "requires_human_review": (not fresh or bool(row["requires_human_review"])),
             "review_reason": ("미판정" if row["assessment_id"] is None else
+                              "판정 엔진 변경 또는 이전 엔진 정보 없음 — 재판정 필요"
+                              if not policy_fresh else
                               "원본 또는 회사 프로필 변경 후 재판정 필요" if not fresh else ""),
         })
     return result
