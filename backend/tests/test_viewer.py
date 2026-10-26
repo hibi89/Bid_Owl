@@ -71,6 +71,16 @@ class ViewerTests(unittest.TestCase):
             self.assertEqual(query_bids(c,{'deadline':['expired']})['total'],1)
             self.assertEqual(query_bids(c,{'page_size':['1'],'page':['2']})['page'],2)
 
+    def test_detail_fetch_is_key_scoped(self):
+        from viewer import _latest_rows
+        with open_database(self.path) as conn:
+            ids = [(r['source_id'], r['bid_no']) for r in _latest_rows(conn, 'P1', ('TEST','B'))]
+            self.assertEqual(ids,[('TEST','B')])
+            self.assertEqual(_latest_rows(conn, 'P1', ('TEST','MISSING')),[])
+            detail=query_detail(conn,{'source_id':['TEST'],'bid_no':['A'],'profile':['P1']})
+            self.assertEqual(detail['bid']['bid_no'],'A')
+            self.assertEqual(detail['rules'][0]['rule_id'],'r1')
+
     def test_read_only_and_rule_provenance(self):
         with open_database(self.path) as c:
             self.assertEqual(query_profiles(c)['profiles'][0]['profile_id'],'P1')
