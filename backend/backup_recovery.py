@@ -28,7 +28,7 @@ EVIDENCE_TABLES = (
     "profiles", "profile_versions", "bids", "bid_versions",
     "import_runs", "assessments", "rule_assessments",
 )
-EVIDENCE_NAMESPACE = b"BIDOWL-RECOVERY-EVIDENCE-v1\\0"
+EVIDENCE_NAMESPACE = b"BIDOWL-RECOVERY-EVIDENCE-v1\0"
 CHUNK_BYTES = 1024 * 1024
 
 
@@ -90,7 +90,7 @@ def _evidence_hash(connection: sqlite3.Connection, *, has_policy: bool) -> str:
         ("assessment_engine_provenance",) if has_policy else ()
     )
     for table in table_names:
-        digest.update(table.encode("ascii") + b"\\0")
+        digest.update(table.encode("ascii") + b"\0")
         cursor = connection.execute(f'SELECT * FROM "{table}" ORDER BY rowid')
         for row in cursor:
             cells = []
@@ -110,7 +110,7 @@ def _evidence_hash(connection: sqlite3.Connection, *, has_policy: bool) -> str:
             ).encode("utf-8")
             digest.update(len(serialized).to_bytes(8, "big"))
             digest.update(serialized)
-        digest.update(b"\\xff")
+        digest.update(b"\xff")
     return digest.hexdigest()
 
 
@@ -129,7 +129,7 @@ def _source_snapshot(path: Path) -> tuple[
         raise FileNotFoundError(f"Backup not found: {path}")
     # An actively journalled raw DB copy may omit committed WAL transactions.
     # Fail closed and ask the user to create a consistent SQLite backup first.
-    for suffix in ("-wal", "-journal"):
+    for suffix in ("-wal", "-journal", "-shm"):
         if Path(str(path) + suffix).exists():
             raise ValueError("Backup has an active WAL/journal sidecar; use a consistent SQLite backup")
     identity = database_file_identity(path)
@@ -141,6 +141,11 @@ def _source_snapshot(path: Path) -> tuple[
         evidence = _evidence_hash(connection, has_policy=has_policy)
         connection.execute("ROLLBACK")  # release read snapshot; no writes
     checksum = _file_hash(path)
+    # Sidecars can appear while an external process starts writing. A
+    # standalone recoverable snapshot must remain journal-free throughout.
+    for suffix in ("-wal", "-journal", "-shm"):
+        if Path(str(path) + suffix).exists():
+            raise ValueError("Backup journal sidecar appeared during inspection")
     if database_file_identity(path) != identity:
         raise ValueError("Backup changed while being inspected; retry after stopping writers")
     return identity, checksum, counts, has_policy, evidence
