@@ -1,3 +1,9 @@
+## BASIC MVP 우선 복귀 — P2-25
+
+현재 개발의 최우선 목표는 CSV·회사 정보 입력 → 입찰 자격 참고 판정 → 로컬 SQLite 증거 저장 → 공고 조회 → Excel/PDF 보고서를 **실제로 끝까지 실행·검증하는 것**이다. 기존 시각 디자인은 보류하고 PRO/PREMIUM도 MVP 통과 이후에 진행한다. 실제 고객 등록기 경로의 자동 수용 검사 소스 `backend/mvp_smoke.py` 및 기준 `backend/MVP_ACCEPTANCE.md`를 추가했다. 현재 GitHub에는 Python 테스트 **256개가 정의**되어 있으나 전체 실행·Windows 출시 검증은 아직 완료되지 않았다.
+
+---
+
 > **P2-14 개발 브랜치 안내:** 실사용 CSV·회사 프로필을 PC에 등록하는 새로운 오프라인 진입점은 `START_BID_OWL_IMPORT.cmd`이며 [backend/IMPORT.md](backend/IMPORT.md)에 설명했습니다. 가상 데이터 전용 `START_BID_OWL_DEMO.cmd`와 별개입니다. 실제 Windows 실행·상용 인증은 미검증 상태입니다.
 
 > **BID OWL 신규 Python 로컬 제품 개발 브랜치 안내 (P2-13)**  
