@@ -166,9 +166,11 @@ def _reusable_assessment_status(
     before that boundary must be regenerated, not silently reused.
     """
     row = store.db.execute("""
-        SELECT b.latest_version, a.bid_version, a.profile_version,
-               a.status, a.is_expired
+        SELECT b.latest_version,
+               p.latest_version AS current_profile_version,
+               a.bid_version, a.profile_version, a.status, a.is_expired
         FROM bids b
+        JOIN profiles p ON p.profile_id = ?
         LEFT JOIN assessments a ON a.id = (
             SELECT x.id FROM assessments x
             WHERE x.source_id = b.source_id AND x.bid_no = b.bid_no
@@ -176,7 +178,9 @@ def _reusable_assessment_status(
             ORDER BY x.id DESC LIMIT 1
         )
         WHERE b.source_id = ? AND b.bid_no = ?
-    """, (profile_id, source_id, bid_no)).fetchone()
+    """, (profile_id, profile_id, source_id, bid_no)).fetchone()
+    if row is not None and row["current_profile_version"] != profile_version:
+        raise ValueError("Company profile changed while importing; retry")
     if (row is not None and row["status"] in ("PASS", "FAIL", "UNKNOWN")
             and row["bid_version"] == row["latest_version"]
             and row["profile_version"] == profile_version
