@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import sqlite3
 import sys
 from contextlib import closing
 from pathlib import Path
@@ -174,7 +175,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         print(json.dumps(execute(options),ensure_ascii=False,indent=2))
         return 0
-    except (ValueError,KeyError,CSVImportError,RuntimeError,OSError) as exc:
+    except (ValueError,KeyError,CSVImportError,RuntimeError,OSError,sqlite3.Error) as exc:
         if isinstance(exc,CSVImportError):
             problems=[{"code":p.code,"line":p.line,"field":p.field,"message":p.message} for p in exc.issues]
             print(json.dumps({"status":"INPUT_REJECTED","issues":problems},ensure_ascii=False),file=sys.stderr)
