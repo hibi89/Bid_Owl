@@ -4,6 +4,7 @@ from __future__ import annotations
 import contextlib
 import io
 import json
+import sqlite3
 import tempfile
 import unittest
 from pathlib import Path
@@ -122,7 +123,7 @@ class LocalImportTests(unittest.TestCase):
 
     def test_non_bidowl_existing_db_refused_readonly(self):
         self.db.write_bytes(b"SOMEONE_ELSES_EXISTING_FILE")
-        with self.assertRaises((ValueError, OSError, Exception)):
+        with self.assertRaises((ValueError, sqlite3.DatabaseError)):
             self.prepare()
         self.assertEqual(self.db.read_bytes(), b"SOMEONE_ELSES_EXISTING_FILE")
         self.assertFalse((self.root / "backups").exists())
@@ -192,6 +193,17 @@ class LocalImportTests(unittest.TestCase):
             self.assertEqual(main(arguments + ["--apply"]), 0)
         self.assertEqual(json.loads(output.getvalue())["status"], "IMPORTED")
         self.assertTrue(self.db.exists())
+
+    def test_overlong_gui_profile_id_rejected_prewrite(self):
+        oversize = CompanyProfile("X" * 301)
+        with self.assertRaisesRegex(ValueError, "300 characters"):
+            self.prepare(profile=oversize)
+        self.assertFalse(self.db.exists())
+
+    def test_source_id_whitespace_rejected_prewrite(self):
+        with self.assertRaisesRegex(ValueError, "Source ID"):
+            self.prepare(source_id=" LOCAL TEST ")
+        self.assertFalse(self.db.exists())
 
     def test_desktop_launcher_paths_and_no_http_write(self):
         root_cmd = (BACKEND.parent / "START_BID_OWL_IMPORT.cmd").read_text(encoding="utf-8")
