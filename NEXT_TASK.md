@@ -1,3 +1,21 @@
+# BID OWL NEXT — P2-22 status-filter backend query optimization (2026-10-27 KST)
+
+**Next ㄱ => P2-23 BACKEND ONLY.** User explicitly rejects visual UI design and prefers backend work. Do not modify UI CSS/mockups until explicitly asked. User dislikes repeated ZIP downloads and routine manual Windows PowerShell QA; implement in connected private GitHub feature. Preserve main/Vercel, no paid CI, customer data, secrets, or public product release.
+
+## P2-22 actual changes
+- `backend/viewer.py`: `query_bids` now routes **every** list filter, including `status=PASS/FAIL/UNKNOWN`, through one metadata-first readonly snapshot. It parses bid metadata and applies casefold keyword, category, favorite keys, deadline before SQL assessment lookup. New `_status_for_candidate_keys` queries minimal latest assessment, bid version, company profile latest version and optional engine fingerprint with parameterized row-value IN in **batches of 200 (<=402 bind parameters)**. It reproduces original `_latest_rows` logic exactly for stale original bid, old/missing company, missing/old SHA256 policy, no assessment, and selected profile; anything unproven is UNKNOWN. Then only selected current page keys (<=100) load the complete assessment/provenance in `_latest_rows`. Uses same transaction and UTC expiry cutoff; returns unchanged JSON shape/category semantics. `query_detail` and static frontend files untouched.
+- `backend/tests/test_viewer.py` +7 test methods: exact old/new state filter parity, SHA mismatch and removed provenance table/missing policy, 425-row 3-chunk query, browser favorites status, empty favorites, multiple profiles (newest regardless of profile vs explicit profile), preserving caller-owned SQLite read transaction. Prior 17-case combined differential parity test now exercises optimized status path. Previous expectation of old unbatched status lookup updated.
+- `backend/benchmark_local.py --compare-full-scan`: additionally measures `legacy_status_pass_scan_ms` vs `status_pass_page_1_ms` and `legacy_status_unknown_scan_ms` vs `status_unknown_page_1_ms` with exact result equality on the same synthetic DB. `backend/tests/test_benchmark_local.py` has updated timing field assertions. This remains explicitly opt-in; no hidden 10k in ordinary unit suite.
+- Docs: `backend/VIEWER_QUERY.md`, `backend/BENCHMARK.md`, `backend/README.md`, NEXT_TASK/STATUS/HANDOFF/START_HERE.
+- Current GitHub source **245 Python test declarations in 16 test modules** (238+7). NOT 245 passing. An **isolated** Python/sqlite3 synthetic 10k-row status SQL run matched 10,000/10,000 expected classifications in 50 chunks; not an authenticated full BID OWL run or Windows speed guarantee. Full 245 Python suite/native Windows E2E/10k app benchmark not executed. Old authentic Windows run 137 tests, 18 WinError32 cleanup errors before fixes; no subsequent native confirmation.
+- Overall all-tier estimated progress previously ~42%; do not use commit counts to invent percentage increases.
+
+## P2-23 next
+Prioritize **actual backend test execution and source-quality checks** in an authorized isolated environment without repeatedly asking the user to run QA, or further correctness of status result and indexing. Consider performance of metadata JSON decode/sort and SQLite assessment lookup index coverage, test real 10k exact code before promising gains. No external customer data or paid runner. Windows installer, PDF/XLSX native Korean fonts, browser acceptance, PRO government API/PREMIUM AI and brand clearance remain unavailable/unverified. Document blockers instead of claiming full QA.
+
+---
+## Earlier NEXT_TASK history
+
 # BID OWL NEXT — P2-21 metadata-first read-only viewer pagination (2026-10-27 KST)
 
 **Next ㄱ => P2-22 BACKEND ONLY.** User rejected two UI mockups and explicitly ordered backend-first; no CSS/design/UI image work until reapproved. User dislikes repeated ZIP and PowerShell manual testing requests. Only edit private `hibi89/Bid_Owl` feature branch `feature/bid-owl-v1-basic-mvp`; preserve main/Vercel; no paid CI, sensitive data transfers or public release. Fetch current GitHub feature/main, START_HERE, AGENTS, REQUIREMENTS, STATUS, HANDOFF.
