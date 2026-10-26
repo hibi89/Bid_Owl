@@ -74,8 +74,12 @@ async function openDetail(item,button){const token=++state.drawerSeq;state.focus
       if(rule.source_text)box.append(node('div','source',rule.source_text));if(rule.source_locator)box.append(node('div','subline','출처 위치: '+rule.source_locator));host.append(box);}
     if(Number.isSafeInteger(data.bid.assessment_id)&&data.bid.assessment_id>0){
       const snapshotId=data.bid.assessment_id;
-      host.append(node('h3','','저장된 평가 보고서 재출력'));
-      host.append(node('p','subline','평가 ID '+snapshotId+' · 기존 판정 스냅샷으로 PDF/Excel을 생성합니다. DB나 평가 기록은 바뀌지 않습니다.'));
+      host.append(node('h3','','저장된 평가 보고서'));
+      host.append(node('p','subline','평가 ID '+snapshotId+' · 조회 중인 평가의 과거 스냅샷으로 출력합니다. DB와 평가 기록은 바뀌지 않습니다.'));
+      const href='/api/report?'+new URLSearchParams({assessment_id:String(snapshotId)});
+      const download=node('a','report-download','Excel (.xlsx) 직접 다운로드');
+      download.href=href;download.download='bidowl_review_'+String(snapshotId).padStart(8,'0')+'.xlsx';
+      host.append(download);
       if(!data.evidence_is_current)host.append(node('p','warn','이 평가는 과거 버전입니다. 출력 보고서의 PASS/FAIL은 현재 참가 자격을 뜻하지 않습니다.'));
       const command='python report_existing.py --db "DB_PATH" --assessment-id '+snapshotId+' --output "NEW_REPORT_DIR" --format both';
       host.append(node('pre','command',command),node('p','subline','backend 폴더에서 실행하세요. DB_PATH와 새 출력 폴더 경로를 실제 로컬 경로로 바꿔야 합니다.'));
