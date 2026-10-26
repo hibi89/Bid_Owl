@@ -66,10 +66,18 @@ def export_existing(
                 raise FileExistsError(f"Report already exists, choose another directory: {dest / name}")
         # Keep all DB reads complete before creating output directory or files.
     paths = []
-    for ext in ("xlsx", "pdf"):
-        if format in (ext, "both"):
-            write = write_xlsx if ext == "xlsx" else write_pdf
-            paths.append(str(write(report, dest / f"bidowl_review_{assessment_id:08d}.{ext}")))
+    try:
+        for ext in ("xlsx", "pdf"):
+            if format in (ext, "both"):
+                write = write_xlsx if ext == "xlsx" else write_pdf
+                paths.append(str(write(report, dest / f"bidowl_review_{assessment_id:08d}.{ext}")))
+    except BaseException:
+        # Multi-format output is not a filesystem transaction, but a failed
+        # later export must not strand earlier files from THIS invocation.
+        # The XLSX/PDF writers themselves clean up their own partial files.
+        for created in reversed(paths):
+            Path(created).unlink(missing_ok=True)
+        raise
     return {
         "status": "LOCAL_EXPORTED",
         "assessment_id": assessment_id,
