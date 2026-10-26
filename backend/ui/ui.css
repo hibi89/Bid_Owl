@@ -17,3 +17,8 @@ body[data-theme="iris"]{--bg:#f7f5fc;--surface:#fff;--sidebar:#ece7f7;--text:#30
 .profile-form button[type="submit"]{background:var(--accent);color:var(--surface);border:1px solid var(--accent);font-weight:700}
 .command{padding:12px;background:var(--bg);border:1px solid var(--line);border-radius:8px;overflow-wrap:anywhere;white-space:pre-wrap;font-size:12px;user-select:text}
 @media(max-width:850px){.profile-button{flex:1 1 100%}}
+
+
+/* P2-07: same-origin, read-only historical Excel download. */
+.report-download{display:inline-flex;align-items:center;min-height:40px;margin:12px 0;padding:9px 14px;border:1px solid var(--accent);border-radius:8px;background:var(--accent);color:var(--surface);font-weight:700;text-decoration:none}
+.report-download:hover,.report-download:focus-visible{background:var(--surface);color:var(--accent)}
