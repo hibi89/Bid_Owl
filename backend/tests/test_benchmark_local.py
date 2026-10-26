@@ -50,9 +50,13 @@ class BenchmarkLocalTests(unittest.TestCase):
         )
         self.assertEqual(result["status"], "SYNTHETIC_BENCH_COMPLETE")
         self.assertTrue(result["viewer_baseline_compared"])
-        self.assertIn("legacy_full_scan_page_1_ms", result["timings_ms"])
-        self.assertIn("all_rows_page_1_ms", result["timings_ms"])
-        self.assertGreaterEqual(result["timings_ms"]["legacy_full_scan_page_1_ms"], 0)
+        for key in (
+            "legacy_full_scan_page_1_ms", "all_rows_page_1_ms",
+            "legacy_status_pass_scan_ms", "status_pass_page_1_ms",
+            "legacy_status_unknown_scan_ms", "status_unknown_page_1_ms",
+        ):
+            self.assertIn(key, result["timings_ms"])
+            self.assertGreaterEqual(result["timings_ms"][key], 0)
 
     def test_comparison_mode_requires_real_bool(self):
         with self.assertRaisesRegex(ValueError, "measure_viewer_baseline"):
