@@ -10,7 +10,7 @@ import json
 import os
 import sqlite3
 import sys
-from contextlib import contextmanager
+from contextlib import closing, contextmanager
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -343,7 +343,9 @@ class BidOwlStore:
         with dest.open("xb"):
             pass
         try:
-            with sqlite3.connect(str(dest)) as target:
+            # sqlite3.Connection.__exit__ commits/rolls back but does NOT
+            # close the handle. Windows otherwise locks this backup file.
+            with closing(sqlite3.connect(str(dest))) as target:
                 self.db.backup(target)
                 if target.execute("PRAGMA integrity_check").fetchone()[0] != "ok":
                     raise sqlite3.DatabaseError("backup integrity check failed")
