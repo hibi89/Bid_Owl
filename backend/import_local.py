@@ -167,7 +167,7 @@ def _reusable_assessment_status(
     store: BidOwlStore, *, source_id: str, bid_no: str,
     profile_id: str, profile_version: int, is_expired: bool,
     engine_hash: str,
-) -> str | None:
+) -> tuple[int, str] | None:
     """Reuse only a snapshot matching both revisions and today's expiry.
 
     A bid can pass its deadline without a data revision. An assessment from
@@ -176,8 +176,8 @@ def _reusable_assessment_status(
     row = store.db.execute("""
         SELECT b.latest_version,
                p.latest_version AS current_profile_version,
-               a.bid_version, a.profile_version, a.status, a.is_expired,
-               ep.engine_hash
+               a.id AS assessment_id, a.bid_version, a.profile_version,
+               a.status, a.is_expired, ep.engine_hash
         FROM bids b
         JOIN profiles p ON p.profile_id = ?
         LEFT JOIN assessments a ON a.id = (
@@ -196,7 +196,7 @@ def _reusable_assessment_status(
             and row["profile_version"] == profile_version
             and row["engine_hash"] == engine_hash
             and bool(row["is_expired"]) == is_expired):
-        return str(row["status"])
+        return int(row["assessment_id"]), str(row["status"])
     return None
 
 
@@ -283,28 +283,38 @@ def apply_import(plan: ImportPlan, *, force_reassess: bool = False) -> dict:
             counts = {"PASS": 0, "FAIL": 0, "UNKNOWN": 0}
             saved_assessments = 0
             reused_assessments = 0
+            assessments = []
             for bid in plan.bids:
                 checked_at = datetime.now(timezone.utc)
-                previous_status = None
+                previous_snapshot = None
                 if not force_reassess:
-                    previous_status = _reusable_assessment_status(
+                    previous_snapshot = _reusable_assessment_status(
                         store, source_id=plan.source_id, bid_no=bid.bid_no,
                         profile_id=plan.profile.profile_id,
                         profile_version=profile_version,
                         is_expired=bid.is_expired(checked_at),
                         engine_hash=policy_hash,
                     )
-                if previous_status is not None:
+                if previous_snapshot is not None:
+                    assessment_id, previous_status = previous_snapshot
                     reused_assessments += 1
                     counts[previous_status] += 1
+                    assessments.append({
+                        "bid_no": bid.bid_no, "assessment_id": assessment_id,
+                        "status": previous_status, "reused": True,
+                    })
                     continue
-                _, outcome = store.assess_and_record(
+                assessment_id, outcome = store.assess_and_record(
                     plan.source_id, bid.bid_no, plan.profile.profile_id,
                     expected_profile_version=profile_version,
                     checked_at=checked_at,
                 )
                 saved_assessments += 1
                 counts[outcome.status] += 1
+                assessments.append({
+                    "bid_no": bid.bid_no, "assessment_id": assessment_id,
+                    "status": outcome.status, "reused": False,
+                })
     except BaseException as exc:
         if started_writing:
             # Do not auto-restore: a concurrent write or successful earlier
@@ -329,6 +339,7 @@ def apply_import(plan: ImportPlan, *, force_reassess: bool = False) -> dict:
         },
         "assessments_saved": saved_assessments,
         "assessments_reused": reused_assessments,
+        "assessments": assessments,
         "eligibility_counts": counts,
         "notice": "Rule screening only; check the original tender before any bid.",
     }
