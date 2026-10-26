@@ -22,6 +22,13 @@ REQUIRED_TABLES = (
     "assessments", "rule_assessments",
 )
 REPORT_COUNTS = ("profiles", "bids", "assessments", "import_runs")
+# Deterministic evidence coverage includes every version and immutable rule
+# snapshot. Only hard-coded table names are ever interpolated into SQL.
+EVIDENCE_TABLES = (
+    "profiles", "profile_versions", "bids", "bid_versions",
+    "import_runs", "assessments", "rule_assessments",
+)
+EVIDENCE_NAMESPACE = b"BIDOWL-RECOVERY-EVIDENCE-v1\\0"
 CHUNK_BYTES = 1024 * 1024
 
 
@@ -33,6 +40,7 @@ class RecoveryPlan:
     source_sha256: str
     counts: tuple[tuple[str, int], ...]
     policy_provenance: bool
+    evidence_sha256: str
 
 
 def _source_connection(path: Path) -> sqlite3.Connection:
@@ -70,6 +78,42 @@ def _validate_v1(connection: sqlite3.Connection) -> tuple[tuple[tuple[str, int],
     return counts, "assessment_engine_provenance" in tables
 
 
+def _evidence_hash(connection: sqlite3.Connection, *, has_policy: bool) -> str:
+    """Stream a digest of every version, assessment, rule and policy row.
+
+    Counts alone cannot detect same-count value changes. rowid provides a
+    stable ordering for the supported BID OWL v1 tables. Serialize each cell
+    with explicit type tags to avoid text/int/NULL/BLOB ambiguity.
+    """
+    digest = hashlib.sha256(EVIDENCE_NAMESPACE)
+    table_names = EVIDENCE_TABLES + (
+        ("assessment_engine_provenance",) if has_policy else ()
+    )
+    for table in table_names:
+        digest.update(table.encode("ascii") + b"\\0")
+        cursor = connection.execute(f'SELECT * FROM "{table}" ORDER BY rowid')
+        for row in cursor:
+            cells = []
+            for value in row:
+                if value is None:
+                    cells.append(("null", None))
+                elif isinstance(value, bytes):
+                    cells.append(("blob", value.hex()))
+                elif isinstance(value, int):
+                    cells.append(("int", value))
+                elif isinstance(value, float):
+                    cells.append(("float", value.hex()))
+                else:
+                    cells.append(("text", value))
+            serialized = json.dumps(
+                cells, ensure_ascii=False, separators=(",", ":"), allow_nan=False,
+            ).encode("utf-8")
+            digest.update(len(serialized).to_bytes(8, "big"))
+            digest.update(serialized)
+        digest.update(b"\\xff")
+    return digest.hexdigest()
+
+
 def _file_hash(path: Path) -> str:
     sha = hashlib.sha256()
     with path.open("rb") as stream:
@@ -78,7 +122,9 @@ def _file_hash(path: Path) -> str:
     return sha.hexdigest()
 
 
-def _source_snapshot(path: Path) -> tuple[tuple[int, int, int, int], str, tuple[tuple[str, int], ...], bool]:
+def _source_snapshot(path: Path) -> tuple[
+    tuple[int, int, int, int], str, tuple[tuple[str, int], ...], bool, str,
+]:
     if not path.is_file():
         raise FileNotFoundError(f"Backup not found: {path}")
     # An actively journalled raw DB copy may omit committed WAL transactions.
@@ -88,11 +134,16 @@ def _source_snapshot(path: Path) -> tuple[tuple[int, int, int, int], str, tuple[
             raise ValueError("Backup has an active WAL/journal sidecar; use a consistent SQLite backup")
     identity = database_file_identity(path)
     with closing(_source_connection(path)) as connection:
+        # One read transaction keeps count + evidence fingerprint consistent
+        # even if another SQLite connection attempts to update at the time.
+        connection.execute("BEGIN")
         counts, has_policy = _validate_v1(connection)
+        evidence = _evidence_hash(connection, has_policy=has_policy)
+        connection.execute("ROLLBACK")  # release read snapshot; no writes
     checksum = _file_hash(path)
     if database_file_identity(path) != identity:
         raise ValueError("Backup changed while being inspected; retry after stopping writers")
-    return identity, checksum, counts, has_policy
+    return identity, checksum, counts, has_policy, evidence
 
 
 def prepare_recovery(source: str | Path, destination: str | Path) -> RecoveryPlan:
@@ -103,8 +154,8 @@ def prepare_recovery(source: str | Path, destination: str | Path) -> RecoveryPla
         raise ValueError("Restored output must not be the source backup")
     if dst.exists():
         raise FileExistsError(f"Destination already exists, refusing overwrite: {dst}")
-    identity, checksum, counts, policy = _source_snapshot(src)
-    return RecoveryPlan(src, dst, identity, checksum, counts, policy)
+    identity, checksum, counts, policy, evidence = _source_snapshot(src)
+    return RecoveryPlan(src, dst, identity, checksum, counts, policy, evidence)
 
 
 def preview_summary(plan: RecoveryPlan) -> dict:
@@ -115,6 +166,7 @@ def preview_summary(plan: RecoveryPlan) -> dict:
         "source": str(plan.source),
         "new_destination": str(plan.destination),
         "source_sha256": plan.source_sha256,
+        "evidence_sha256": plan.evidence_sha256,
         "schema_version": SCHEMA_VERSION,
         "record_counts": dict(plan.counts),
         "engine_provenance_table": plan.policy_provenance,
@@ -136,7 +188,9 @@ def restore_to_new_file(plan: RecoveryPlan) -> dict:
     rechecked = prepare_recovery(plan.source, plan.destination)
     if (rechecked.source_identity != plan.source_identity
             or rechecked.source_sha256 != plan.source_sha256
-            or rechecked.counts != plan.counts):
+            or rechecked.counts != plan.counts
+            or rechecked.policy_provenance != plan.policy_provenance
+            or rechecked.evidence_sha256 != plan.evidence_sha256):
         raise ValueError("Backup changed since preview; do not restore without reinspection")
 
     destination = plan.destination
@@ -165,9 +219,11 @@ def restore_to_new_file(plan: RecoveryPlan) -> dict:
         if (database_file_identity(plan.source) != plan.source_identity
                 or _file_hash(plan.source) != plan.source_sha256):
             raise ValueError("Backup changed during copy; recovery not activated")
-        verified_identity, _, verified_counts, policy = _source_snapshot(destination)
-        if verified_counts != plan.counts or policy != plan.policy_provenance:
-            raise ValueError("Restored database verification differs from preview")
+        verified_identity, _, verified_counts, policy, evidence = _source_snapshot(destination)
+        if (verified_counts != plan.counts
+                or policy != plan.policy_provenance
+                or evidence != plan.evidence_sha256):
+            raise ValueError("Restored evidence content differs from backup preview")
         if verified_identity[:2] != reserved_identity[:2]:
             raise ValueError("Destination changed during verification")
     except BaseException:
@@ -186,6 +242,7 @@ def restore_to_new_file(plan: RecoveryPlan) -> dict:
         "new_database": str(destination),
         "source_backup": str(plan.source),
         "source_sha256": plan.source_sha256,
+        "evidence_sha256": plan.evidence_sha256,
         "record_counts": dict(verified_counts),
         "original_database_modified": False,
         "activation": "NOT_ACTIVATED; close applications and manually select the verified new DB.",
