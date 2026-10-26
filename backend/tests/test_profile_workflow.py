@@ -69,6 +69,41 @@ class ProfileWorkflowTests(unittest.TestCase):
                 "WHERE assessment_id=?", (self.old_id,),
             ).fetchone())
 
+    def test_profile_apply_db_deleted_after_readonly_preflight_not_recreated(self):
+        original_store = BidOwlStore
+        backup = self.root / "deleted-db-backup.sqlite3"
+
+        def delete_during_writer(*args, **kwargs):
+            self.db.unlink()
+            return original_store(*args, **kwargs)
+
+        with patch("profile_workflow.BidOwlStore", side_effect=delete_during_writer):
+            with self.assertRaises(FileNotFoundError):
+                self.run_flow(apply=True, backup_path=backup)
+        self.assertFalse(self.db.exists())
+        self.assertFalse(backup.exists())
+
+    def test_profile_apply_db_replaced_before_writer_not_adopted(self):
+        import os
+        alternate = self.root / "replacement.sqlite3"
+        with BidOwlStore(alternate) as store:
+            store.save_profile(CompanyProfile("company", region="부산"))
+        original_store = BidOwlStore
+        backup = self.root / "replaced-db-backup.sqlite3"
+
+        def swap_during_writer(*args, **kwargs):
+            os.replace(alternate, self.db)
+            return original_store(*args, **kwargs)
+
+        with patch("profile_workflow.BidOwlStore", side_effect=swap_during_writer):
+            with self.assertRaisesRegex(ValueError, "identity changed"):
+                self.run_flow(apply=True, backup_path=backup)
+        self.assertFalse(backup.exists())
+        with BidOwlStore(self.db, must_exist=True) as current:
+            self.assertEqual(current.db.execute(
+                "SELECT COUNT(*) FROM assessments"
+            ).fetchone()[0], 0)
+
     def test_preview_never_changes_file_or_reassesses(self):
         before = self.db.read_bytes()
         result = self.run_flow(reassess=True)
