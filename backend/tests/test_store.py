@@ -7,6 +7,7 @@ import json
 import sqlite3
 import tempfile
 import unittest
+from contextlib import closing
 from dataclasses import replace
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -255,20 +256,20 @@ class StoreTests(unittest.TestCase):
 
     def test_unknown_schema_version_not_rewritten(self):
         future=Path(self.temp.name)/'future.sqlite3'
-        with sqlite3.connect(future) as db:
+        with closing(sqlite3.connect(future)) as db, db:
             db.execute('PRAGMA user_version=99')
         with self.assertRaises(SchemaVersionError):
             BidOwlStore(future)
-        with sqlite3.connect(future) as db:
+        with closing(sqlite3.connect(future)) as db, db:
             self.assertEqual(db.execute('PRAGMA user_version').fetchone()[0],99)
 
     def test_unversioned_foreign_db_not_claimed(self):
         future=Path(self.temp.name)/'unknown.sqlite3'
-        with sqlite3.connect(future) as db:
+        with closing(sqlite3.connect(future)) as db, db:
             db.execute('CREATE TABLE business_data (secret TEXT)')
         with self.assertRaises(SchemaVersionError):
             BidOwlStore(future)
-        with sqlite3.connect(future) as db:
+        with closing(sqlite3.connect(future)) as db, db:
             self.assertIsNotNone(db.execute("SELECT name FROM sqlite_master WHERE name='business_data'").fetchone())
 
     def test_source_id_and_hash_validation(self):
