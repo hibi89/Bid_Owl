@@ -5,7 +5,7 @@
 ## 즉시 행동
 1. GitHub `main`과 `feature/bid-owl-v1-basic-mvp` HEAD 확인.
 2. `AGENTS.md`, `STATUS.md`, `HANDOFF.md`, `NEXT_TASK.md`, `REQUIREMENTS.md` 순서로 읽기.
-3. 이미 승인된 내용을 다시 묻지 말고 `NEXT_TASK.md`의 **최신 미완료 단계부터** 실제 구현 + 가능한 검증 + 커밋. 2026-10-27 기준 P2-17까지 진행하며 기존 CLI 백업 선행·프로필 변경 거부·지문 저장 호환성까지 보강. 다음은 P2-18의 기존 DB 재생성 경쟁 조건 방지. 실제 CSV 등록은 `START_BID_OWL_IMPORT.cmd` / `backend/import_local.py`, 가상 데모는 `START_BID_OWL_DEMO.cmd`.
+3. 이미 승인된 내용을 다시 묻지 말고 `NEXT_TASK.md`의 **최신 미완료 단계부터** 실제 구현 + 가능한 검증 + 커밋. 2026-10-27 기준 P2-18까지 진행. 기존 DB 삭제·교체 때 SQLite mode=rw 및 원본 파일 식별 검증을 구현했고 다음은 P2-19의 안전한 백업 점검·복원 설계. 실제 CSV 등록은 `START_BID_OWL_IMPORT.cmd` / `backend/import_local.py`, 가상 데모는 `START_BID_OWL_DEMO.cmd`.
 4. 코드 변경은 feature 브랜치에서만, main 교육용 데모는 보존. 차단사항은 기록하고 가능한 작업 진행.
 5. 작업 후 STATUS/HANDOFF 갱신과 정확한 최신 SHA 보고.
 
@@ -49,3 +49,8 @@
 ## P2-17 구형 CLI 호환성 개선
 - 구형 `backend/cli.py` CSV/PDF/XLSX 경로가 기존 SQLite를 수정하기 전에 읽기 전용 검사와 비덮어쓰기 백업을 수행하도록 보강. 규칙 엔진 지문 테이블은 백업 이후에만 보강.
 - 소스 검토와 9개 신규 테스트 정의 반영. 전체 Python **199개 정의 테스트는 실제 실행 검증되지 않음**. 사용자에게 반복적인 ZIP/PowerShell 테스트 요청 금지.
+
+## P2-18 DB 재생성/교체 보호
+- 기존 SQLite는 `must_exist=True`, preflight 원본 stat 지문 확인 후 쓰기 오픈. 새 DB는 독점 예약 후 해당 파일만 초기화.
+- 구현 경로 `backend/bidowl/store.py`, `backend/import_local.py`, `backend/cli.py`, `backend/profile_workflow.py`.
+- 계약과 남은 OS 동시성 한계는 `backend/DB_FILE_SAFETY.md`. 212개 테스트 정의는 전체 실행 PASS가 아님. 사용자의 반복적 ZIP/PowerShell QA 불요.
