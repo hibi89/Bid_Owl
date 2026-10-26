@@ -28,6 +28,22 @@ class BenchmarkLocalTests(unittest.TestCase):
         self.assertEqual(result["assessed"], 0)
         self.assertFalse(result["database_mutation_by_viewer"])
 
+    def test_opt_in_small_synthetic_recovery_benchmark(self):
+        result = run_benchmark(records=31, assessed=5, measure_recovery=True)
+        self.assertEqual(result["status"], "SYNTHETIC_BENCH_COMPLETE")
+        self.assertTrue(result["recovery_verified"])
+        self.assertEqual(len(result["recovery_evidence_sha256"]), 64)
+        for field in (
+            "sqlite_backup_ms", "recovery_validate_and_hash_ms",
+            "recovery_copy_verify_ms",
+        ):
+            self.assertIn(field, result["timings_ms"])
+            self.assertGreaterEqual(result["timings_ms"][field], 0)
+
+    def test_recovery_measurement_rejects_non_boolean_flag(self):
+        with self.assertRaisesRegex(ValueError, "measure_recovery"):
+            run_benchmark(records=1, assessed=0, measure_recovery="yes")
+
     def test_invalid_limits_rejected_before_file_creation(self):
         for records, assessed in ((0,0), (10001,0), (3,-1),
                                   (3,4), (True,0), (3,False)):
