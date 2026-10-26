@@ -1,3 +1,22 @@
+# BID OWL STATUS — P2-14 local actual CSV/company onboarding · 2026-10-27 KST
+
+**Branch/product:** private `hibi89/Bid_Owl`, `feature/bid-owl-v1-basic-mvp` (started P2-14 at `7718f34b1398d9e9309cd82a9dcb2e761778c7e7`). Main baseline `c888c795bef72734f3f7016e54013b82453f11d8` unchanged; legacy school Vercel untouched. Entire BASIC+PRO+PREMIUM/installer subjective ~35% last estimate, not recalculated by code completion alone.
+
+**Implemented this turn:**
+- `backend/import_local.py`: explicit local Tkinter GUI onboarding and CLI preview-first importer for user CSV and company profile. Validates entire CSV/contract and IDs and firm profile, refuses synthetic/demo files, checks SQLite schema and stored company **read-only** before writing; CLI defaults `PREVIEW_NO_WRITE`. Tkinter wizard shows source/count/company/backup summary and asks explicit confirmation.
+- `apply_import`: guarded CSV digest and DB/profile recheck; existing DB always makes an exclusive, non-overwriting SQLite backup *before mutation*; brand new DB reserves file via exclusive `open('xb')` against creation race; profile create with expected_version=0; uses existing versioned import + pinned profile-version rule assessments; mismatch of existing company requires separate CAS-backed edit; local-only outputs honest counts. Partial failures retain backup and are not represented as atomic rollback.
+- Root `START_BID_OWL_IMPORT.cmd` plus `backend/START_IMPORT.cmd` double-click entry. GUI may open existing readonly viewer on loopback after import; no HTTP write routes, external source or subscription. `backend/IMPORT.md` detailed usage/security, root/backend READMEs and START_HERE quickstart updated.
+- `backend/tests/test_import_local.py`: **18 new declared test methods** including dry-run, first registration, saved evidence, existing DB backed-up reimport, profile mismatch no-write, foreign DB preservation, bad CSV/demo rejection, source bounds, after-preview CSV/profile and new-DB file-creation race, partial-write backup retained, missing profile fields UNKNOWN, CLI explicit apply, launchers. Full test inventory: **170 methods across 13 Python test modules**. This number is source count only.
+
+**Verification actually obtained:** Authenticated GitHub source readback + static inspection found (a) preview opens DB in SQLite mode=ro; (b) backup_to invoked before import; (c) expected_version profile CAS; (d) expected_profile_version assessment CAS; (e) newly exclusive file reservation and Tkinter explicit confirmation; (f) 18 tests defined. **NO authenticated full source Python 170-case execution and NO native Windows GUI execution in this authoring environment**. Do not claim 170 PASS/Windows installer/BASIC sale readiness. Prior authentic user P2-10 Windows 137-case run returned 119 without error, 18 WinError32 cleanup errors, 0 assertion failures, JS syntax PASS. P2-11/12 fixes are in source but no real Windows rerun obtained; 10k timings and native Excel/PDF still unknown.
+
+**Security & limitations:** No customer CSV/SQLite, API key, docs, fonts or PDF/XLSX uploaded, no external request, no paid runner, no main/Vercel or permission change. Existing DB backed up before write. Import/profile/assess spans multiple commits; on partial failure manual inspection and preserved backup, no unsafe auto-restore. Company edit of existing ID not silently permitted. Browser remains read-only on 127.0.0.1. Real upload, official API, opt-in AI, native installer/security/name clearance are later stages.
+
+**Next P2-15:** autonomous source QA + import assessment idempotency/recovery and BASIC first-use/report usability; no routine ZIP/PowerShell instructions to the user. Final Windows 11 GUI/Excel/PDF/10k integration remains a separate release acceptance gate.
+
+---
+## Historical P2-13 and earlier status
+
 # BID OWL STATUS — P2-13 disposable first-run demo, 2026-10-27 KST
 
 ## Stage / actual GitHub work
