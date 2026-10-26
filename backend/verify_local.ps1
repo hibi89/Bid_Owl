@@ -1,34 +1,23 @@
-# BID OWL local Windows verification. Run ONLY on an authorized private checkout.
-# This never modifies customer DBs: smoke_local.py uses synthetic fixture/temp files.
+# BID OWL Windows one-command local QA; use only from an authorized checkout.
+# Synthetic fixtures/temp DBs only. No external API, customer data or deployment.
+# Output JSON is kept locally under backend/qa_results/ (Git ignored).
 param([switch]$Benchmark)
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
-$start = Get-Date
 Push-Location $PSScriptRoot
 try {
-  Write-Host 'BID OWL local QA: actual source checkout / all unittest cases'
+  Write-Host 'BID OWL: measured full Python tests, synthetic smoke and JS syntax'
   python --version
-  if ($LASTEXITCODE -ne 0) { throw 'Python unavailable' }
-  python -m unittest discover -s tests -v
-  if ($LASTEXITCODE -ne 0) { throw 'Python unittest FAILED; stop without claiming PASS' }
-  Write-Host 'BID OWL local QA: synthetic end-to-end smoke'
-  python smoke_local.py
-  if ($LASTEXITCODE -ne 0) { throw 'Synthetic E2E FAILED; stop without claiming PASS' }
-  $node = Get-Command node -ErrorAction SilentlyContinue
-  if ($null -ne $node) {
-    node --check ui/ui.js
-    if ($LASTEXITCODE -ne 0) { throw 'JavaScript syntax FAILED' }
-  } else {
-    Write-Warning 'Node not installed; JavaScript syntax CHECK SKIPPED (not PASS)'
-  }
+  if ($LASTEXITCODE -ne 0) { throw 'Python 3.11+ unavailable' }
   if ($Benchmark) {
-    Write-Host 'BID OWL local QA: isolated synthetic 10,000-record benchmark'
-    python benchmark_local.py --records 10000 --assessed 200
-    if ($LASTEXITCODE -ne 0) { throw 'Synthetic 10k benchmark FAILED' }
+    Write-Host 'Optional extra: synthetic 10,000-bid local benchmark'
+    python qa_runner.py --benchmark
+  } else {
+    python qa_runner.py
   }
-  $duration = (Get-Date) - $start
-  Write-Host ('LOCAL_QA_COMPLETED: all invoked checks passed, elapsed {0:N1} sec' -f $duration.TotalSeconds)
-  Write-Host 'Not checked: native Excel/PDF visual rendering, browser layout, real tender data or installation.'
+  if ($LASTEXITCODE -ne 0) { throw 'BID OWL QA failed; inspect saved local JSON and console diagnostics' }
+  Write-Host 'Actual invoked checks passed; inspect local qa_results JSON for counts and skipped checks.'
+  Write-Host 'Not validated: native Windows Excel/PDF appearance, Chrome/Edge visual UX, real tenders.'
 } finally {
   Pop-Location
 }
