@@ -142,6 +142,21 @@ class LocalImportTests(unittest.TestCase):
             apply_import(plan)
         self.assertEqual(self.db.read_bytes(), b"NEVER_OVERWRITE")
 
+    def test_new_file_racing_after_preflight_is_never_adopted(self):
+        plan = self.prepare()
+
+        def simulate_race(*_args, **_kwargs):
+            # Another process creates the path AFTER preflight recheck
+            # but BEFORE our sqlite3.connect. Exclusive create must fail.
+            self.db.write_bytes(b"RACING_OTHER_OWNER")
+            return False, 0, "CREATE"
+
+        with patch("import_local._existing_db_state", side_effect=simulate_race):
+            with self.assertRaises(FileExistsError):
+                apply_import(plan)
+        self.assertEqual(self.db.read_bytes(), b"RACING_OTHER_OWNER")
+        self.assertFalse((self.root / "backups").exists())
+
     def test_profile_change_after_preview_is_rejected(self):
         apply_import(self.prepare())
         plan = self.prepare()
