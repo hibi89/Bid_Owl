@@ -12,6 +12,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from urllib.parse import urlencode
 
+from bidowl.engine_identity import engine_fingerprint
 from viewer import make_server, open_database, query_bids, query_detail, query_profiles, query_favorites, query_profile
 
 
@@ -30,6 +31,7 @@ class ViewerTests(unittest.TestCase):
           profile_id TEXT,profile_version INTEGER,status TEXT,checked_at TEXT,requires_human_review INTEGER,data_as_of TEXT);
         CREATE TABLE rule_assessments(assessment_id INTEGER,position INTEGER,rule_id TEXT,kind TEXT,
           status TEXT,reason_code TEXT,explanation TEXT,source_text TEXT,source_locator TEXT,requires_human_review INTEGER);
+        CREATE TABLE assessment_engine_provenance(assessment_id INTEGER PRIMARY KEY, engine_hash TEXT NOT NULL);
         PRAGMA user_version=1;
         """)
         now = datetime.now(timezone.utc)
@@ -51,7 +53,37 @@ class ViewerTests(unittest.TestCase):
                       (row[0],'TEST',row[1],row[2],'P1',1,row[3],now.isoformat(),0,now.isoformat()))
         c.execute('INSERT INTO rule_assessments VALUES (?,?,?,?,?,?,?,?,?,?)',
                   (1,0,'r1','license_all','PASS','MATCH','면허 조건 충족','자격조건 원문','공고문 p.3',0))
+        for assessment_id in (1,2,3):
+            c.execute("INSERT INTO assessment_engine_provenance VALUES (?,?)",
+                      (assessment_id, engine_fingerprint()))
         c.commit();c.close()
+
+    def test_legacy_database_without_policy_provenance_shows_unknown(self):
+        with closing(sqlite3.connect(self.path)) as writer:
+            writer.execute("DROP TABLE assessment_engine_provenance")
+            writer.commit()
+        with closing(open_database(self.path)) as reader:
+            rows = {r["bid_no"]: r for r in query_bids(reader, {})["items"]}
+            self.assertEqual(rows["A"]["snapshot_status"], "PASS")
+            self.assertEqual(rows["A"]["status"], "UNKNOWN")
+            self.assertFalse(rows["A"]["assessment_fresh"])
+            self.assertFalse(rows["A"]["engine_fresh"])
+            self.assertTrue(rows["A"]["requires_human_review"])
+            self.assertIn("판정 엔진", rows["A"]["review_reason"])
+
+    def test_stale_policy_fingerprint_invalidates_previous_pass(self):
+        with closing(sqlite3.connect(self.path)) as writer:
+            writer.execute(
+                "UPDATE assessment_engine_provenance SET engine_hash=? WHERE assessment_id=1",
+                ("0" * 64,),
+            )
+            writer.commit()
+        with closing(open_database(self.path)) as reader:
+            rows = {r["bid_no"]: r for r in query_bids(reader, {})["items"]}
+            self.assertEqual(rows["A"]["snapshot_status"], "PASS")
+            self.assertEqual(rows["A"]["status"], "UNKNOWN")
+            self.assertFalse(rows["A"]["engine_fresh"])
+            self.assertEqual(rows["B"]["status"], "FAIL")
 
     def test_filters_and_stale_assessment_are_conservative(self):
         with closing(open_database(self.path)) as c:
