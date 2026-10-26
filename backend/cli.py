@@ -12,7 +12,7 @@ from bidowl import BidOwlStore, CompanyProfile, CSVImportError, parse_csv
 from bidowl.engine_identity import engine_fingerprint
 from bidowl.report import check_pdf_support, load_review_report, write_pdf, write_xlsx
 from bidowl.schema import MAX_CSV_BYTES
-from bidowl.store import default_database_path
+from bidowl.store import database_file_identity, default_database_path
 from import_local import _check_source_id, _new_backup_path
 from profile_workflow import load_profile_file
 from viewer import open_database
@@ -78,18 +78,30 @@ def execute(args: argparse.Namespace) -> dict:
     if output.exists() and not output.is_dir():
         raise ValueError("Report output path is not a directory")
 
+    initial_identity = database_file_identity(db_path) if db_path.exists() else None
     existing, previous_profile_version = _preflight_existing_db(db_path, company)
+    if initial_identity is not None:
+        # A DB disappearing or being replaced during readonly preflight
+        # is a conflict, never permission to initialize a new database.
+        if not existing or database_file_identity(db_path) != initial_identity:
+            raise ValueError("Database changed during CLI preflight; retry")
+    elif existing:
+        raise ValueError("Database appeared during CLI preflight; retry")
     if not existing:
         db_path.parent.mkdir(parents=True, exist_ok=True)
-        # Prevent another process's newly created DB being silently adopted.
+        # O_EXCL refuses a new file unexpectedly appearing since preview.
         with db_path.open("xb"):
             pass
+    expected_identity = (initial_identity if existing
+                         else database_file_identity(db_path))
 
     backup = None
     mutated = False
     exported = []
     try:
-        with BidOwlStore(db_path) as store:
+        with BidOwlStore(
+            db_path, must_exist=existing, expected_identity=expected_identity,
+        ) as store:
             if existing:
                 # Preserve the exact pre-write state, including on a future
                 # provenance-metadata migration. Refuse silent backup overwrite.
