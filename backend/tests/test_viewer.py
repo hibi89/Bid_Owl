@@ -215,5 +215,11 @@ class ViewerTests(unittest.TestCase):
         self.assertNotIn('.innerHTML',js)
         self.assertIn('textContent',js)
         self.assertIn('localStorage',js)
+        # Only export a local JSON, never permit a browser route to mutate SQLite.
+        self.assertIn('id="create-profile"',html)
+        self.assertIn('id="edit-profile"',html)
+        self.assertIn("creating?'--create'",js)
+        self.assertIn('profile_id:chosenId',js)
+        self.assertIn('--apply --backup',js)
 
 if __name__=='__main__':unittest.main()
