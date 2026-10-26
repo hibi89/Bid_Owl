@@ -1,3 +1,22 @@
+## P2-26 — 등록과 Excel/PDF 내보내기를 한 번에 실행 (BASIC MVP)
+
+기존 실제 공고 등록기 `import_local.py`에 선택적 `--export-dir`를 추가했습니다. CLI에서 **명시적 `--apply`를 지정한 경우에만** 저장 후 동일 공고의 확정된 `assessment_id`로 보고서를 내보냅니다. 과거 판정을 재사용하면 기존 동일 평가 ID를 사용하며 다시 평가하거나 과거 보고서 파일을 덮어쓰지 않습니다.
+
+```powershell
+cd backend
+python import_local.py --csv "C:\\data\\bids.csv" --profile "C:\\data\\company.json" --source-id LOCAL-2026 --apply --export-dir "C:\\data\\reports"
+# PDF 폰트/ReportLab 환경이 확인되었을 때에만 양식 둘 다:
+python import_local.py --csv "C:\\data\\bids.csv" --profile "C:\\data\\company.json" --source-id LOCAL-2026 --apply --export-dir "C:\\data\\new-reports" --report-format both
+```
+
+`--export-dir`가 없으면 이전처럼 **등록만** 합니다. `--report-format`은 `xlsx`(기본)/`pdf`/`both` 중 하나입니다. PDF를 요청했는데 한글 글꼴이나 ReportLab이 없으면 **저장 전에** 실패합니다.
+
+성공 결과 `IMPORTED_AND_EXPORTED`에는 `assessments` (공고번호·평가 ID·PASS/FAIL/UNKNOWN·재사용 여부)와 `reports` (동일 ID의 로컬 생성 파일) 배열이 들어갑니다. 등록과 평가가 먼저 확정된 뒤 **보고서 생성만 실패**했으면 `IMPORTED_EXPORT_FAILED`로 종료하고 데이터 저장은 성공했음을 명시합니다. 기존 원본 DB·백업은 그대로 유지되며 완료된 보고서가 있다면 경로를 반환합니다. 덮어쓰기/자동 롤백을 시도하지 않으므로 사용자는 다른 출력 폴더를 지정해 기존 평가 ID 보고서를 `report_existing.py`로 다시 내보낼 수 있습니다.
+
+**MVP 자동 검사:** `backend/mvp_smoke.py`가 동일한 등록+보고서 원클릭 CLI 경로로 합성 공고 2건을 추가 검사하도록 확장되었습니다. 전체 제품 Python 테스트/Windows 실사용 합격 기록은 아직 없습니다. 공시 라이트닝(KIC) 재사용은 BASIC MVP 검증 후 **별도 공시 원본→정규화 어댑터**로 진행하며 현재 입찰 판정이 해외 공시 규칙까지 지원한다는 주장은 하지 않습니다.
+
+---
+
 # BID OWL P2-14 — 실제 CSV + 회사 정보 로컬 등록
 
 이 문서는 상용 사용자 DB용 **등록 작업**입니다. 가상 공고만 사용하는 `DEMO.md`와 별도이며, 실제 사용자 파일을 GitHub·외부 서버·모델 API로 전송하지 않습니다. Python 3.11 이상의 Windows 로컬 PC용으로 설계했으며 이 단계는 개발판으로, 실제 Windows 11 화면과 전체 회귀 테스트 통과는 아직 미확인입니다.
