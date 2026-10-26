@@ -107,6 +107,21 @@ class LocalImportTests(unittest.TestCase):
                 "SELECT id FROM assessments ORDER BY id"
             )))
 
+    def test_force_reassess_regenerates_identical_input_evidence(self):
+        apply_import(self.prepare())
+        second = apply_import(self.prepare(), force_reassess=True)
+        self.assertEqual(second["assessments_saved"], 2)
+        self.assertEqual(second["assessments_reused"], 0)
+        with BidOwlStore(self.db) as store:
+            self.assertEqual(store.db.execute(
+                "SELECT COUNT(*) FROM assessments"
+            ).fetchone()[0], 4)
+
+    def test_force_reassess_flag_rejects_nonboolean(self):
+        with self.assertRaisesRegex(ValueError, "boolean"):
+            apply_import(self.prepare(), force_reassess="yes")
+        self.assertFalse(self.db.exists())
+
     def test_revised_bid_only_reassesses_its_own_snapshot(self):
         apply_import(self.prepare())
         data = self.csv.read_bytes()
@@ -325,6 +340,25 @@ class LocalImportTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Source ID"):
             self.prepare(source_id=" LOCAL TEST ")
         self.assertFalse(self.db.exists())
+
+    def test_cli_force_reassess_creates_new_assessments(self):
+        profile_file = self.root / "profile.json"
+        profile_file.write_text(json.dumps({
+            "profile_id": self.company.profile_id,
+            "region": self.company.region,
+            "categories": self.company.categories,
+            "licenses": self.company.licenses,
+            "staff_count": self.company.staff_count,
+        }, ensure_ascii=False), encoding="utf-8")
+        options = ["--csv", str(self.csv), "--profile", str(profile_file),
+                   "--source-id", "LOCAL-TEST", "--db", str(self.db), "--apply"]
+        with contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(main(options), 0)
+        with contextlib.redirect_stdout(io.StringIO()) as stdout:
+            self.assertEqual(main(options + ["--force-reassess"]), 0)
+        result = json.loads(stdout.getvalue())
+        self.assertEqual(result["assessments_saved"], 2)
+        self.assertEqual(result["assessments_reused"], 0)
 
     def test_desktop_launcher_paths_and_no_http_write(self):
         root_cmd = (BACKEND.parent / "START_BID_OWL_IMPORT.cmd").read_text(encoding="utf-8")
