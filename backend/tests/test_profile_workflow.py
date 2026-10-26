@@ -110,6 +110,45 @@ class ProfileWorkflowTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.run_flow(max_reassess=10001)
 
+    def test_preview_uses_no_writable_store(self):
+        from profile_workflow import ReadOnlyProfileStore
+        with patch('profile_workflow.BidOwlStore', side_effect=AssertionError('write connection created')):
+            result = self.run_flow(reassess=True)
+        self.assertEqual(result['status'], 'PREVIEW')
+        with ReadOnlyProfileStore(self.db) as conn:
+            self.assertEqual(conn.get_profile('company').region, '부산')
+            with self.assertRaises(sqlite3.OperationalError):
+                conn.db.execute("UPDATE profiles SET latest_version=9")
+
+    def test_invalid_existing_database_never_gets_initialized(self):
+        other = self.root/'empty.sqlite3'
+        sqlite3.connect(other).close()
+        before = other.read_bytes()
+        for should_apply in (False, True):
+            with self.subTest(apply=should_apply), self.assertRaises(ValueError):
+                execute(db_path=other, profile_path=self.profile_file,
+                        expected_version=1, apply=should_apply,
+                        backup_path=self.root/'never-create.sqlite3')
+        self.assertEqual(other.read_bytes(), before)
+        self.assertFalse((self.root/'never-create.sqlite3').exists())
+
+    def test_atomic_version_conflict_at_commit(self):
+        from bidowl.store import BidOwlStore as ActualStore
+        original_save = ActualStore.save_profile
+        def change_behind_the_scenes(store, profile, **kwargs):
+            # Simulate another process editing after the initial read and backup.
+            original_save(store, CompanyProfile('company', region='제주'), expected_version=1)
+            return original_save(store, profile, **kwargs)
+        backup = self.root/'conflict.sqlite3'
+        with patch.object(ActualStore, 'save_profile', autospec=True,
+                          side_effect=change_behind_the_scenes):
+            with self.assertRaisesRegex(ValueError, 'CONFLICT_NO_WRITE'):
+                self.run_flow(apply=True, backup_path=backup)
+        self.assertTrue(backup.exists())
+        with ActualStore(self.db) as store:
+            self.assertEqual(store.get_profile('company').region, '제주')
+            self.assertEqual(store.db.execute('SELECT COUNT(*) FROM profile_versions').fetchone()[0], 2)
+
     def test_partial_failure_reports_backup_and_preserves_old_snapshot(self):
         backup=self.root/"partial.sqlite3"
         with patch.object(BidOwlStore,"assess_and_record", side_effect=RuntimeError("synthetic failure")):
