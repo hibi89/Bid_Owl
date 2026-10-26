@@ -1,3 +1,25 @@
+# BID OWL HANDOFF — P2-26 BASIC one-shot real importer + reports (2026-10-27)
+
+## User directive
+User plans eventual reuse of BID OWL as derivative **Disclosure Lightning** overseas regulatory-filings product for KIC hackathon. They explicitly said continue BID OWL's existing work, NOT to start overseas filing implementation now. Prioritize complete **BASIC MVP** (CSV/profile, PASS/FAIL/UNKNOWN, SQLite evidence, read-only viewer, XLSX/PDF), actual E2E execution over deep hardening. Frontend design mockups rejected; visual frontend changes deferred. User `ㄱ` means make real GitHub code commits autonomously, no repetitive user ZIP/PowerShell chores. Private repo `hibi89/Bid_Owl`, only `feature/bid-owl-v1-basic-mvp`, protected main/Vercel, no paid CI/cloud/customer data upload.
+
+## P2-26 source and behavior
+- `backend/import_local.py` `_reusable_assessment_status` selects saved `a.id AS assessment_id` and returns `(id,status)` when BID/profile/current policy SHA/deadline all match; `apply_import` records exact assessment ID and `reused` flag both when assessing fresh and when using saved snapshot in `assessments` result.
+- `backend/import_local.py main` new explicit `--export-dir` (requires `--apply`) and optional `--report-format xlsx|pdf|both`. PDF dependency/font preflight occurs before DB write; report export from `report_existing.export_existing` uses read-only DB/snapshot, refuses replacing existing reports. On success returns `IMPORTED_AND_EXPORTED`, list of `reports` IDs/files and `assessments`. If export fails after DB import succeeds, returns `IMPORTED_EXPORT_FAILED` and exit 2, identifies previously completed reports, DB/backup preserved, does NOT mislabel as import failure or autoundo import. Defaults still import-only, plain preview no changes.
+- `backend/mvp_smoke.py` synthetic smoke includes **separate** one-shot CLI import into isolated DB and XLSX export 2 reports, checks same IDs and valid ZIP. `test_mvp_smoke.py` verifies one-shot count.
+- `backend/tests/test_import_local.py` +7: stored/reused IDs, XLSX OOXML and saved IDs, export failure status, report collision no overwrite despite repeat registration, PDF missing font before write, export without apply rejected, second report failure and earlier generated XLSX preserved.
+- `backend/IMPORT.md`, `backend/MVP_ACCEPTANCE.md`, `backend/README.md` document CLI and next derivatives. Status/next/start also updated. `main` original static app untouched, no CSS work.
+- Latest current GitHub **263 test definitions / 17 test modules** (256 before), NOT suite 263 PASS. No private full source real execution or native Windows, PDF font, Excel or browser QA. Older user Windows suite was 137 run, 18 WinError32 file cleanup issues, not proven fixed. Previous whole BASIC+PRO+PREMIUM/installer estimate ~42% subjective, unchanged pending objective run.
+
+## Next P2-27
+1. Obtain authorized local full checkout/test execution without imposing repetitive manual user work, fix actual current code runtime failures, record reproducible signed-off QA result. No private paid CI or public deploy.
+2. Ensure first-use BASIC can access reports using new CLI and GUI/viewer functional buttons without visual redesign; consider minimal error handling and export discoverability.
+3. Then integrated 10k/Windows release QA, actual font/rendering, packaging, spec gap check. KIC adaptation later and separate (foreign filing source adapter, independent type/policy; avoid carrying Korean tender-specific semantics into international disclosure).
+4. On next `ㄱ` read repo heads and top docs and continue coding. Fetch final feature/main SHA now; never claim a guessed commit. Keep docs accurate.
+
+---
+## Previous handoffs
+
 # BID OWL HANDOFF — P2-25 MVP-first acceptance, next P2-26
 
 **User priority:** user explicitly asked "지금 mvp부터만드는거맞제" and agreed to proceed with ㄱ. Restore original plan: BASIC MVP functionality and true E2E before premium extensions/hardening. User rejected both UI images: **NO frontend aesthetic redesign** until explicit request. They want actual GitHub code committed, not repeated local manual scripts, ZIP downloads or PowerShell QA chores. Private repo `hibi89/Bid_Owl`, feature branch `feature/bid-owl-v1-basic-mvp` exclusively; main/Vercel protected, no paid private Actions/cloud, real customer data/keys or public release.
