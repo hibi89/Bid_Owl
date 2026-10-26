@@ -41,3 +41,19 @@ When timing data is measured, record source commit SHA, Python version, Windows/
 ## Quality and privacy
 
 `tests/test_benchmark_local.py` includes a small 31-record regression, an unassessed 1-record edge case and invalid input checks, not a heavy 10k CI test. An optional 10k benchmark is kept outside the always-on unittest suite for fast feedback. No API key or customer PDF/CSV is read or uploaded. Benchmarks are local, synchronous and contain only synthetic Korean bid text.
+
+## P2-10 evidence capture in one command
+
+From a genuine authenticated checkout, in `backend`, after installing the optional PDF dependency and a locally permitted Korean TTF:
+
+    python qa_runner.py --benchmark
+
+On Windows PowerShell, the equivalent wrapper is:
+
+    powershell -ExecutionPolicy Bypass -File .\verify_local.ps1 -Benchmark
+
+`qa_runner.py` executes the **actual discovered unittest cases**, synthetic import→report→HTTP→profile backup/apply smoke, optional Node.js JavaScript syntax checking, and (with `--benchmark`) the synthetic 10k measurement. The suite is run in-process by unittest and records actual `tests_run`, errors, failures, skips, failed-test identifiers and elapsed milliseconds. If any unittest fails, dependent smoke and benchmark steps are skipped with explicit reasons rather than represented as passing.
+
+A new timestamped, non-overwriting JSON file is written under the local `backend/qa_results/` directory. This directory is Git-ignored and the script never emails/uploads its result. The report captures the actual Git HEAD when available and a generic OS/Python/machine description, not customer data or API keys. It marks browser and native Excel/PDF visual validation false, as those require separate human checks. A missing Node.js installation is recorded as SKIP, not PASS.
+
+**At commit time this is an implementation and regression-test addition only: the 137 test cases were not executed by the authoring environment.** The first real run on an authenticated checkout is still the release blocker. Use the JSON output and console log to review concrete failed tests/benchmark results, then fix and rerun.
