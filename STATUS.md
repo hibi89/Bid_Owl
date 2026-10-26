@@ -1,21 +1,27 @@
-# BID OWL STATUS — 2026-10-27 KST
+# BID OWL STATUS — 2026-10-27 KST (P2-03)
 
-## Repository and verified branch heads
-Private: hibi89/Bid_Owl, repo ID 1399359397. Feature branch: feature/bid-owl-v1-basic-mvp. Observed starting feature SHA 1cfb8f54304a47f3604010ed4e4c86b2eeb505f1; P2-02 code commits 016ab8c251f92628e17ccd6e102b374284d20608, 823edf48d31ed0077cdd0c700f20594f59b44b68, cd05d6d56daf6613c7f7ebe11c558a60f3cfe7d9. Docs follow code: after updating HANDOFF, query live current branch SHA. Main remained c888c795bef72734f3f7016e54013b82453f11d8 at session start; recheck on closure. Legacy rollback commit 2807a93a3e0deba98840712401fdd6025e6f5610.
+## Repo/branch and source
+Private https://github.com/hibi89/Bid_Owl. Work branch feature/bid-owl-v1-basic-mvp. At task start feature SHA 148d51eec12002c491e19862b27e364be2c7fd51 and main SHA c888c795bef72734f3f7016e54013b82453f11d8. Main and legacy Vercel untouched. Feature HEAD must be re-read after latest HANDOFF commit. Legacy original restore SHA 2807a93a3e0deba98840712401fdd6025e6f5610.
 
-## Product implementation
-P1-01 importer, P1-02 conservative evidence-backed PASS/FAIL/UNKNOWN, P1-03 versioned SQLite/backups, P1-04 complete local CLI CSV/profile -> stored revision/assessment -> Excel/PDF. UI P2-01 in backend/viewer.py and backend/ui/: loopback, SQLite mode=ro, static local seven-theme responsive table, category/status/deadline/text/profile search, detail rule provenance. Historical 2025 school demo data and 340/340 are not current procurement data.
+## Code completed/implemented
+P1-01 CSV validation; P1-02 conservative evidentiary PASS/FAIL/UNKNOWN; P1-03 immutable SQLite revisions and backups; P1-04 offline CLI PDF+XLSX. P2-01 SQLite GET viewer, search/filter/detail, seven themes. P2-02 global read-only favorites via bounded same-origin POST; browser localStorage and correct global pagination, no DB schema modification.
 
-P2-02 code feature: browser-local favorites selected from any page are now processed by bounded **read-only POST /api/bids/favorites** against the complete SQLite listing before search/status/category/expiry and pagination, fixing prior current-page-only favorite totals. Browser sends JSON pairs source_id+bid_no, max 1000; request max 1MiB, strict JSON, exact same Host and Origin. The endpoint only executes query_bids with a query_only connection; no DB write, storage schema migration or external API. Stored IDs and chosen theme still localStorage in same browser. Unavailable/malformed favorites fail visibly instead of hiding records.
+P2-03 new:
+- backend/profile_workflow.py: validate UTF-8 <=64KiB JSON before DB writes; preview default, --apply and unique backup required, profile version guard, optional explicit create, opt-in reassessment of up to 10,000 locally stored bids, retained historical assessments, PARTIAL_WRITE and backup location on failure. SQLite operations are sequential, not globally atomic.
+- backend/viewer.py: GET /api/profile backed by profile_versions read-only SQLite query, distinct from POST favorites query.
+- backend/ui/index.html, ui.js, ui.css: show/edit selected profile fields locally, distinct unknown vs verified empty list, export JSON in browser; NO browser DB write and no customer external upload; operator must run local profile_workflow.py preview then --apply.
+- backend/tests/test_profile_workflow.py: 8 new source test methods. backend/tests/test_viewer.py: 1 new profile-read-only test. backend/README.md and NEXT_TASK.md updated.
 
-## Verification: facts vs gaps
-Previously measured P1 96 PASS Linux CPython 3.13.5, 0 FAIL (2026-10-26); synthetic two PDF+XLSX. P2-01 isolated 5 PASS from prior session, 0 FAIL. This session added 2 test cases to backend/tests/test_viewer.py (expected combined 103 tests) but DID NOT execute them. Confirmed new files and blob SHA from GitHub; exact remote JS syntax parsed successfully in V8 Function compiler (PASS). New Python helper snippet passed local AST parse, not full Python syntax test and not real HTTP runtime test.
-GitHub private raw URL signed-download via curl failed DNS resolution in this container, after previous private repo clone DNS/auth restriction; stop repeating unchanged method. Chromium in prior session blocked local/alternate host navigation by ERR_BLOCKED_BY_ADMINISTRATOR, so browser UI/screenshot verification is NOT VERIFIED, not a proven product fault.
-Combined 103-test suite, end-to-end integration on full checkout, native Windows, browser, Excel, user official bids, security audit and legal procurement interpretation remain NOT VERIFIED.
+## Measured verification and honesty boundary
+Historic P1: 96 PASS /0 FAIL Linux on 2026-10-26; old P2-01 isolated 5 PASS/0 FAIL. After P2-02 and P2-03 expected combined suite count 112 (96 P1 + 8 viewer + 8 workflow), NOT EXECUTED in a full real repository, do not report 112 PASS.
+Actual this session: read verified GitHub files (SHA), GitHub profile_workflow.py git blob SHA a8ac6a204edcbf8afde904391d4f51c53f12876f independently recomputed against locally reconstructed **byte-identical** source; Python AST parse PASS, seven **isolated mock-store smoke cases** PASS/0 FAIL against that exact module. This is **not real BidOwlStore integration**. New actual GitHub ui.js syntax parse with V8 Function PASS; no actual DOM/browser interaction. New repository unittest files committed but not executed.
+Full private repo pull unavailable via this environment (previous DNS/auth clone and signed raw URL failed); real Chromium UI blocked by ERR_BLOCKED_BY_ADMINISTRATOR in previous attempt. Stop repeating unchanged approach. The lack of browser signal is not app failure evidence.
+Windows 11, native Excel, API and customer procurement files, 7-theme visuals, 10k-bid performance, backup restoring with real store, official qualification accuracy, legal/trademark clearance remain UNVERIFIED.
 
-## Remaining priorities/risks
-NEXT P2-03: execute actual full GitHub repository checkout tests, correct integration issues, design and implement safe company-profile edit/assessment workflow, remaining search/UI gaps, keyboard/7-theme browser regression and Windows smoke. P3 PRO official API, P4 PREMIUM optional AI, P5 packaging/security/reinstallation, P6 public brand/sales license. Public BID OWL trademark not cleared via KIPRIS; do not release/claim an official qualification verdict.
-Current P2-02 is SOURCE IMPLEMENTED / INTEGRATION UNVERIFIED; not customer-ready. SQLite assessment status must remain UNKNOWN when bid/profile revision changes. Existing partial DB commit before PDF/Excel export remains unresolved for retries.
+## Current state and next priority
+P1 backend MVP source complete; P2-01/02/03 source complete but UI/real-store integration PARTIAL / verification pending. Next P2-04 actual full 112-test suite + synthetic CSV/CLI/PDF+XLSX -> local API -> favorites -> profile preview/backup/apply/reassess -> read-only UI; inspect CSP Blob download, keyboard/7 themes, crash recovery and Windows. Read NEXT_TASK.md.
+Future P3 PRO official API and local-PC-only updates, P4 opt-in AI, P5 Windows release/security, P6 branding and sales gate.
+Price targets BASIC KRW 59,000, PRO KRW 149,000, PREMIUM KRW 299,000 one-time; not validated sales.
 
-## Production/data safety
-Original legacy main and existing Vercel project project08-bid-insight (prj_YcrN7OdOjKl6M457HelGIItLeeXZ) not modified; no new Python feature production deployment (N/A). Current legacy production URL and live SHA/HTTP not verified. No paid services, external data transfer, changes to domains or env, customer bid data, credentials or SQLite uploaded. Local backup backup_to forbids overwriting existing files. GitHub writer hibi89; final author/committer and HEAD check required after docs.
+## Production, security, data
+Legacy Vercel project project08-bid-insight id prj_YcrN7OdOjKl6M457HelGIItLeeXZ unchanged; existing Production URL/commit/live UI not checked. New Python local app not deployed (N/A). Read-only viewer only binds 127.0.0.1. CLI modifications require explicit --apply + unique backup; no new HTTP write endpoint, key or paid API. No customer DB/CSV/PDF/credentials/.env/fonts uploaded to GitHub. No main/permission/domain/payment/production change. GitHub connected identity hibi89; verify latest commit author and branch HEAD after HANDOFF.
