@@ -1,3 +1,25 @@
+# BID OWL NEXT — P2-18 strict SQLite DB identity/open boundary (2026-10-27 KST)
+
+**Next ㄱ resumes P2-19 automatically.** User directs autonomous work without repeating ZIP/PowerShell test requests. Private `hibi89/Bid_Owl`, work only on `feature/bid-owl-v1-basic-mvp`. Protect main/Vercel, never make customer files public, no paid CI or API services without approval. Read current heads, START_HERE.md, AGENTS.md, REQUIREMENTS.md, STATUS/HANDOFF, then proceed.
+
+## P2-18 source changes completed
+- `backend/bidowl/store.py`: backward-compatible `BidOwlStore(..., must_exist=False, expected_identity=None)`. Strict mode `must_exist=True` opens SQLite with **URI mode=rw, no auto-create**, refuses absent, empty, foreign or unsupported DB. `database_file_identity(path)` captures st_dev/st_ino/st_size/st_mtime_ns; caller can pass `expected_identity`, checked both before and after connecting. For intentionally fresh O_EXCL-reserved blank DB, pass expected_identity but must_exist=False: mode=rw opens the already reserved new file and explicitly initializes its schema, while refusing a changed/newly missing file. Default legacy constructor still permits creating new DB for synthetic/unit compatibility.
+- `backend/import_local.py`: `ImportPlan.db_identity` stores readonly preview identity for existing DBs; compares identity again before+after apply preflight; opens existing with must_exist=True and expected_identity, fresh reserved file with expected_identity. No silent new DB creation when preflighted existing DB disappears. Rejects swapped same-path valid database before backing up or mutating.
+- `backend/cli.py`: snapshot identity before readonly preflight; reject missing/swapped existing path, reserve new via `xb`, pass expected identity and existing flag to strict store. Previous P2-17 backup-first/engine policy unchanged.
+- `backend/profile_workflow.py`: apply snapshots existing file identity, read-only validates, rejects change, and opens strict existing writer with same identity. Preview still readonly.
+- New synthetic test definitions: `test_store.py` +6 (missing/empty/schema, matching file, swapped valid DB, deleted between stat and connect, deliberately reserved new file), `test_import_local.py` +3 (preview→apply swap, deleted on writer, swapped on writer), `test_cli_safe.py` +2 (CLI writer deletion and swap after readonly validation), `test_profile_workflow.py` +2 (same scenarios for company profile). **+13 tests: 212 defined in 15 files**, not 212 runtime PASS.
+- `backend/DB_FILE_SAFETY.md` documents semantics and limitations; update README, STATUS/HANDOFF/START_HERE.
+- Independent real Python sqlite3 stdlib temporary-file contract: **4/4 PASS** (URI mode=rw never creates missing db, file stays absent, empty SQLite is schema-version 0, os.replace alters observed file identity). These are not full GitHub tests or native Windows tests.
+
+## Known remaining risk and P2-19
+- This is *best-effort* TOCTOU conflict detection, NOT a filesystem-level lock or cross-process serializability. File inode reuse, concurrent writes after validation, SQLite WAL and Windows OneDrive/network behavior need real tests; no claim of absolute prevention or production hardening.
+- NEXT P2-19: materially improve customer backup recovery / guided snapshot restore with explicit safety and no automatic overwrite, then tackle commercial BASIC Windows installer & actual end-to-end QA, report/Excel/PDF outputs and 10k synthetic benchmark in an approved non-paid authorized environment. No routine user testing. PRO customer-key procurement API and PREMIUM AI remain unimplemented.
+- Feature branch started P2-18 at `dd6536cd9be340e503deb92e030405b8c9ab9d0e`, main baseline `c888c795bef72734f3f7016e54013b82453f11d8`. After docs fetch final feature HEAD/main SHA and compare changes; DO NOT guess SHA.
+- Previous all-tier subjective estimate 42%; don't artificially increase without objective release evidence.
+
+---
+## Earlier NEXT_TASK history
+
 # BID OWL NEXT — P2-17 legacy CLI prewrite safety implementation (2026-10-27 KST)
 
 **Next ㄱ => P2-18 autonomous.** User expects direct GitHub work, no routine ZIP download or PowerShell testing from user. Keep `main` and prior Vercel untouched; only `feature/bid-owl-v1-basic-mvp`. Do not use paid private GitHub CI, public deploy, customer data, or API keys without approval. Inspect actual latest refs and START_HERE, AGENTS, REQUIREMENTS, HANDOFF, STATUS before acting.
