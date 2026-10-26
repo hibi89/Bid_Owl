@@ -1,3 +1,15 @@
+# 현재 개발 우선순위 — BASIC MVP 실제 동작 완성
+
+**사용자 결정:** 먼저 **BASIC MVP**(CSV → 회사 정보 → 판정 → 결과 조회 → Excel/PDF 보고서)를 끝까지 연결하고, 실제 테스트를 통과시킨 뒤 원래 최종 설계도와 비교·확장한다. 프론트엔드 미관, PRO, PREMIUM, 고급 성능·보안 작업은 잠시 후순위다.
+
+**P2-25 새 기능:** `backend/mvp_smoke.py`가 실제 Tkinter 고객 등록기와 동일한 `prepare_import/apply_import` 코어를 사용해 합성 CSV·회사 정보를 등록하고, 읽기 전용 조회·상세 판정 확인·저장본 XLSX 보고서 생성·동일 공고 재등록 시 자동 백업과 판정 재사용까지 통합 검사한다. `backend/qa_runner.py`에서도 구형 CLI 스모크와 새 BASIC 스모크가 모두 성공해야 QA를 통과한다. 독립 `--require-pdf` 옵션은 ReportLab/한국어 글꼴까지 검사한다.
+
+**검증 경계:** GitHub에는 **256개 Python 테스트 함수가 정의**되어 있으나 비공개 저장소 전체를 실제 실행한 결과는 아직 확보되지 않았다. Windows GUI/PDF/Excel 실사용 및 출시 검증도 미완료. 코드가 존재한다는 이유로 MVP 완성·판매 가능 판정을 내리지 않는다.
+
+[정확한 MVP 수용 기준](backend/MVP_ACCEPTANCE.md)
+
+---
+
 > **최신 단계 P2-22:** 일반 공고 검색뿐 아니라 PASS·FAIL·UNKNOWN 상태 필터도 먼저 공고 후보를 좁힌 뒤 200건 단위로 판정의 현재성을 확인한다. 상세 판정은 페이지 최대 100건만 조회. 테스트 **245개 정의**, 현재 전체 실행 검증은 아직 없음. 프론트엔드 디자인은 사용자 지시로 보류. 다음 P2-23 백엔드 QA.
 
 > **P2-21 업데이트:** 프론트엔드 미관 보류, 백엔드 목록 조회 성능 개선. 최신 상태는 [backend/VIEWER_QUERY.md](backend/VIEWER_QUERY.md), 실제 성능 측정 경계는 [backend/BENCHMARK.md](backend/BENCHMARK.md). 다음 단계는 P2-22 상태 필터 최적화. 전체 238개 Python 테스트는 정의됐지만 통합 실행은 아직 미확인.
