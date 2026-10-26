@@ -1,3 +1,24 @@
+# BID OWL — P2-20 backup evidence hash and optional 10k recovery benchmark (2026-10-27 KST)
+
+**Next ㄱ => P2-21 BACKEND ONLY.** User explicitly suspended frontend/UX redesign after seeing unsatisfactory images. Do NOT alter visual UI/CSS or generate further mockups until asked. Work in connected PRIVATE GitHub `hibi89/Bid_Owl` on `feature/bid-owl-v1-basic-mvp`, protect main/Vercel, customer data, proprietary files, paid CI/cloud, releases. User does NOT want routine ZIP downloads/manual PowerShell QA.
+
+## Implemented & committed P2-20
+- `backend/backup_recovery.py`: Previously verified only v1 structure/FK/integrity and table counts. Added deterministic **whole-evidence SHA-256** hashing of all rows from profiles/profile_versions/bids/bid_versions/import_runs/assessments/rule_assessments and optional assessment_engine_provenance. Separate type tags for text/int/float/NULL/BLOB, fixed table names and rowid order. `RecoveryPlan.evidence_sha256` pins exact record-level digest from readonly preview; full v1 validation and evidence hash now share a readonly BEGIN snapshot. Rechecks source identity/raw byte SHA/metadata/evidence before copy and compares full evidence digest AFTER SQLite backup restore. A copied DB with the same counts but different row content fails closed. Source must be journal/WAL/SHM sidecar free both before and after snapshot/hash. No overwrite/activate of existing user DB or backup; O_EXCL destination remains.
+- `backend/tests/test_backup_recovery.py`: 5 new synthetic tests (result digest, same-count target mutation detected and cleaned up, same-count source modification rejected, initial -shm sidecar refusal, WAL file appearing during hash refused).
+- `backend/benchmark_local.py`: opt-in `measure_recovery=True` / `--with-recovery`, runs consistent SQLite backup + preview/full-evidence digest + new-file restore for synthetic data, stores independent ms timings `sqlite_backup_ms`, `recovery_validate_and_hash_ms`, `recovery_copy_verify_ms`, `recovery_verified`, `recovery_evidence_sha256`. Default speed benchmark remains unchanged, no hidden 10k in ordinary tests. `backend/tests/test_benchmark_local.py`: 2 new methods, small 31-bid/5-assessment recovery and invalid flag.
+- `backend/RECOVERY.md`, `backend/BENCHMARK.md`, `backend/README.md` updated; STATUS, HANDOFF, START_HERE also update.
+
+## Verification truth boundary
+- Auth GitHub code readback: **233 Python test definitions across 16 test files** (previous 226 +7); not 233 PASS.
+- Real isolated Python SQLite content-hash contract **5/5 PASS** (before/after backup, same-content stable, changed-record hashes differ). Separate container SQLite microbench ran 10,000 synthetic rows and 200 synthetic assessments; this is **NOT BID OWL project's authentic full 10k benchmark** and must not be cited as product performance/Windows timing.
+- Actual GitHub private whole-repo unit run, Windows native GUI, SQLite WinError32 cleanup retest, real BASIC viewer+Excel/PDF, full program 10k benchmark, packaging/install still NOT EXECUTED in this iteration. Do not claim commercial-ready, full QA PASS or 10k performance.
+
+## Next P2-21
+Analyze measured 10k bottleneck in `viewer.query_bids` /`_latest_rows` (currently loads and JSON-parses all bid rows and filters/page sorts in Python; latency not measured on target PC). Implement conservative correctness-preserving optimization or index improvements with differential test fixtures across combinations of filter/category/status/deadline/favorites; continue backend and protect PASS/FAIL/UNKNOWN and engine-fingerprint semantics. Performance measurement must be actual and repeatable before increasing completeness estimate. Previous subjective all-tier completion ~42%—do not arbitrarily boost.
+
+---
+## Earlier NEXT_TASK history
+
 # BID OWL NEXT — P2-19 safe offline SQLite backup inspection and restore (2026-10-27 KST)
 
 **NEXT ㄱ => P2-20, BACKEND ONLY.** User explicitly rejected the current visual design and decided FRONTEND / UX REDESIGN IS DEFERRED. Do not make new UI mockups or CSS redesign; prioritize backend functionality, reliability, correctness and local recoverability. The existing browser UI stays as-is for functional smoke use. No manual ZIP/PowerShell testing requests on routine ㄱ.
