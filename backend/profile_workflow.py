@@ -149,6 +149,17 @@ def execute(
         saved = 0
         profile_committed = False
         try:
+            # Legacy schema-v1 databases have no policy provenance table.
+            # This additive change is allowed ONLY after backup_to succeeds.
+            # The old assessments stay unproven; reassessed rows record their
+            # real engine hash inside BidOwlStore.assess_and_record.
+            store.db.execute("""
+                CREATE TABLE IF NOT EXISTS assessment_engine_provenance (
+                    assessment_id INTEGER PRIMARY KEY,
+                    engine_hash TEXT NOT NULL CHECK(length(engine_hash) = 64),
+                    FOREIGN KEY(assessment_id) REFERENCES assessments(id) ON DELETE CASCADE
+                )
+            """)
             if changed:
                 summary["planned_version"] = store.save_profile(profile, expected_version=version)
                 profile_committed = True
