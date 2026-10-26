@@ -1,3 +1,26 @@
+# BID OWL NEXT — P2-19 safe offline SQLite backup inspection and restore (2026-10-27 KST)
+
+**NEXT ㄱ => P2-20, BACKEND ONLY.** User explicitly rejected the current visual design and decided FRONTEND / UX REDESIGN IS DEFERRED. Do not make new UI mockups or CSS redesign; prioritize backend functionality, reliability, correctness and local recoverability. The existing browser UI stays as-is for functional smoke use. No manual ZIP/PowerShell testing requests on routine ㄱ.
+
+Project: private GitHub `hibi89/Bid_Owl`, sole development branch `feature/bid-owl-v1-basic-mvp`. Check actual branch main/feature heads, START_HERE, AGENTS, REQUIREMENTS, STATUS, HANDOFF first. Protect `main` and original Vercel; no releases, cloud payment or customer data upload.
+
+## Actual P2-19 source delivered
+- `backend/backup_recovery.py` (new, stdlib SQLite offline only): `prepare_recovery(source, destination)` **read-only preview, no directory creation**; requires existing source file (SQLite URI mode=ro), v1 user_version, all seven required schema tables, full PRAGMA integrity_check, foreign_key_check, consistent counts of profiles/bids/assessments/import_runs, SHA-256 bytes and OS file identity. Refuses source with -wal/-journal sidecar; unverified raw WAL copies not promoted as good backups.
+- `preview_summary`: `RECOVERY_PREVIEW_NO_WRITE`. `restore_to_new_file` verifies preview source identity+hash, reserves nonexistent destination via `open("xb")` (O_EXCL), uses SQLite mode=rw on that reserved output and Python SQLite Connection.backup to copy a consistent DB, checks source unchanged after copy, verifies restored v1 tables/integrity/FK/counts. **Never overwrites existing destination, never swaps live DB, never removes source or active customer DB, never automatically activates recovered DB.** On error attempts to remove only file provably reserved by invocation (dev/inode match, inode != 0); third-party path remains untouched. Concurrent changes after checks not fully excluded; no OS lock.
+- CLI `python backend/backup_recovery.py --source BACKUP --destination NEW_DB` is preview by default; `--apply` explicitly creates NEW file and outputs `RESTORED_TO_NEW_FILE` with need for later manual activation. Corrupt/foreign schema, FK failure, changed/disappeared source, output collision fail closed as JSON `RECOVERY_FAILED`. Legacy v1 snapshot with no policy provenance retains historical records but UI displays old PASS as UNKNOWN.
+- New `backend/tests/test_backup_recovery.py` **14 synthetic tests defined**: no-write preview and counts, verified restoration+live/original backup unchanged, overwrite and same-path refusal, corrupt/foreign schema refusal, legacy unproven PASS -> UNKNOWN, source changed/deleted postpreview, destination race no-overwrite, failure output cleanup, FK corruption, CLI preview/apply and error. Test SQLite handles explicitly closed for Windows cleanup safety.
+- New `backend/RECOVERY.md` documents commands, scope, risk and activation. Remaining doc pointers updated.
+- Authenticated live GitHub counts **226 Python test_* definitions in 16 modules (212+14)**; **NOT 226 PASS**. Separate stdlib Python/sqlite temporary-file backup-copy contract **8/8 PASS** (this is not current full private repo module test), with no cloud or paid runner. Actual Windows native 226-suite, installer, DOC/Excel/PDF, UI E2E, 10k performance and restore on OneDrive remains **unverified**. Earlier true Windows run 137 tests/18 WinError32; no subsequent full native measurement.
+- Prior all-tier 42% subjective estimate, not automatically increased based on code/test definitions.
+
+## Next P2-20 backend priority
+1. Tighten backup source preview/copy verification and partial-cleanup/sidecar cases, improve offline 10k bid performance and data indexing based on measured local synthetic benchmark where real repo execution can be authorized without asking user repeatedly. Improve cross-process consistency; avoid promising complete filesystem locking.
+2. Expand recovery to safe user-facing selection of new DB (e.g. explicit --db in existing reader) before any possible in-place restore; no overwriting active DB by default.
+3. Need authentic Windows 226 suite, file locks, PDF Korean font, XLSX, loopback, installer and release safety gates later. PRO official customer-key API/PREMIUM optional AI unimplemented, branding/KIPRIS not cleared. UI aesthetic redesign explicitly deferred.
+
+---
+## Historical NEXT tasks
+
 # BID OWL NEXT — P2-18 strict SQLite DB identity/open boundary (2026-10-27 KST)
 
 **Next ㄱ resumes P2-19 automatically.** User directs autonomous work without repeating ZIP/PowerShell test requests. Private `hibi89/Bid_Owl`, work only on `feature/bid-owl-v1-basic-mvp`. Protect main/Vercel, never make customer files public, no paid CI or API services without approval. Read current heads, START_HERE.md, AGENTS.md, REQUIREMENTS.md, STATUS/HANDOFF, then proceed.
