@@ -1,3 +1,18 @@
+# BID OWL STATUS — P2-19 backup integrity and non-overwriting recovery (2026-10-27 KST)
+
+**Backend-first direction confirmed:** User dislikes both generated UI concepts. FRONTEND VISUAL REDESIGN IS ON HOLD until explicitly resumed; do not spend subsequent ㄱ calls on mockups/visual design. Focus on backend safety, correctness and data recovery. Work only in private `feature/bid-owl-v1-basic-mvp` and leave main/Vercel untouched.
+
+**Actual implementation:** New `backend/backup_recovery.py` provides readonly SQLite v1 backup integrity/FK/schema/count/hash preview, optional explicit --apply SQLite backup-based restore to a **never-overwritten new DB file**, source SHA/identity rechecks, result verification and careful cleanup limited to invocation's reserved file. Existing live DB/backup not modified or activated. Original/legacy assessments kept intact; missing engine provenance still UNKNOWN on current viewer. New `backend/tests/test_backup_recovery.py`: 14 declared synthetic unit/integration tests. New `backend/RECOVERY.md`: operator usage and limitations.
+
+**Measured test evidence:** Isolated Python sqlite3 source → backup → exclusive new target copy and integrity contract 8/8 PASS. **226 test functions defined in 16 GitHub test modules, NOT executed as complete real private repo suite**. No genuine Windows QA pass, no Windows WinError32 closure confirmation, no full report/browser/PDF/Excel native E2E, no 10k benchmark, no paid CI. Historical authentic 137 Windows suite encountered 18 cleanup WinError32 before repairs.
+
+**Honest limits:** Restoring to original live path is NOT implemented (intentionally non-destructive). Existing WAL/journal sidecars are rejected. File id and SHA checks mitigate but do not eliminate concurrent edits/OneDrive/file race; recovered DB needs explicit selection after stopping apps. Backup integrity does not prove procurement correctness. BASIC cannot yet be called fully sellable; PRO and PREMIUM not implemented, installer and legal trademark clearance pending. Overall all-tier ~42% previous subjective estimate (no new objectively scored %).
+
+**Next P2-20:** backend recovery robustness, controlled local restore verification/10k synthetic performance, reduce genuine native acceptance blockers; frontend postponed. No customer files/keys/fonts/PDF uploaded, no GitHub main/Vercel deploy or paid service.
+
+---
+## Historical STATUS
+
 # BID OWL STATUS — P2-18 SQLite original-file preservation (2026-10-27 KST)
 
 **Implemented, feature branch only:** DB writer can now require existing `mode=rw` SQLite and strictly validated v1 schema; caller pins dev/inode/size/mtime file identity after readonly preview. `BidOwlStore` validates expected identity before and after SQLite connect. New DB initializations must first reserve file with `xb` and pass its exact expected file identity. Integrated into real GUI `import_local.py`, legacy report CLI `cli.py`, company edit `profile_workflow.py`. Mode=ro viewer remains untouched. Never treat deleted existing path as a reason to create a blank DB, or silently write to a swapped foreign DB. Backups still precede mutations and are not overwritten.
