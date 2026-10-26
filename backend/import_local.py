@@ -23,6 +23,8 @@ from bidowl.engine_identity import engine_fingerprint
 from bidowl.schema import MAX_CSV_BYTES
 from bidowl.store import database_file_identity, default_database_path
 from profile_workflow import load_profile_file
+from report_existing import export_existing
+from bidowl.report import check_pdf_support
 from viewer import make_server, open_database
 
 RESERVED_DEMO_SOURCE = "BIDOWL_SYNTHETIC_DEMO"
@@ -501,8 +503,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--db", help="Local BID OWL SQLite destination (default OS-local app data)")
     parser.add_argument("--apply", action="store_true", help="Commit after preflight and backup; CLI preview by default")
     parser.add_argument("--force-reassess", action="store_true", help="Regenerate all assessments after rules-engine upgrades")
+    parser.add_argument("--export-dir", help="After --apply, export reports for exactly the imported assessment IDs")
+    parser.add_argument("--report-format", choices=("xlsx", "pdf", "both"), default="xlsx",
+                        help="Local report output format when --export-dir is used (default xlsx)")
     args = parser.parse_args(argv)
-    if not any((args.csv, args.profile, args.source_id, args.db, args.apply, args.force_reassess)):
+    if not any((args.csv, args.profile, args.source_id, args.db, args.apply, args.force_reassess, args.export_dir)):
         try:
             return run_gui()
         except (ImportError, OSError, RuntimeError) as exc:
@@ -511,11 +516,50 @@ def main(argv: list[str] | None = None) -> int:
     if not all((args.csv, args.profile, args.source_id)):
         parser.error("CLI requires --csv --profile --source-id")
     try:
+        if args.export_dir and not args.apply:
+            raise ValueError("--export-dir requires explicit --apply")
+        if args.export_dir:
+            export_dir = Path(args.export_dir).expanduser().resolve()
+            if export_dir.exists() and not export_dir.is_dir():
+                raise ValueError("Report output path exists but is not a directory")
+            if args.report_format in ("pdf", "both"):
+                check_pdf_support()  # fail before modifying any customer DB
         plan = prepare_import(
             csv_path=args.csv, profile=load_profile_file(args.profile),
             source_id=args.source_id, db_path=args.db,
         )
         outcome = apply_import(plan, force_reassess=args.force_reassess) if args.apply else plan_summary(plan)
+        if args.export_dir:
+            # Registration is ALREADY committed; a later report error cannot
+            # truthfully be called an import failure or silently rolled back.
+            completed_reports = []
+            try:
+                for assessment in outcome["assessments"]:
+                    report = export_existing(
+                        db_path=plan.db_path,
+                        assessment_id=assessment["assessment_id"],
+                        output_dir=export_dir, format=args.report_format,
+                    )
+                    completed_reports.append({
+                        "bid_no": assessment["bid_no"],
+                        "assessment_id": assessment["assessment_id"],
+                        "files": report["files"],
+                    })
+            except (OSError, ValueError, LookupError, KeyError,
+                    RuntimeError, sqlite3.Error) as exc:
+                outcome.update({
+                    "status": "IMPORTED_EXPORT_FAILED",
+                    "reports": completed_reports,
+                    "export_error_type": type(exc).__name__,
+                    "export_error": str(exc),
+                    "notice": "Database import succeeded. Report export failed; saved "
+                              "assessments and backups remain unchanged. Inspect "
+                              "completed reports before attempting retry.",
+                })
+                print(json.dumps(outcome, ensure_ascii=False, indent=2), file=sys.stderr)
+                return 2
+            outcome["reports"] = completed_reports
+            outcome["status"] = "IMPORTED_AND_EXPORTED"
         print(json.dumps(outcome, ensure_ascii=False, indent=2))
         return 0
     except CSVImportError as exc:
