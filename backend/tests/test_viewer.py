@@ -71,6 +71,15 @@ class ViewerTests(unittest.TestCase):
             self.assertTrue(rows["A"]["requires_human_review"])
             self.assertIn("판정 엔진", rows["A"]["review_reason"])
 
+    def test_missing_rule_engine_source_never_displays_pass(self):
+        from unittest.mock import patch
+        with patch("viewer.engine_fingerprint", side_effect=FileNotFoundError("missing policy")):
+            with closing(open_database(self.path)) as reader:
+                rows = {r["bid_no"]: r for r in query_bids(reader, {})["items"]}
+        self.assertEqual(rows["A"]["status"], "UNKNOWN")
+        self.assertEqual(rows["A"]["snapshot_status"], "PASS")
+        self.assertFalse(rows["A"]["engine_fresh"])
+
     def test_stale_policy_fingerprint_invalidates_previous_pass(self):
         with closing(sqlite3.connect(self.path)) as writer:
             writer.execute(
