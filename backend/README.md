@@ -1,3 +1,11 @@
+# P2-17 — 기존 CLI의 안전한 백업·규칙 엔진 지문 처리
+
+기존 `python cli.py --csv ... --profile ... --source-id ... --output ...` 경로도 이전 DB를 **변경하기 전에** 읽기 전용 검증과 자동 백업을 수행하도록 수정했습니다. 이전과 달리 같은 ID의 회사 프로필 내용이 다른 경우 자동 덮어쓰지 않고 `profile_workflow.py` 사용을 안내합니다. 기존 v1 DB의 규칙 지문 메타테이블도 백업 성공 후에만 추가하며 새 평가에 SHA-256 엔진 지문을 저장합니다. 반복 실행 시 XLSX/PDF 보고서는 새 평가 스냅샷과 별도 파일로 남습니다.
+
+기존 CLI는 개발/합성 CSV·보고서 호환성을 위해 샘플 `DEMO-` 데이터도 명시적으로 사용할 수 있지만, **실제 회사 파일 입력**은 `START_BID_OWL_IMPORT.cmd` GUI 또는 `import_local.py`를 우선 권장합니다. CLI에 대한 테스트는 실제 Python/Windows 실행 전이므로 상용 안전성 확정은 아닙니다. 백업 경로는 성공 응답 JSON `backup` 필드로 보고되며, 부분 실패는 `CLI_PARTIAL_OR_UNCERTAIN`을 반환하므로 백업 및 DB/생성된 보고서를 확인한 뒤 재실행해야 합니다.
+
+---
+
 # P2-16 규칙 엔진 변경 감지와 구형 DB 보수적 판정
 
 새 판정에는 로컬 엔진 소스 SHA-256 지문을 저장합니다. 구형 또는 다른 엔진으로 평가된 PASS는 현재 조회에서 UNKNOWN으로 보이며, 새 등록/재평가 시 기존 DB 백업 후 자동 갱신됩니다. 자세한 처리·제한은 [ENGINE_POLICY.md](ENGINE_POLICY.md). **전체 Python 190개 정의 테스트 및 Windows 실사용 통과는 아직 미검증입니다.**
