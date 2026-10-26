@@ -10,7 +10,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from qa_runner import _synthetic_smoke, run_qa
+from qa_runner import _synthetic_smoke, _unit_suite, run_qa
 
 
 class QAReportingTests(unittest.TestCase):
@@ -90,6 +90,16 @@ class QAReportingTests(unittest.TestCase):
         self.assertEqual(result["synthetic_result"]["basic_mvp"]["status"], "FAILED")
         self.assertIn("MVP_IMPORT_BROKEN",
                       result["synthetic_result"]["basic_mvp"]["reason"])
+
+    def test_zero_discovered_python_tests_is_a_qa_failure(self):
+        with patch("qa_runner.unittest.TestLoader.discover",
+                   return_value=unittest.TestSuite()), \
+             contextlib.redirect_stderr(io.StringIO()):
+            result = _unit_suite()
+        self.assertEqual(result["tests_run"], 0)
+        self.assertEqual(result["status"], "FAIL")
+        self.assertEqual(result["failures"], 0)
+        self.assertEqual(result["errors"], 0)
 
     def test_javascript_failure_is_not_misreported_as_pass(self):
         with patch("qa_runner._unit_suite", return_value=self.good_suite), \
