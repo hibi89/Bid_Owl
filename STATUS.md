@@ -1,24 +1,30 @@
-# BID OWL STATUS — P2-10 · 2026-10-27 KST
+# BID OWL STATUS — actual Windows P2-11 test remediation, 2026-10-27 KST
 
-## Source, branch, production safety
-Private GitHub hibi89/Bid_Owl repo ID 1399359397. Work ONLY on feature/bid-owl-v1-basic-mvp; P2-10 starting SHA cfaaf69ae73a4f067facd20b94ff8522a941c7b2. Main starting SHA c888c795bef72734f3f7016e54013b82453f11d8 (no main writes), legacy rollback 2807a93a3e0deba98840712401fdd6025e6f5610. Original Vercel project project08-bid-insight/prj_YcrN7OdOjKl6M457HelGIItLeeXZ untouched; legacy deployed URL/HTTP not rechecked. Local Python app is not publicly deployed. Final HEAD and author to confirm after HANDOFF.
+## Actual measured quality signal
+User executed current P2-10 downloaded GitHub ZIP on Windows PowerShell in backend (Python 3.11, ReportLab 4.5.1):
+- `python qa_runner.py --benchmark`
+- Python unittest **137 ran in 7.237s; 119 finished successfully, 0 assertion failures, 18 ERROR, 0 skipped**.
+- All 18 ERRORs show `PermissionError: [WinError 32]` deleting temporary SQLite or backup files from `TemporaryDirectory.cleanup` on Windows. This is SQLite handle-lifetime/connection-close defect in production backup creation and test cleanup.
+- JavaScript syntax PASS; dependent smoke_local and synthetic 10k benchmark SKIPPED (not PASS) after Python suite error.
+- Local machine results saved in Git-ignored `backend/qa_results/bidowl_qa_20261026T174533Z_6780ada1.json` (user's observed JSON result). No user/customer data uploaded.
+- This is the first current-branch measured Python suite result, replacing previous statements that no current full suite ever executed. **Never say 137 PASS**.
 
-## Source implemented
-P1 source importer, rules/evidence, revisioned local SQLite and PDF/XLSX. P2-01 readonly localhost UI/7 themes, P2-02 global favorites, P2-03 backed-up profile edit CLI + browser JSON form, P2-04 CAS/detail/read-only preview/accessibility, P2-05 report re-export and synthetic smoke, P2-06 XLSX/PDF failure cleanup and new-profile form, P2-07 read-only XLSX attachment UI, P2-08 Unicode 300-char IDs and batch profile revision pinning, P2-09 disposable 10k-bid synthetic perf workload.
+## Changes committed this iteration, pending user's Windows rerun
+- `backend/bidowl/store.py`: `BidOwlStore.backup_to` now closes destination SQLite connection explicitly using `contextlib.closing`; previous `with sqlite3.connect(...) as target` committed but did **not** close, leaving backup files locked on Windows.
+- `backend/tests/test_viewer.py`: seven read-only viewer SQLite contexts explicitly closed before fixture tempdir cleanup.
+- `backend/tests/test_report_existing.py`: two snapshot-reader/Excel HTTP test SQLite contexts explicitly closed.
+- `backend/tests/test_store.py`: 4 synthetic sqlite3 schema-check contexts now both commit and close using `with closing(sqlite3.connect(future)) as db, db:`; added Windows regression for immediate backup file deletion after integrity check (tests/source total 138).
+- `backend/qa_runner.py`: future local JSON reports per-test last exception summary (`failed_test_errors`) to diagnose without uploading lengthy console logs.
+- `NEXT_TASK.md`, `STATUS.md`, `HANDOFF.md` updated.
 
-P2-10 specifically:
-- NEW `backend/qa_runner.py` executes actual unittest-discovered tests, collects tests_run/failures/errors/skips/failed-test IDs and real elapsed time; when unit suite passes runs synthetic full import→HTTP→report→profile backup/modify smoke; runs Node JS syntax check if installed, with explicit SKIP otherwise; and optional `--benchmark` for 10k synthetic timing only after unit/smoke success.
-- New timestamped exclusive local JSON `backend/qa_results/bidowl_qa_...json` records Git SHA when available, Python/OS/machine and measured outcomes. Flags browser/native Excel/PDF as unverified; no customer data or secrets. `backend/.gitignore` updated so generated JSON is never inadvertently committed.
-- NEW `backend/tests/test_qa_runner.py` +3 synthetic/mock reporter outcome tests (PASS JSON count, failing unit blocks dependent stages, JS FAIL blocks overall pass). `backend/verify_local.ps1` delegates once to qa_runner (optional `-Benchmark`), keeping original Windows one-command usage. `backend/BENCHMARK.md` amended and NEXT_TASK/STATUS/HANDOFF refreshed.
+## Verification interpretation
+Auth GitHub fetched live source and confirmed 138 declared Python test functions (benchmark3, eligibility27, importer21, profile12, runner3, report21, report_existing10, smoke1, store30, viewer10). The prior actual 137-test run is **FAILED**; the new 138-test current source has **NOT been run again** on Windows. Source inspection shows all plain `with open_database(..)` / `with sqlite3.connect(..)` patterns remaining in relevant tests converted to explicitly closed, target in backup_to closed. Minimal isolated Python syntax check of `with closing(sqlite3.connect(...)) as db, db:` succeeded, but no authenticated full checkout executing suite inside assistant container due private git/DNS/auth limitation.
+Browser 7 themes, native Windows Excel/PDF, portable installer, PDF fonts and synthetic 10k timings still pending. Previous P1 96 PASS historical does not override observed P2 full-suite failure. Overall all-tier estimate ~35% subjective and unchanged.
 
-## Verification: what is measured and what is NOT
-GitHub source fetched and static inventories counted **137 declared test functions** across 10 test modules: eligibility27/importer21/profile_workflow12/report21/report_existing10/smoke1/store29/viewer10/benchmark3/qa_runner3. **137 Python tests have NOT been executed in this environment; NOT 137 PASS.** The new QA runner and mock tests have been committed but not executed on a full authenticated checkout. No actual QA JSON, synthetic smoke run, 10k timing numbers, Windows/Excel/PDF native visual or browser UI test collected. Previously V8 parsed exact remote JS PASS (static syntax only). Historical P1 CPython Linux 96 PASS on 2026-10-26 pertains to earlier P1 source, not this feature branch. Avoid substituting test definitions, script capability or historical mock for execution results.
-Private clone/download of full repo in author's Python/container sandbox blocked by DNS/auth; current /mnt/data empty in this container session. Authenticated GitHub connector successfully reads/writes code but does not mount full private checkout for CPython test. Previous browser localhost ERR_BLOCKED_BY_ADMINISTRATOR. No GitHub Actions workflows had run for feature branch last checked; did not trigger paid external CI.
-Safe next verification command from `backend` of exact checkout:
-    python qa_runner.py --benchmark
-On Windows:
-    powershell -ExecutionPolicy Bypass -File .\verify_local.ps1 -Benchmark
+## Repository restrictions
+Private hibi89/Bid_Owl ID 1399359397; only branch `feature/bid-owl-v1-basic-mvp` changed. Previous feature SHA f2f408299abdf4402abd83a7a07376ee9cbc47b7; protected `main` baseline c888c795bef72734f3f7016e54013b82453f11d8. Existing 2025 school demo Vercel project project08-bid-insight ID prj_YcrN7OdOjKl6M457HelGIItLeeXZ untouched. No public deploy, no real procurement data/API, no customer files/keys/fonts, no paid runner or privilege changes.
 
-## Next / current release gate
-P2-11 execute genuine full 137-case suite + synthetic smoke + 10k synthetic measurement, inspect JSON Git SHA/real PASS/FAIL/skips and elapsed times. Fix failures and repeat. Then Windows native Excel, Korean-font PDF, Edge/Chrome 7 themes/accessibility and 10k UI, profile JSON/backup, install/data restore. BASIC still CLI-assisted for import/profile mutation/PDF and not ready for commercial sale; P3 official key API, P4 AI opt-in, P5 Windows packaging/security, P6 trademark KIPRIS/sales after BASIC gate. Product plans BASIC 59k/PRO149k/PREMIUM299k KRW and ~35% all-tier progress estimate unchanged and unverified objectively.
-No customer CSV/DB/PDF/XLSX/credentials/fonts/uploads, no external API/fees, no main/Vercel/permissions changes. Writer authenticated hibi89, recheck final feature SHA and commit identity.
+## Next action
+User should download a **fresh feature ZIP** (old ZIP cannot reflect commits), extract, open backend PowerShell and run:
+`python qa_runner.py --benchmark`
+Python 3.11 and ReportLab already installed in previous run. Attach new `backend/qa_results/bidowl_qa_*.json` or new console output. New run should execute **138** tests if all discovered; resolve any actual failures instead of counting definitions. If full suite PASS, inspect real synthetic smoke and 10k timings; compare tested ZIP's branch/commit by provenance. Then validate Windows native XLSX/PDF/Edge and usability. BASIC not yet sale-ready; P3 PRO official API/P4 AI/installer/KIPRIS remain later.
