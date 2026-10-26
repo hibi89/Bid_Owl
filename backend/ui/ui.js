@@ -72,6 +72,16 @@ async function openDetail(item,button){const token=++state.drawerSeq;state.focus
     if(!data.rules.length)host.append(node('p','','저장된 세부 평가가 없습니다. CLI에서 해당 공고·프로필을 평가해야 합니다.'));
     for(const rule of data.rules){const box=node('section','rule');const heading=node('div');heading.append(badge(rule.status),node('strong','', '  '+rule.rule_id+' · '+rule.kind));box.append(heading,node('p','',rule.explanation),node('div','subline',rule.reason_code));
       if(rule.source_text)box.append(node('div','source',rule.source_text));if(rule.source_locator)box.append(node('div','subline','출처 위치: '+rule.source_locator));host.append(box);}
+    if(Number.isSafeInteger(data.bid.assessment_id)&&data.bid.assessment_id>0){
+      const snapshotId=data.bid.assessment_id;
+      host.append(node('h3','','저장된 평가 보고서 재출력'));
+      host.append(node('p','subline','평가 ID '+snapshotId+' · 기존 판정 스냅샷으로 PDF/Excel을 생성합니다. DB나 평가 기록은 바뀌지 않습니다.'));
+      if(!data.evidence_is_current)host.append(node('p','warn','이 평가는 과거 버전입니다. 출력 보고서의 PASS/FAIL은 현재 참가 자격을 뜻하지 않습니다.'));
+      const command='python report_existing.py --db "DB_PATH" --assessment-id '+snapshotId+' --output "NEW_REPORT_DIR" --format both';
+      host.append(node('pre','command',command),node('p','subline','backend 폴더에서 실행하세요. DB_PATH와 새 출력 폴더 경로를 실제 로컬 경로로 바꿔야 합니다.'));
+    }else{
+      host.append(node('p','subline','저장된 평가 기록이 없어 보고서를 출력할 수 없습니다. 먼저 로컬 CLI에서 공고를 평가해야 합니다.'));
+    }
     host.append(node('p','disclaimer',data.notice));
   }catch(err){if(token===state.drawerSeq&&!$('drawer').hidden)$('detail-content').replaceChildren(node('p','warn','근거 조회 오류: '+err.message));}
 }
