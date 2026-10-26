@@ -1,3 +1,22 @@
+# BID OWL HANDOFF — P2-21 complete, next P2-22 (2026-10-27 KST)
+
+**Operating instruction:** User `ㄱ` = autonomous work in connected private GitHub `hibi89/Bid_Owl`, branch `feature/bid-owl-v1-basic-mvp`, inspect latest heads/START_HERE/NEXT_TASK/AGENTS/REQUIREMENTS/STATUS/HANDOFF; implement code, tests, docs and commits. Do not repeatedly request user ZIP download or PowerShell QA. User explicitly defers frontend aesthetics after rejecting 2 image mockups: DO NOT touch CSS/JS UI redesign or generate images unless requested. Protect main, historical Vercel, private customer files, API keys, no paid CI/public deployment.
+
+## Current implemented source
+1. `backend/viewer.py`: new `_query_without_status` metadata-first path for all `query_bids` without a status filter, including all ordinary browse/search/category/deadline/favorite routes. SQL reads `bids JOIN latest bid_versions` (no assessments) for all rows. Same Python `casefold`, date parsing, search/category/favorite/deadline criteria and lexicographic tuple sort; categories from *all* bids, before filters. After pagination (max page_size=100), `_latest_rows(...,candidate_keys=keys,as_of=now)` fetches only the chosen page's assessment/profile/policy provenance with safe row-value IN placeholders; result reorders to chosen page. Uses readonly SQLite BEGIN/ROLLBACK snapshot if not already in transaction; no HTTP write or schema change. Status-filter queries deliberately continue original full-scan `_latest_rows` to avoid stale/UNKNOWN semantic changes. Detail reader untouched.
+2. `backend/tests/test_viewer.py`: +3 test declarations: compare output to original full scan across 17 filter combinations with 65 extra synthetic bids including Unicode Straße/AI Korean, old/open deadlines, pagination, favorites including empty and unmatched, statuses and profiles. Additional tests verify candidate keys exactly 2 and status path fallback, empty favorites and out-of-range page no assessment full scan.
+3. `backend/benchmark_local.py`: new optional `measure_viewer_baseline` and `--compare-full-scan`; measures old full assessment scan and new metadata-first query on SAME synthetic 10k target when explicitly run, checks exact items/categories/total. Old P2-20 `--with-recovery` remains. `backend/tests/test_benchmark_local.py` +2 tests on only 41 bids/7 assessed and invalid boolean.
+4. New `backend/VIEWER_QUERY.md` full query contract, limitations, correctness scope. Updated BENCHMARK/README and handoff docs. No frontend visual files modified.
+
+## Evidence limits
+GitHub authenticated readback counted **238 Python test methods across 16 modules**, NOT 238 executed PASS. Separate Python/sqlite3 temporary synthetic 10k metadata and 30-bound-key experiment returned success, but did not execute actual BID OWL code or Windows. No target machine timing, no genuine complete private 238-test run, no Windows WinError32 fix confirmation, no GUI/Excel/PDF/integrated 10k/installer release gate. Historic user Windows 137-suite had 18 WinError32 cleanup errors. Product entire BASIC+PRO+PREMIUM/install previous ~42% only subjective. Protected main baseline `c888c795bef72734f3f7016e54013b82453f11d8`. Feature began at `112c371cc4861eb828adf4cb2ab12b4b08468f21`; fetch real latest feature HEAD after HANDOFF commit and compare changed paths.
+
+## Next P2-22
+Optimize status-filter path safely without changing PASS/FAIL/UNKNOWN and rule-engine currentness or profile version checks. Build differential tests with old metadata v1, no provenance, changed policy hash, expiry and favorites. Or source QA of metadata-first path; preserve exact sorting, categories. Need true 10k speed measurement and native Windows full test execution when authorized without repeatedly asking user. Avoid frontend design until user explicitly resumes.
+
+---
+## Previous handoff history
+
 # BID OWL HANDOFF — P2-20 complete, next P2-21 (2026-10-27 KST)
 
 ## User policy
