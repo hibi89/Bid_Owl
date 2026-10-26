@@ -82,6 +82,20 @@ def run_smoke() -> dict:
             )
             if detail["bid"]["bid_no"] != selected["bid_no"]:
                 raise AssertionError("Detail API returned wrong saved bid")
+            # Binary attachment path is intentionally not handled by http_json.
+            download = http.client.HTTPConnection("127.0.0.1", server.server_port, timeout=5)
+            try:
+                download.request("GET", f"/api/report?assessment_id={first_id}",
+                                 headers={"Host":host,"Sec-Fetch-Site":"same-origin"})
+                attachment = download.getresponse()
+                download_bytes = attachment.read()
+                if attachment.status != 200 or not download_bytes.startswith(b"PK"):
+                    raise AssertionError("Read-only report download did not return XLSX")
+                with ZipFile(io.BytesIO(download_bytes)) as archive:
+                    if archive.testzip() is not None:
+                        raise AssertionError("Downloaded XLSX is corrupted")
+            finally:
+                download.close()
             favorites = http_json("POST", "/api/bids/favorites", {
                 "favorites": [[selected["source_id"], selected["bid_no"]]],
                 "filters": {"page": "1", "page_size": "1"}
@@ -131,7 +145,7 @@ def run_smoke() -> dict:
                 raise AssertionError("Revised assessments missing from viewer")
             return {
                 "status": "SYNTHETIC_E2E_PASS", "source_id": "SYNTHETIC-SMOKE",
-                "imported": 2, "http_endpoints": 4,
+                "imported": 2, "http_endpoints": 5,
                 "favorites_checked": 1, "historical_assessment_preserved": True,
                 "backup_verified": True, "new_profile_version": 2,
                 "new_assessments": 2, "pdf_tested": False,
