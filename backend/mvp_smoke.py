@@ -7,17 +7,18 @@ report_existing XLSX. It never uses a default customer database or network.
 from __future__ import annotations
 
 import argparse
+import io
 import json
 import sqlite3
 import tempfile
-from contextlib import closing
+from contextlib import closing, redirect_stdout
 from pathlib import Path
 from xml.etree import ElementTree
 from zipfile import ZipFile
 
 from bidowl import CompanyProfile
 from bidowl.report import check_pdf_support
-from import_local import apply_import, plan_summary, prepare_import
+from import_local import apply_import, main as real_import_main, plan_summary, prepare_import
 from report_existing import export_existing
 from viewer import open_database, query_bids, query_detail, query_profile
 
@@ -161,11 +162,42 @@ def run_mvp_smoke(*, require_pdf: bool = False) -> dict:
                     not all(x["assessment_fresh"] for x in newest["items"])):
                 raise AssertionError("BASIC reimport changed current assessment selection")
 
+        # Test the operator-facing single-command route separately: imported
+        # assessment IDs must flow directly into read-only saved XLSX exports.
+        company_file = root / "cli-company.json"
+        company_file.write_text(
+            json.dumps(source_profile, ensure_ascii=False), encoding="utf-8"
+        )
+        cli_db = root / "cli-run.sqlite3"
+        cli_reports = root / "cli-run-reports"
+        cli_args = [
+            "--csv", str(csv_path), "--profile", str(company_file),
+            "--source-id", SOURCE_ID + "-CLI", "--db", str(cli_db),
+            "--apply", "--export-dir", str(cli_reports),
+        ]
+        with redirect_stdout(io.StringIO()) as captured:
+            if real_import_main(cli_args) != 0:
+                raise AssertionError("BASIC single-command importer/export failed")
+        cli_result = json.loads(captured.getvalue())
+        if (cli_result["status"] != "IMPORTED_AND_EXPORTED"
+                or cli_result["assessments_saved"] != 2
+                or len(cli_result["reports"]) != 2
+                or {x["assessment_id"] for x in cli_result["reports"]} !=
+                   {x["assessment_id"] for x in cli_result["assessments"]}):
+            raise AssertionError("BASIC one-shot import/export IDs or report counts mismatch")
+        for report in cli_result["reports"]:
+            if len(report["files"]) != 1:
+                raise AssertionError("BASIC one-shot XLSX output missing")
+            with ZipFile(report["files"][0]) as archive:
+                if archive.testzip() is not None:
+                    raise AssertionError("BASIC one-shot XLSX file integrity failed")
+
         return {
             "status": "BASIC_MVP_SYNTHETIC_E2E_PASS",
             "path": "real CSV importer -> saved company and assessments -> "
                     "readonly viewer/details -> saved reports -> backup/no-op reimport",
             "bids": 2, "reports": len(report_paths),
+            "one_shot_reports": len(cli_result["reports"]),
             "format": "xlsx+pdf" if require_pdf else "xlsx",
             "assessments_saved": first["assessments_saved"],
             "assessments_reused_on_repeat": second["assessments_reused"],
