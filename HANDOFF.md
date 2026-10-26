@@ -1,3 +1,20 @@
+# BID OWL HANDOFF — P2-25 MVP-first acceptance, next P2-26
+
+**User priority:** user explicitly asked "지금 mvp부터만드는거맞제" and agreed to proceed with ㄱ. Restore original plan: BASIC MVP functionality and true E2E before premium extensions/hardening. User rejected both UI images: **NO frontend aesthetic redesign** until explicit request. They want actual GitHub code committed, not repeated local manual scripts, ZIP downloads or PowerShell QA chores. Private repo `hibi89/Bid_Owl`, feature branch `feature/bid-owl-v1-basic-mvp` exclusively; main/Vercel protected, no paid private Actions/cloud, real customer data/keys or public release.
+
+**P2-25 actual code changes:** Added `backend/mvp_smoke.py` using real `import_local.prepare_import/apply_import` and non-demo safe synthetic fixture copied to temp; preflight no-write; evaluate two real-contract bids with company profile; local SQLite version+evidence persistence; read-only `viewer.query_bids/query_detail/query_profile` and mutation refusal; `report_existing.export_existing` creates saved snapshot XLSX, verifies archive and XML and bid IDs/status; checks same CSV repeat import backup preserves 2 previous assessments, 0 saved/2 reused, report files unchanged; optional strict `--require-pdf` prechecks ReportLab & Korean font prior to DB writes and asserts PDF bytes. No customer path/default DB/network involved.
+- NEW `backend/tests/test_mvp_smoke.py` 5 synthetic tests covering actual importer-to-report, CLI JSON, PDF prereq failure, failed importer cannot fake PASS, wrong require_pdf argument.
+- UPDATED `backend/qa_runner.py`: existing synthetic smoke now runs both historical CLI smoke and new real importer MVP acceptance. Both must pass to return PASS, failures captured separately; unit suite with zero discovered tests now FAIL rather than false PASS.
+- UPDATED `backend/tests/test_qa_runner.py`: 3 extra tests for both smoke stages required, new MVP broken while old CLI succeeds, and 0-tests discovered fail.
+- New `backend/MVP_ACCEPTANCE.md`, updated `START_HERE.md`, `README.md`, `backend/README.md`, `NEXT_TASK.md`, `STATUS.md`, `HANDOFF.md`. Total **256 test_* definitions in 17 modules**, not 256 PASS. Feature branch started at `817b6b0b4fd2927815dd58ba8738a7d04448e457` (P2-24 wrote no GitHub commits due safety block). Main baseline `c888c795bef72734f3f7016e54013b82453f11d8`. GitHub writes worked this turn. Re-fetch final branch SHA and changed files.
+
+**Potential remaining gaps:** New complete E2E source is not actually executed on private checkout; potential integration failures are not ruled out. Old `smoke_local.py` uses synthetic legacy CLI, new code tests actual customer's importer core. Actual Tkinter window, browser flow, strict PDF Korean font, Excel desktop open, native WinError32 lock, proper installer still not validated. Importer is multi-stage; report export is separate read-only step after saved DB and should NEVER be claimed atomic/auto-restored. Old P2-24 QA zip has a smaller standalone tester, but GitHub already had the stronger qa_runner; no need to duplicate it. PRO procurement API and PREMIUM AI not implemented. Overall old subjective ~42%.
+
+**NEXT ㄱ => P2-26:** MVP-first: seek real test run with available permitted environment (no paid CI/unapproved deployment and no asking user to run repeated ZIP/PowerShell manually) then fix failures. If no actual test runner access, inspect/test integration boundaries conservatively, add a simple first-use BASIC CLI/user workflow with import success separate from export failures, and prioritize true operational MVP over more broad hardening. Keep docs and branch commits current and accurate, no UI visual work.
+
+---
+## Prior HANDOFF notes
+
 # P2-23 (2026-10-27 KST) — 마감 시점 변경에 따른 판정 무효화
 
 **실제 코드 변경:** `backend/viewer.py`의 일반·상태별 공고 검색에서 저장된 `assessments.is_expired`와 현 시점 마감 상태를 비교하도록 수정. 공고 및 프로필 버전·규칙 엔진 해시가 같아도 평가 이후 공고가 마감되거나 기한이 연장되어 상태가 달라지면 PASS/FAIL을 현재 결과로 표시하지 않는다. 과거 `snapshot_status`와 근거는 유지, 현재 상태 UNKNOWN/수동 재검토/상세 evidence_is_current=false. 기존 200건 상태 일괄 조회에도 동일 조건 적용.
