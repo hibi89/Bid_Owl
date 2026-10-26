@@ -1,3 +1,11 @@
+## P2-20 optional recovery benchmark
+
+The optional command `python benchmark_local.py --records 10000 --assessed 200 --with-recovery` adds three measured stages to the established synthetic import/query timings: `sqlite_backup_ms`, `recovery_validate_and_hash_ms`, `recovery_copy_verify_ms`. The result also reports `recovery_verified` and the reconstructed evidence SHA-256. Without `--with-recovery`, the normal benchmark and regression-test workload are unchanged. A small 31-record/5-assessment test checks the opt-in path; there is no hidden 10k task in a standard unit run.
+
+A separate Python-only synthetic SQLite microbenchmark ran with 10,000 rows and 200 assessments. It is NOT the complete BID OWL importer, report, browser, or Windows performance test. Do not market its timings as product performance. The full private-repository 10k benchmark remains unexecuted.
+
+---
+
 # BID OWL P2-09 — isolated 10,000-bid local benchmark
 
 ## Purpose and evidence boundary
