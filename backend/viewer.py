@@ -193,7 +193,8 @@ def _query_without_status(
                 continue
             if category and kind != category:
                 continue
-            expired = _timestamp(due) is None or _timestamp(due) <= now
+            due_time = _timestamp(due)
+            expired = due_time is None or due_time <= now
             if deadline and expired != (deadline == "expired"):
                 continue
             metadata.append((expired, due or "", source_id, bid_no))
