@@ -1,26 +1,31 @@
-# BID OWL NEXT_TASK — P2-05 (2026-10-27 KST)
+# BID OWL NEXT_TASK — P2-06 · 2026-10-27 KST
 
-Private repo hibi89/Bid_Owl. Only feature/bid-owl-v1-basic-mvp. New chat: read HANDOFF -> STATUS -> AGENTS -> REQUIREMENTS -> NEXT_TASK -> current code, and check main/feature HEAD. "ㄱ" resumes automatically.
+Private repository hibi89/Bid_Owl. All work ONLY feature/bid-owl-v1-basic-mvp; never change main/legacy Vercel/deployments/paid services/customer files without approval. On user ㄱ, read fresh HANDOFF, STATUS, AGENTS, REQUIREMENTS, NEXT_TASK and actual GitHub source; verify main & feature branch HEAD first.
 
-## Prior implementation
-P1: importer, evidence-based PASS/FAIL/UNKNOWN, versioned SQLite, PDF/XLSX. P1 was measured at 96 PASS/0 FAIL on Linux 2026-10-26.
-P2-01 read-only SQLite 127.0.0.1 viewer, search/evidence/seven themes. P2-02 global browser-local favorites via same-origin bounded read-only JSON POST. P2-03 JSON profile editor + dry-run/backup-required explicit local edit/reassess CLI. P2-04 store expected_version inside transaction, preview read-only SQLite, keyed detail SQL, async drawer and accessibility hardening.
+## Prior source milestones
+- P1: strictly validated CSV; source-grounded 3-state rule assessment, immutable bid/profile/assessment revisions + backups, native XLSX and ReportLab PDF via CLI (earlier 96 tests PASS Linux 2026-10-26).
+- P2-01: localhost read-only SQLite HTTP/viewer and 7 themes; P2-02 global read-only favorites with bounds and same-origin POST; P2-03 explicit backed-up company editing and re-assessment CLI + browser JSON export; P2-04 readonly preview, SQLite version CAS, per-bid exact SQL detail, modal accessibility; P2-05 immutable saved report replay and synthetic full-stack smoke.
 
-## P2-05 source committed (NOT integration-verified)
-- backend/report_existing.py: open existing SQLite with viewer.open_database(mode=ro/query_only), load a persisted immutable assessment with historical bid version/rule evidence, write local non-overwriting XLSX/PDF with existing renderer, **without reimporting or re-evaluating**. Validates assessment ID and output collisions. No network/DB write endpoint.
-- backend/ui/ui.js: evidence drawer shows selected saved assessment ID and the correct report_existing.py local command, with explicit warning if this is a stale PASS/FAIL.
-- backend/tests/test_report_existing.py: six synthetic report replay, history preservation, overwrite refusal, missing ID, readonly, CLI tests.
-- backend/smoke_local.py: disposable synthetic fixture end-to-end runner: CSV -> SQLite -> XLSX -> loopback API GET and read-only favorites POST -> stored report replay -> profile preview + backup + apply + re-assess -> historical snapshot and backup verification. It does not use user DB, official API, external services, or PDF.
-- backend/tests/test_smoke_local.py: one synthetic integration test.
-- backend/REPORT_REPLAY.md documents exact local commands and limitations.
-- GitHub currently has **123 declared test methods**: import21, eligibility27, store28, report20, viewer9, profile_workflow11, report_existing6, smoke_local1. Count observed using fetched source; NOT actual pass result. Current exact remote ui.js parses in V8 Function (PASS).
+## P2-06 changes, source implemented / not yet integrated verified
+1. backend/bidowl/report.py: XLSX exclusive-creation writer removes its own incomplete file on any ZIP/XML failure; existing paths are never deleted.
+2. backend/report_existing.py: on failure of PDF after successful XLSX with --format both, remove only the completed sibling generated in this invocation. This is best-effort failure cleanup, not power-loss-level atomic multi-file transaction. Source SQLite remains query_only.
+3. backend/tests/test_report.py: +1 synthetic interrupted XLSX sheet regression. backend/tests/test_report_existing.py: +2 regressions for sibling PDF failure cleanup and pre-existing PDF preservation.
+4. backend/ui/index.html + ui.js: new company profile onboarding button. Create JSON from empty conservative unknown fields, enter new profile ID, download locally and apply via existing explicit --create / --apply / --backup CLI. Existing-profile editor remains; no new HTTP write path. backend/tests/test_viewer.py adds assertions to existing UI/theme test.
+5. backend/verify_local.ps1: self-contained Windows local verification from *actual private checkout*: Python all tests, synthetic smoke, Node syntax if installed. Stops at first nonzero exit and notes untested Windows/native Excel/browser/official records.
+6. backend/REPORT_REPLAY.md updated.
+7. GitHub connected source contains **126 declared Python test methods**: 27 eligibility +21 importer +11 profile workflow +21 report +8 report_existing +1 smoke +28 store +9 viewer. Count confirmed by reading test definitions, **126 NOT RUN / NOT 126 PASS**. Exact current GitHub ui.js parsed with V8 Function constructor = PASS. Runtime profile onboarding/browser and output-failure recovery not verified.
 
-## NEXT P2-06 priorities
-1. Run a fully authenticated/authorized actual checkout on a runner able to access this private repo. Execute `cd backend && python -m unittest discover -s tests -v` and `python smoke_local.py`; report real test count/errors (123 is only an inventory). Fix failures immediately and rerun.
-2. Test `python report_existing.py --db ./demo.sqlite3 --assessment-id 1 --output ./new-reports --format both` on a **synthetic** DB; inspect real XLSX and PDF (ReportLab + local Korean TTF). Verify original DB not mutated and new files never overwrite.
-3. Windows 11 local Chrome/Edge: inspect UI detail/history and profile JSON download, CSP, keyboard focus, seven themes responsive, Excel/PDF. Benchmark 10k bids and assess status/batch crash recovery.
-4. Customer-friendly report export and profile editing remain CLI-assisted by design, not full one-click paid UX. No writable HTTP endpoint without explicit CSRF/authentication/backup review and user approval.
-5. Future: P3 official procurement API with customer key, P4 opt-in AI, P5 Windows install/security, P6 trademark/sale gate. No main/Vercel/production/paid-service changes and no customer DB/docs/keys/fonts in GitHub.
+## NEXT P2-07: highest priority, acceptance criteria
+- Work from authorized GitHub private checkout with Python 3.11+ and ReportLab/local Korean TTF installed. Run:
+  `cd backend`
+  `python -m unittest discover -s tests -v`
+  `python smoke_local.py`
+  `node --check ui/ui.js`
+  Windows convenience: `powershell -ExecutionPolicy Bypass -File .\verify_local.ps1`
+  Report actual PASS/FAIL/skip counts and fix any real test failures immediately. The smoke uses only provided synthetic fixtures and a temp directory. Do not repeat prior container private git/raw DNS attempts or call stand-ins the actual repo.
+- Validate real local output failure cleanup and both-format PDF font/license, native Excel, browser Blob download for new and edited profile, 7 themes, keyboard focus and mobile widths, no profile before onboarding, version conflict after backup; measure 10k list/detail.
+- BASIC customer-ready UX still incomplete: CLI necessary to save/edit profile and export reports. New read-only HTTP binary report route might avoid CLI, but must first review sensitive output/download/path safety and avoid DB mutation or leaked files; full write UI requires explicit authenticated security/CSRF/backup approval.
+- P3 official procurement user-key API, P4 optional AI, P5 Windows installation/security, P6 KIPRIS and product sale later.
 
-## Blocker / earlier attempts
-Container DNS couldn't resolve GitHub private repo clone, signed raw URL or api.github.com, and no private checkout exists at /mnt/data. Do not run partial old stand-in and call it full current QA. Chromium blocked local navigation in previous session with ERR_BLOCKED_BY_ADMINISTRATOR. No proof of browser bug or successful rendering. Work remains source-implemented/integration-pending until genuine execution on full checkout.
+## Blocking, privacy and production
+Connector GitHub read/write works; local sandbox can't obtain private full checkout via previous DNS/auth and signed raw method, so all P2 tests remain unverified on actual checkout. Browser automation previously blocked with ERR_BLOCKED_BY_ADMINISTRATOR. Main unchanged from baseline c888c795bef72734f3f7016e54013b82453f11d8 at start; recheck at final. Existing Vercel project project08-bid-insight not touched; local Python product not deployed. No customer CSV/docs/SQLite/API credentials/PDF/XLSX or fonts committed; no external service calls or costs. Old 340/340 school static QA is not BID OWL product QA.
