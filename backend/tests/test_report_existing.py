@@ -8,6 +8,7 @@ import sqlite3
 import tempfile
 import threading
 import unittest
+from contextlib import closing
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from zipfile import ZipFile
@@ -110,7 +111,7 @@ class ExistingReportTests(unittest.TestCase):
                                 output_dir=self.destination,format="xlsx")
 
     def test_snapshot_reader_sqlite_connection_rejects_writes(self):
-        with open_database(self.db) as conn:
+        with closing(open_database(self.db)) as conn:
             r = SnapshotReader(conn)
             record, rules = r.assessment(self.first)
             self.assertEqual(record["status"], "PASS")
@@ -121,7 +122,7 @@ class ExistingReportTests(unittest.TestCase):
                 conn.execute("DELETE FROM assessments")
 
     def test_readonly_download_renders_valid_historical_xlsx_bytes(self):
-        with open_database(self.db) as conn:
+        with closing(open_database(self.db)) as conn:
             payload = render_saved_xlsx(conn,self.first)
             self.assertTrue(payload.startswith(b'PK'))
             with ZipFile(io.BytesIO(payload)) as archive:
