@@ -15,6 +15,7 @@ from contextlib import closing
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
+from backup_recovery import prepare_recovery, restore_to_new_file
 from bidowl import Bid, BidOwlStore, CompanyProfile, Requirement
 from viewer import open_database, query_bids, query_detail, query_favorites
 
@@ -28,11 +29,14 @@ def timed(name: str, task, results: dict):
     return answer
 
 
-def run_benchmark(*, records: int = 10000, assessed: int = 200) -> dict:
+def run_benchmark(*, records: int = 10000, assessed: int = 200,
+                  measure_recovery: bool = False) -> dict:
     if type(records) is not int or not 1 <= records <= 10000:
         raise ValueError("records must be an integer between 1 and 10000")
     if type(assessed) is not int or not 0 <= assessed <= records:
         raise ValueError("assessed must be an integer between 0 and records")
+    if type(measure_recovery) is not bool:
+        raise ValueError("measure_recovery must be a bool")
     now = datetime.now(timezone.utc)
     deadline = now + timedelta(days=30)
     data = [
@@ -94,11 +98,32 @@ def run_benchmark(*, records: int = 10000, assessed: int = 200) -> dict:
                 with_failure = True
             if not with_failure:
                 raise AssertionError("Benchmark viewer allowed DB mutation")
+        recovery_result = None
+        if measure_recovery:
+            snapshot = Path(scratch) / "perf-snapshot.sqlite3"
+            restored = Path(scratch) / "perf-recovered.sqlite3"
+            with BidOwlStore(db, must_exist=True) as store:
+                timed("sqlite_backup_ms", lambda: store.backup_to(snapshot), timings)
+            plan = timed(
+                "recovery_validate_and_hash_ms",
+                lambda: prepare_recovery(snapshot, restored), timings,
+            )
+            recovery_result = timed(
+                "recovery_copy_verify_ms",
+                lambda: restore_to_new_file(plan), timings,
+            )
+            if (recovery_result["record_counts"]["bids"] != records
+                    or recovery_result["record_counts"]["assessments"] != assessed
+                    or recovery_result["evidence_sha256"] != plan.evidence_sha256):
+                raise AssertionError("Synthetic recovery benchmark evidence mismatch")
         return {
             "status": "SYNTHETIC_BENCH_COMPLETE",
             "records": records,
             "assessed": assessed,
             "db_size_bytes": db.stat().st_size,
+            "recovery_verified": recovery_result is not None,
+            "recovery_evidence_sha256": (recovery_result["evidence_sha256"]
+                                         if recovery_result is not None else None),
             "timings_ms": timings,
             "database_mutation_by_viewer": False,
             "disclaimer": (
@@ -113,9 +138,12 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="BID OWL isolated synthetic 10k performance benchmark")
     parser.add_argument("--records", type=int, default=10000)
     parser.add_argument("--assessed", type=int, default=200)
+    parser.add_argument("--with-recovery", action="store_true",
+                        help="Also measure consistent backup, evidence validation and safe restore")
     args = parser.parse_args(argv)
     try:
-        print(json.dumps(run_benchmark(records=args.records, assessed=args.assessed),
+        print(json.dumps(run_benchmark(records=args.records, assessed=args.assessed,
+                                              measure_recovery=args.with_recovery),
                          ensure_ascii=False, indent=2))
         return 0
     except (OSError, ValueError, sqlite3.Error, AssertionError) as exc:
