@@ -54,7 +54,7 @@ class ViewerTests(unittest.TestCase):
         c.commit();c.close()
 
     def test_filters_and_stale_assessment_are_conservative(self):
-        with open_database(self.path) as c:
+        with closing(open_database(self.path)) as c:
             data=query_bids(c,{})
             self.assertEqual(data['total'],3)
             self.assertEqual(data['categories'],['IT','교육'])
@@ -74,7 +74,7 @@ class ViewerTests(unittest.TestCase):
 
     def test_detail_fetch_is_key_scoped(self):
         from viewer import _latest_rows
-        with open_database(self.path) as conn:
+        with closing(open_database(self.path)) as conn:
             ids = [(r['source_id'], r['bid_no']) for r in _latest_rows(conn, 'P1', ('TEST','B'))]
             self.assertEqual(ids,[('TEST','B')])
             self.assertEqual(_latest_rows(conn, 'P1', ('TEST','MISSING')),[])
@@ -105,7 +105,7 @@ class ViewerTests(unittest.TestCase):
                  datetime.now(timezone.utc).isoformat(),1,
                  datetime.now(timezone.utc).isoformat()))
             writer.commit()
-        with open_database(self.path) as conn:
+        with closing(open_database(self.path)) as conn:
             detail=query_detail(conn,{'source_id':[source],'bid_no':[number],
                                       'profile':[profile]})
             self.assertEqual(detail['bid']['assessment_id'],400)
@@ -144,7 +144,7 @@ class ViewerTests(unittest.TestCase):
             worker.join(timeout=3)
 
     def test_read_only_and_rule_provenance(self):
-        with open_database(self.path) as c:
+        with closing(open_database(self.path)) as c:
             self.assertEqual(query_profiles(c)['profiles'][0]['profile_id'],'P1')
             detail=query_detail(c,{'source_id':['TEST'],'bid_no':['A']})
             self.assertEqual(detail['rules'][0]['source_text'],'자격조건 원문')
@@ -155,7 +155,7 @@ class ViewerTests(unittest.TestCase):
                 c.execute("DELETE FROM bids")
 
     def test_input_validation_and_missing_data(self):
-        with open_database(self.path) as c:
+        with closing(open_database(self.path)) as c:
             for q in ({'page':['0']},{'page_size':['101']},{'status':['OTHER']},{'q':['x'*121]},
                       {'page':['1 OR 1=1']},{'q':['A','B']}):
                 with self.subTest(q=q),self.assertRaises(ValueError):query_bids(c,q)
@@ -194,7 +194,7 @@ class ViewerTests(unittest.TestCase):
         self.assertEqual(get('GET','/api/detail?'+urlencode({'source_id':'TEST','bid_no':'A'}))[0],200)
 
     def test_global_favorites_filter_before_pagination(self):
-        with open_database(self.path) as conn:
+        with closing(open_database(self.path)) as conn:
             # B is not among first two open bids but must still be found globally.
             all_page = query_bids(conn, {'page':['1'], 'page_size':['1']})
             self.assertNotEqual(all_page['items'][0]['bid_no'], 'B')
@@ -252,7 +252,7 @@ class ViewerTests(unittest.TestCase):
         self.assertEqual(post(body, {**base, 'Host':host})[0], 200)
 
     def test_current_profile_is_read_only_and_unmodified(self):
-        with open_database(self.path) as conn:
+        with closing(open_database(self.path)) as conn:
             found=query_profile(conn, {'profile_id':['P1']})
             self.assertTrue(found['read_only'])
             self.assertEqual(found['version'],1)
