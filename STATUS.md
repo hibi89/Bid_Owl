@@ -1,3 +1,19 @@
+# BID OWL STATUS — P2-12 autonomous QA hardening, 2026-10-27 KST
+
+**Latest live-source state:** 144 Python test method definitions in 11 files; **not yet executed as a current 144-case suite**. First real Windows P2-10 ZIP run: 137 ran, 119 without error, 18 WinError 32 locked SQLite temporary files, 0 assertion failures. Current code fixes from P2-11 and P2-12 not yet native-Windows-rerun. Overall all-tier subjective completion estimate remains ~35%.
+
+**New P2-12 GitHub changes**
+- `backend/tests/test_sqlite_handles.py`: new 4-method AST regression suite catches direct unsafe sqlite3/open_database context managers. Three isolated scanner cases executed PASS locally in Python; full tree condition unexecuted on authentic repo.
+- `backend/tests/test_store.py`: +1 portable connection-spy test verifies SQLite backup destination is actually closed, even on Linux where deleted open files otherwise mask the WinError. Minimal stand-alone spy mechanism PASS in local Python, not integrated test result.
+- `backend/qa_runner.py` and `backend/tests/test_qa_runner.py`: isolation semantics changed to continue real synthetic smoke and explicit opt-in 10k benchmark after unrelated unit/smoke FAIL while still returning overall FAIL; +1 test for independence, existing mock fixture revised.
+- `backend/BENCHMARK.md`: explains independent stages and real Windows 137-run evidence. `NEXT_TASK.md`, `STATUS.md`, `HANDOFF.md`: updated.
+- Remote source inspection of 25 Python files found **zero direct bare `with sqlite3.connect(...)` or `with open_database(...)` patterns**. Static scan does not cover aliases or arbitrary connection retention.
+- No full Python suite, native browser, native Excel/PDF or 10k timing executed in this authoring environment due lack of authenticated mounted private checkout. Do not claim source pass equals Windows validation.
+
+**Operating instruction:** User previously objected to repeated manual ZIP downloads/tests. Do NOT ask them for routine QA each ㄱ; continue developing autonomously on feature branch and distinguish code readiness from final Windows validation. No public deployment, paid CI, customer-data transfer, API key or main/Vercel modifications.
+
+## Prior P2-11 factual result and background below
+
 # BID OWL STATUS — actual Windows P2-11 test remediation, 2026-10-27 KST
 
 ## Actual measured quality signal
