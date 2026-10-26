@@ -1,3 +1,23 @@
+# BID OWL HANDOFF — P2-18 strict file identity and no-create writer (2026-10-27 KST)
+
+User's `ㄱ` means autonomously continue source dev in connected private GitHub `hibi89/Bid_Owl`, `feature/bid-owl-v1-basic-mvp`. They explicitly dislike repeated ZIP downloads/PowerShell testing. Do NOT ask user to run routine QA; make GitHub commits and perform feasible isolated/static tests yourself. Protect main/legacy Vercel, privacy, API keys, no paid runner/public deploy.
+
+**P2-18 actual code changes**
+- New `database_file_identity(path) -> (st_dev,st_ino,st_size,st_mtime_ns)` in `backend/bidowl/store.py`. Store supports optional `must_exist=True` (SQLite URI mode=rw, no CREATE, schema version1 only) and `expected_identity` (same exact preflighted physical file, check before+after connect). Old callers with no flags retain explicit/new DB creation default. Fresh `open('xb')` reserved DB uses expected_identity without must_exist to initialize only that intended file, not an accidentally created/replaced path. Missing/wrong-type file fails before schema creation.
+- `backend/import_local.py`: `ImportPlan.db_identity` captured during preview and checked against second preflight, then passed to writer; existing must_exist, new reserved identity. Both existing and newly reserved DB are opened with mode=rw (not auto-create). Existing DB backup remains mandatory before first mutation.
+- `backend/cli.py`: captures initial stat before readonly preflight, compares after; uses must_exist+expected_identity for existing, exclusively reserves and pins expected identity for new; preserves P2-17 consistent backup, CAS profile/version checks and report partial-failure signaling.
+- `backend/profile_workflow.py`: full existing-only identity pin across readonly preflight and writer open, backup-first semantics unchanged; readonly previews unchanged.
+- Synthetic code tests +13: `tests/test_store.py` +6, `test_import_local.py` +3, `test_cli_safe.py` +2, `test_profile_workflow.py` +2. Current GitHub test declaration count **212 methods/15 modules**, not verified executions.
+- Isolated `python` sqlite3 temporary-file check 4/4 PASS for URI mode=rw no create, unchanged missing path, empty version 0, and os.replace differing dev/inode/size/time tuple. NOT authentic integrated GitHub 212 suite.
+- New doc `backend/DB_FILE_SAFETY.md`, README and status/handoff/next/start updated. Feature started HEAD `dd6536cd9be340e503deb92e030405b8c9ab9d0e`; fetch final SHA and verify main remains `c888c795bef72734f3f7016e54013b82453f11d8`. Only feature commits.
+
+**Limitations & safety:** No cross-process exclusive lock, inode collision/reuse and post-open path changes are not fully stopped. SQLite writer still runs multi-stage operations in separate transactions and retains backups rather than auto-restores. No malicious DB tampering authentication. Browser still localhost read-only. Real Windows cleanup locks 18 errors on 137-case P2-10 old run not proven fixed by rerun. No Windows GUI, real PDF font/Excel or benchmark execution in P2-18. No app installer, official procurement PRO or opt-in AI PREMIUM; full product prior estimate ~42% subjective (not measured).
+
+**Next P2-19:** user-friendly backup validation and safe restore plan, optional controlled local restore only after separate backup of active DB and explicit approval. Prioritize avoiding customer data loss, no silent overwrite. Then native Windows installers, 212 suite and browser/PDF/Excel/10k authentic QA (approved local or other authorized no-fee mechanism). Do not ask user to do repeated QA. Handoff stays in GitHub for new chat.
+
+---
+## Earlier HANDOFF history
+
 # BID OWL HANDOFF — P2-17 legacy CLI upgrade and next P2-18 (2026-10-27 KST)
 
 **User intent:** `ㄱ` means autonomous GitHub source work; user has objected to repeated manual ZIP download and Windows test requests. Private repo `hibi89/Bid_Owl` branch `feature/bid-owl-v1-basic-mvp` only; main and legacy Vercel protected. No paid runner, external customer file transfer, public deploy or real APIs without approval.
