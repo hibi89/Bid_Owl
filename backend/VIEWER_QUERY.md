@@ -1,3 +1,13 @@
+## P2-23 — 마감 시점이 바뀌면 과거 PASS/FAIL은 유효하지 않음
+
+안전성 검토에서 확인한 누락을 수정했습니다. `_latest_rows`와 `_status_for_candidate_keys` 모두 저장된 평가의 `assessments.is_expired` 값과 **조회 시점 현재 `bid_deadline <= now`** 비교를 추가합니다. 원본 공고와 회사 프로필 버전·평가 엔진 지문이 일치해도, 평가 후 마감일이 지나거나 마감일이 연장되어 평가 당시 마감 상태가 달라지면 현재 상태를 **UNKNOWN**으로 표시합니다. 과거 `snapshot_status`는 보존하며 `requires_human_review=true`, 조회 상세 `evidence_is_current=false`, 설명에는 `공고 마감 상태 변경 — 재판정 필요`를 표시합니다.
+
+메타데이터 단계가 계산한 `expired` 맵을 상태 판정 SQL에 전달하므로, 추가로 1만 건의 공고 JSON을 재파싱하지 않습니다. 일반 목록과 상태별 검색은 동일한 UTC 기준시각을 사용합니다. 별도 구형 DB `is_expired` 컬럼은 BID OWL 실제 v1 정의에 포함되어 있으며, 테스트용 가상 SQLite 테이블도 실제 v1 마감 필드를 반영하도록 변경했습니다.
+
+신규 합성 회귀 테스트 3개: 마감 전 PASS가 마감 뒤 UNKNOWN, 마감된 FAIL 공고의 기한 연장 뒤 UNKNOWN, 상태 필터와 상세 조회도 동일하게 재판정 안내. 독립 Python/sqlite3 임시 DB에서 마감 전 PASS, 마감 전→후 UNKNOWN, 마감 후 FAIL, 마감 후→전 UNKNOWN, 미판정 UNKNOWN의 **5/5 SQL 계약 검증**을 실행했습니다. 이는 전체 GitHub 실제 앱 및 Windows 테스트 결과는 아닙니다.
+
+---
+
 ## P2-22 — PASS·FAIL·UNKNOWN 상태 검색 최적화
 
 기존 P2-21 메타데이터 우선 방식에 **상태 필터**도 포함했습니다. `query_bids`는 현재 공고 메타데이터를 읽고 키워드·카테고리·마감 상태·즐겨찾기를 먼저 좁힌 후, `_status_for_candidate_keys`로 남은 공고의 **최소 판정 현재성 정보**만 조회합니다. 공고 200건씩 최대 402개의 SQLite 바인딩 변수로 나누기 때문에 오래된 SQLite 파라미터 제한에도 대응합니다.
