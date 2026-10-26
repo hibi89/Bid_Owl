@@ -1,3 +1,29 @@
+# BID OWL HANDOFF — P2-16 completed as source, next P2-17 (2026-10-27 KST)
+
+## Continuation and user instruction
+User `ㄱ` = autonomously implement on PRIVATE `hibi89/Bid_Owl`, `feature/bid-owl-v1-basic-mvp`, inspect latest GitHub heads/source and NEXT_TASK/STATUS/AGENTS/REQUIREMENTS/START_HERE. User firmly dislikes repeated manual ZIP/PowerShell tests. No changes to main, old Vercel, paid services or exposure of user/local customer data/API keys.
+
+## P2-16 exact work
+1. New `backend/bidowl/engine_identity.py`: `engine_fingerprint()` SHA-256 over files eligibility.py, schema.py, profile.py, store.py with names + lengths. No customer input or external calls. Source unavailable: raise, fail-closed; packaged EXE must bundle these files or use verified manifest in future.
+2. `backend/bidowl/store.py`: fresh SQLite v1 creates additive `assessment_engine_provenance` table with assessment ID FK and engine_hash. `assess_and_record` computes current fingerprint pre-transaction; inserts hash atomically alongside immutable assessment/rule evidence when metadata table exists. Hash insert failure rolls back whole assessment; older DB with no table does NOT get silently mutated by open/write.
+3. `backend/import_local.py`: existing v1 DB backed up first; then CREATE TABLE IF NOT EXISTS. `_reusable_assessment_status` joins latest assessment provenance and requires hash == runtime SHA (plus same bid/profile revisions, expiry flag). Unknown/old hash causes new assessment and preserved old history. `--force-reassess` still optional. Fresh missing source files cause failure before writing.
+4. `backend/profile_workflow.py`: after mandatory successful backup, create optional metadata table in legacy DB, new reassessments hashed. No metadata before backup; no backfill of old PASS.
+5. `backend/viewer.py`: readonly query detects whether provenance table exists; missing table/hash or changed engine => current `UNKNOWN` and human-review reason; `snapshot_status` retains historical PASS/FAIL. Missing engine source => viewer UNKNOWN instead of false PASS. No HTTP write route.
+6. Synthetic tests: `backend/tests/test_engine_identity.py` (+3), `tests/test_import_local.py` (+2), `tests/test_viewer.py` (+3), `tests/test_store.py` (+2), `tests/test_profile_workflow.py` (+1). Total current verified remote definition count **189 across 14 files**, NOT 189 PASS.
+7. Docs `backend/ENGINE_POLICY.md` and `backend/IMPORT.md`, NEXT_TASK, STATUS, HANDOFF plus pointers updated.
+
+## Verification evidence
+Live code fetched from GitHub: conditional viewer JOIN syntax, old v1 schema avoidance, backup-then-DDL, policy hash on write and compare on reuse. Ran only a separate **3/3 synthetic in-memory sqlite3 SQL contract** in author environment (viewer no-provenance, viewer provenance, reuse join), not exact private GitHub suite. No actual integrated 189 tests, Windows GUI, browser, Excel/PDF, packaging or 10k performance execution verified this iteration. Earlier user Windows P2-10 run had 137 Python cases, 18 WinError 32 cleanup errors; P2-11 code fixed SQLite connection closes but not remeasured. Do not claim full PASS.
+
+## Product and stage
+BID OWL BASIC planned KRW 59k CSV profile snapshots Excel/PDF seven theme offline read-only browser; PRO planned 149k official government API using customer's own key; PREMIUM planned 299k opt-in AI and profitability. Pricing, brand KIPRIS, native installer, official procurement integration and sales eligibility unverified. Overall previous completion guess ~40% remains subjective. No external deployment/customer data/payment. GitHub repository ID 1399359397, main preserved baseline `c888c795bef72734f3f7016e54013b82453f11d8`. Feature branch was `b392983ccd5ef36bc27a8bdcf98dd5a82b5376fe` before P2-16; after writing HANDOFF verify newest SHA and main, author and compare.
+
+## Next P2-17
+Improve `backend/cli.py` compatibility with metadata on old v1 DB: existing CLI lacks backup on mutate, so must add explicit safe prewrite backup before upgrading legacy DB, or use safe readonly importer; no silently writable browser. Also improve guided backup restore/report workflow while maintaining immutable evidence and fail-closed rule engine policy. Real Windows 189-suite + native Excel/PDF/browser is a release blocker, not routine user task. `ㄱ` goes next.
+
+---
+## Earlier P2-15 and prior historical handoff
+
 # BID OWL HANDOFF — P2-15 idempotent local eligibility decisions, 2026-10-27 KST
 
 ## 1. Project and user workflow
