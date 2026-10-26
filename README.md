@@ -1,3 +1,5 @@
+> **P2-14 개발 브랜치 안내:** 실사용 CSV·회사 프로필을 PC에 등록하는 새로운 오프라인 진입점은 `START_BID_OWL_IMPORT.cmd`이며 [backend/IMPORT.md](backend/IMPORT.md)에 설명했습니다. 가상 데이터 전용 `START_BID_OWL_DEMO.cmd`와 별개입니다. 실제 Windows 실행·상용 인증은 미검증 상태입니다.
+
 > **BID OWL 신규 Python 로컬 제품 개발 브랜치 안내 (P2-13)**  
 > Windows에서 가상 공고 전용 로컬 데모를 실행하려면 `START_BID_OWL_DEMO.cmd`를 사용합니다. 실제 공고·고객 DB를 사용하지 않으며 실행 중 임시 SQLite를 사용합니다. 상세 설명은 [backend/DEMO.md](backend/DEMO.md), 개발 상황은 [STATUS.md](STATUS.md) 참조. 이 아래의 BID INSIGHT 설명과 340/340 수치는 과거 정적 학원 데모 전용이며 신규 제품 검증 결과가 아닙니다.
 
