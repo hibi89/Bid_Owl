@@ -231,7 +231,128 @@ class ViewerTests(unittest.TestCase):
                 result = query_bids(conn, {"status": ["PASS"]})
             self.assertEqual(result["total"], 1)
             self.assertEqual(observed.call_count, 1)
-            self.assertNotIn("candidate_keys", observed.call_args.kwargs)
+            self.assertEqual(len(observed.call_args.kwargs["candidate_keys"]), 1)
+
+    def test_status_filters_equal_full_snapshot_across_profiles_and_provenance(self):
+        from viewer import _latest_rows
+        from unittest.mock import patch
+
+        query_variants = [
+            {"status": "PASS"}, {"status": "FAIL"},
+            {"status": "UNKNOWN"}, {"status": "PASS", "profile": "P1"},
+            {"status": "UNKNOWN", "profile": "P1"},
+            {"status": "UNKNOWN", "profile": "missing"},
+            {"status": "PASS", "deadline": "open"},
+            {"status": "FAIL", "deadline": "expired"},
+            {"status": "UNKNOWN", "category": "IT"},
+            {"status": "UNKNOWN", "q": "사업"},
+            {"status": "PASS", "page_size": "1", "page": "2"},
+        ]
+        with closing(open_database(self.path)) as conn:
+            for filters in query_variants:
+                with self.subTest(filters=filters):
+                    original = _latest_rows(conn, filters.get("profile", ""))
+                    filtered = [x for x in original if x["status"] == filters["status"]]
+                    if filters.get("deadline"):
+                        filtered = [x for x in filtered if x["expired"] == (filters["deadline"] == "expired")]
+                    if filters.get("category"):
+                        filtered = [x for x in filtered if x["category"] == filters["category"]]
+                    if filters.get("q"):
+                        term = filters["q"].casefold()
+                        filtered = [x for x in filtered if term in " ".join(
+                            str(x[k]) for k in ("title","agency","bid_no","source_id")
+                        ).casefold()]
+                    filtered.sort(key=lambda x: (
+                        x["expired"], x["deadline"] or "", x["source_id"], x["bid_no"]
+                    ))
+                    page = int(filters.get("page", "1"))
+                    size = int(filters.get("page_size", "30"))
+                    with patch("viewer._latest_rows", wraps=_latest_rows) as full_load:
+                        actual = query_bids(conn, {k: [v] for k,v in filters.items()})
+                    self.assertEqual(actual["total"], len(filtered))
+                    self.assertEqual(actual["items"], filtered[(page-1)*size:page*size])
+                    self.assertEqual(full_load.call_count, 1)
+                    self.assertEqual(len(full_load.call_args.kwargs["candidate_keys"]), len(actual["items"]))
+                    self.assertFalse(conn.in_transaction)
+
+    def test_missing_or_mismatched_engine_hash_never_passes_status_filter(self):
+        from viewer import _latest_rows
+        from unittest.mock import patch
+        import viewer
+
+        with closing(sqlite3.connect(self.path)) as writer:
+            writer.execute(
+                "UPDATE assessment_engine_provenance SET engine_hash=? WHERE assessment_id=1",
+                ("0" * 64,)
+            )
+            writer.commit()
+        with closing(open_database(self.path)) as conn:
+            self.assertEqual(query_bids(conn, {"status": ["PASS"]})["total"], 0)
+            unknown = query_bids(conn, {"status": ["UNKNOWN"]})
+            self.assertEqual({x["bid_no"] for x in unknown["items"]}, {"A", "C"})
+        with closing(sqlite3.connect(self.path)) as writer:
+            writer.execute("DROP TABLE assessment_engine_provenance")
+            writer.commit()
+        with closing(open_database(self.path)) as conn:
+            self.assertEqual(query_bids(conn, {"status": ["PASS"]})["total"], 0)
+            self.assertEqual(query_bids(conn, {"status": ["UNKNOWN"]})["total"], 3)
+            with patch("viewer.engine_fingerprint", side_effect=FileNotFoundError("missing policy")):
+                self.assertEqual(query_bids(conn, {"status": ["PASS"]})["total"], 0)
+                unknown = query_bids(conn, {"status": ["UNKNOWN"]})
+                self.assertEqual(unknown["total"], 3)
+                self.assertTrue(all(x["status"] == "UNKNOWN" for x in unknown["items"]))
+
+    def test_status_query_batches_over_old_sqlite_parameter_limit(self):
+        from viewer import _latest_rows
+        from unittest.mock import patch
+        import viewer
+
+        now = datetime.now(timezone.utc)
+        with closing(sqlite3.connect(self.path)) as writer:
+            for i in range(425):
+                bid_no = f"BIG-{i:04d}"
+                payload = {
+                    "bid_no": bid_no, "title": f"합성 사업 {i}",
+                    "agency": "샘플기관", "category": "IT",
+                    "bid_deadline": self.deadline, "source_ref": "SYNTHETIC",
+                }
+                writer.execute("INSERT INTO bids VALUES (?,?,?)", ("BATCH", bid_no, 1))
+                writer.execute("INSERT INTO bid_versions VALUES (?,?,?,?)",
+                    ("BATCH", bid_no, 1, json.dumps(payload, ensure_ascii=False)))
+                if i % 3 == 0:
+                    aid = 1000 + i
+                    writer.execute("INSERT INTO assessments VALUES (?,?,?,?,?,?,?,?,?,?)",
+                        (aid, "BATCH", bid_no, 1, "P1", 1,
+                         "FAIL" if i % 2 else "PASS", now.isoformat(), 0, now.isoformat()))
+                    writer.execute("INSERT INTO assessment_engine_provenance VALUES (?,?)",
+                                   (aid, engine_fingerprint()))
+            writer.commit()
+        with closing(open_database(self.path)) as conn:
+            from viewer import _status_for_candidate_keys
+            keys = [("BATCH", f"BIG-{i:04d}") for i in range(425)]
+            statuses = _status_for_candidate_keys(conn, keys, "P1")
+            self.assertEqual(len(statuses), 425)
+            self.assertEqual(statuses[("BATCH", "BIG-0000")], "PASS")
+            self.assertEqual(statuses[("BATCH", "BIG-0003")], "FAIL")
+            self.assertEqual(statuses[("BATCH", "BIG-0001")], "UNKNOWN")
+            result = query_bids(conn, {"status": ["PASS"], "page_size": ["10"]})
+            baseline = [x for x in _latest_rows(conn, "P1") if x["status"] == "PASS"]
+            self.assertGreater(result["total"], 10)
+            self.assertEqual(result["total"], len(baseline))
+
+    def test_filtered_favorites_use_status_shortlist_not_full_assessment_scan(self):
+        from unittest.mock import patch
+        import viewer
+        with closing(open_database(self.path)) as conn:
+            with patch("viewer._latest_rows", wraps=viewer._latest_rows) as full_load:
+                result = query_favorites(conn, {
+                    "favorites": [["TEST", "A"], ["TEST", "B"], ["TEST", "C"]],
+                    "filters": {"status": "UNKNOWN", "page_size": "1"},
+                })
+            self.assertEqual(result["total"], 1)
+            self.assertEqual(result["items"][0]["bid_no"], "C")
+            self.assertEqual(len(full_load.call_args.kwargs["candidate_keys"]), 1)
+            self.assertFalse(conn.in_transaction)
 
     def test_empty_page_and_no_favorites_never_request_full_assessment_scan(self):
         from unittest.mock import patch
