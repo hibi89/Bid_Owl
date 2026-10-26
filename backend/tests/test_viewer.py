@@ -11,7 +11,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from urllib.parse import urlencode
 
-from viewer import make_server, open_database, query_bids, query_detail, query_profiles, query_favorites
+from viewer import make_server, open_database, query_bids, query_detail, query_profiles, query_favorites, query_profile
 
 
 class ViewerTests(unittest.TestCase):
@@ -24,6 +24,7 @@ class ViewerTests(unittest.TestCase):
         CREATE TABLE bids(source_id TEXT,bid_no TEXT,latest_version INTEGER);
         CREATE TABLE bid_versions(source_id TEXT,bid_no TEXT,version INTEGER,payload TEXT);
         CREATE TABLE profiles(profile_id TEXT,latest_version INTEGER);
+        CREATE TABLE profile_versions(profile_id TEXT,version INTEGER,payload TEXT);
         CREATE TABLE assessments(id INTEGER,source_id TEXT,bid_no TEXT,bid_version INTEGER,
           profile_id TEXT,profile_version INTEGER,status TEXT,checked_at TEXT,requires_human_review INTEGER,data_as_of TEXT);
         CREATE TABLE rule_assessments(assessment_id INTEGER,position INTEGER,rule_id TEXT,kind TEXT,
@@ -43,6 +44,7 @@ class ViewerTests(unittest.TestCase):
         add_bid('B','교육 행사','교육',self.old_deadline)
         add_bid('C','미검증 사업','IT',self.deadline,version=2)
         c.execute('INSERT INTO profiles VALUES (?,?)',('P1',1))
+        c.execute('INSERT INTO profile_versions VALUES (?,?,?)',('P1',1,json.dumps({'profile_id':'P1','region':'부산','categories':['IT'], 'licenses':None, 'staff_count':0,'experience_total_krw':None},ensure_ascii=False)))
         for row in [(1,'A',1,'PASS'),(2,'B',1,'FAIL'),(3,'C',1,'PASS')]:
             c.execute('INSERT INTO assessments VALUES (?,?,?,?,?,?,?,?,?,?)',
                       (row[0],'TEST',row[1],row[2],'P1',1,row[3],now.isoformat(),0,now.isoformat()))
@@ -176,6 +178,21 @@ class ViewerTests(unittest.TestCase):
         self.assertEqual(post(body, {**base, 'Content-Length':'0'})[0], 413)
         self.assertEqual(post(json.dumps({'favorites': [['TEST','B']]*1001, 'filters':{}}).encode())[0], 400)
         self.assertEqual(post(body, {**base, 'Host':host})[0], 200)
+
+    def test_current_profile_is_read_only_and_unmodified(self):
+        with open_database(self.path) as conn:
+            found=query_profile(conn, {'profile_id':['P1']})
+            self.assertTrue(found['read_only'])
+            self.assertEqual(found['version'],1)
+            self.assertEqual(found['profile']['region'],'부산')
+            self.assertEqual(found['profile']['staff_count'],0)
+            with self.assertRaises(LookupError):
+                query_profile(conn, {'profile_id':['unknown']})
+            for bad in ({}, {'profile_id':['']}, {'profile_id':['P1','other']},
+                        {'profile_id':['x'*301]}):
+                with self.subTest(bad=bad), self.assertRaises(ValueError):
+                    query_profile(conn,bad)
+            self.assertEqual(conn.execute('SELECT count(*) FROM profiles').fetchone()[0],1)
 
     def test_all_seven_themes_and_safe_render_path(self):
         ui=Path(__file__).resolve().parents[1]/'ui'
