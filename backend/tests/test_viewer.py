@@ -7,6 +7,7 @@ import sqlite3
 import tempfile
 import threading
 import unittest
+from contextlib import closing
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from urllib.parse import urlencode
@@ -87,7 +88,7 @@ class ViewerTests(unittest.TestCase):
         source = 'S' * 220
         number = 'B' * 220
         profile = 'P' * 220
-        with sqlite3.connect(self.path) as writer:
+        with closing(sqlite3.connect(self.path)) as writer:
             record = {'bid_no':number, 'title':'긴 ID 합성 공고',
                 'agency':'테스트 기관','category':'IT',
                 'bid_deadline':self.deadline,'budget':1200,
@@ -103,6 +104,7 @@ class ViewerTests(unittest.TestCase):
                 (400,source,number,1,profile,1,'UNKNOWN',
                  datetime.now(timezone.utc).isoformat(),1,
                  datetime.now(timezone.utc).isoformat()))
+            writer.commit()
         with open_database(self.path) as conn:
             detail=query_detail(conn,{'source_id':[source],'bid_no':[number],
                                       'profile':[profile]})
