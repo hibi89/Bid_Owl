@@ -1,3 +1,16 @@
+# BID OWL STATUS — P2-17 legacy CLI prewrite safety source (2026-10-27 KST)
+
+Implemented on private feature branch `feature/bid-owl-v1-basic-mvp`: historical `backend/cli.py` report-producing writer now validates before write, preflights existing v1 SQLite in readonly mode, refuses same-ID company changes, backs up existing DB non-destructively BEFORE migrating policy metadata or importing bids, pins profile versions and writes new current-engine-hash assessments, reserves new DB with exclusive file creation. Report failure after writes raises explicit `CLI_PARTIAL_OR_UNCERTAIN` and preserves backup; SQLite errors from main become JSON `FAILED` with code 2. No HTTP write or public data transmission. Old synthetic CLI reports and BASIC GUI importer remain distinct. `backend/tests/test_cli_safe.py` added **9 synthetic tests defined**, covering backup, policy provenance, legacy table migration, errors, foreign data protection and races. Documentation updated.
+
+**Verification:** Current GitHub source fetched and structurally inspected; **199 Python test method definitions / 15 modules** (previous 190), not executed as current full suite. Private feature branch GitHub workflow run history returned **0 runs**. No native Windows rerun, no 199/199 PASS, no browser/Excel/PDF native or 10k performance measurement. Historical user Windows run had 137 tests/18 WinError32 errors before prior fixes. P2-17 code has NOT been independently executed in genuine full private checkout. Full product BASIC+PRO+PREMIUM/packaging subjective prior completion ~40%, unchanged pending objective release QA.
+
+Legacy CLI still has a limited existing-DB path race where a DB deleted/replaced after readonly preflight may be newly initialized by `BidOwlStore`; `NEXT_TASK.md` prioritizes opt-in must-exist mode with non-initialization in P2-18. No assertion of full atomic multi-report transaction/automatic restore. All existing-DB backup files remain local to user; no customer files, PDF font, secrets, API keys or production main/Vercel actions.
+
+Next P2-18: close SQLite DB path recreation gap, strengthen restored backup usability and effective BASIC Windows release testing via assistant-controlled approved means. User should not be asked to rerun ZIP/PowerShell QA on ordinary ㄱ.
+
+---
+## Previous statuses
+
 # BID OWL STATUS — P2-16 policy fingerprint & fail-closed viewer source (2026-10-27 KST)
 
 Private `hibi89/Bid_Owl`, branch `feature/bid-owl-v1-basic-mvp`, main protected. P2-16 added verifiable local source-based SHA-256 policy fingerprints, transactionally attached them to newly recorded assessments, automatically refuses reuse of old/different policy evaluations, and displays legacy historical PASS as current UNKNOWN until rechecked. DB v1 preserved; migration of engine metadata in `import_local.py` and `profile_workflow.py` occurs only after successful existing-DB SQLite backup. Browser remains readonly. Engine resources missing => new assessment fails closed and viewer UNKNOWN.
