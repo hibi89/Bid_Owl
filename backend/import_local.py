@@ -347,6 +347,44 @@ def apply_import(plan: ImportPlan, *, force_reassess: bool = False) -> dict:
     }
 
 
+class ReportExportError(RuntimeError):
+    """The DB import succeeded, but a post-commit report export failed."""
+
+    def __init__(self, cause: Exception, completed: list[dict]):
+        super().__init__(str(cause))
+        self.cause = cause
+        self.completed = tuple(completed)
+
+
+def export_saved_assessments(
+    outcome: dict, *, db_path: Path, output_dir: Path, report_format: str = "xlsx",
+) -> list[dict]:
+    """Read-only export of exactly the committed assessment IDs.
+
+    Never retry the import on an export error. Preserve paths for already
+    completed files so the operator can use a new output directory safely.
+    """
+    if outcome.get("status") != "IMPORTED":
+        raise ValueError("Only committed imports can be exported")
+    if report_format not in ("xlsx", "pdf", "both"):
+        raise ValueError("Unsupported report format")
+    completed = []
+    for assessment in outcome["assessments"]:
+        try:
+            report = export_existing(
+                db_path=db_path, assessment_id=assessment["assessment_id"],
+                output_dir=output_dir, format=report_format,
+            )
+        except Exception as exc:
+            raise ReportExportError(exc, completed) from exc
+        completed.append({
+            "bid_no": assessment["bid_no"],
+            "assessment_id": assessment["assessment_id"],
+            "files": report["files"],
+        })
+    return completed
+
+
 def _number(text: str, name: str) -> int | None:
     value = text.strip()
     if not value:
@@ -381,7 +419,7 @@ def run_gui() -> int:
     except tk.TclError as exc:
         raise RuntimeError("Graphical desktop unavailable; use CLI --csv --profile --source-id") from exc
     root.title("BID OWL — 로컬 CSV 가져오기")
-    root.minsize(575, 480)
+    root.minsize(575, 540)
     fields = {}
     labels = [
         ("csv", "입찰공고 CSV 파일"),
@@ -444,6 +482,16 @@ def run_gui() -> int:
         text="저장된 판정도 모두 재평가 (규칙 엔진 업데이트 후 권장)",
         variable=force_var,
     ).grid(row=12, column=0, columnspan=3, padx=12, sticky="w")
+    create_reports = tk.BooleanVar(root, value=True)
+    report_format = tk.StringVar(root, value="xlsx")
+    tk.Checkbutton(
+        root, text="가져오기 성공 후 Excel/PDF 보고서 생성 (출력 폴더 선택)",
+        variable=create_reports,
+    ).grid(row=13, column=0, columnspan=3, padx=12, sticky="w")
+    tk.Label(root, text="보고서 형식").grid(row=14, column=0, padx=12, sticky="w")
+    tk.OptionMenu(root, report_format, "xlsx", "pdf", "both").grid(
+        row=14, column=1, sticky="w"
+    )
     confirmed = {"db": None, "status": "CANCELLED"}
 
     def submit():
@@ -454,11 +502,25 @@ def run_gui() -> int:
                 profile=company,
             )
             summary = plan_summary(plan)
+            report_folder = None
+            if create_reports.get():
+                chosen = filedialog.askdirectory(
+                    parent=root, title="저장 후 보고서를 만들 폴더 선택"
+                )
+                if not chosen:
+                    return  # Cancel before *any* database mutation.
+                report_folder = Path(chosen).expanduser().resolve()
+                if not report_folder.is_dir():
+                    raise ValueError("Report output must be an existing directory")
+                if report_format.get() in ("pdf", "both"):
+                    check_pdf_support()  # Validate optional PDF dependency before write.
             confirmation = (
                 f"공고 {summary['bid_count']:,}건\n회사: {summary['company_id']}\n"
                 f"출처: {summary['source_id']}\nDB: {summary['database']}\n"
                 f"기존 DB 백업: {'필수·자동 생성' if summary['backup_required'] else '신규 DB라 불필요'}\n\n"
-                "지금 가져오기를 실행하시겠습니까?"
+                (f"보고서: {report_format.get()} → {report_folder}\n\n"
+                 if report_folder is not None else "보고서 생성: 하지 않음\n\n")
+                + "지금 가져오기를 실행하시겠습니까?"
             )
             if not messagebox.askyesno("검증 완료 — 적용 확인", confirmation, parent=root):
                 return
@@ -466,11 +528,35 @@ def run_gui() -> int:
             counts = result["eligibility_counts"]
             confirmed["status"] = "IMPORTED"
             confirmed["db"] = plan.db_path
+            completed_reports = []
+            report_error = None
+            if report_folder is not None:
+                try:
+                    completed_reports = export_saved_assessments(
+                        result, db_path=plan.db_path,
+                        output_dir=report_folder, report_format=report_format.get(),
+                    )
+                except ReportExportError as exc:
+                    report_error = exc
+                    completed_reports = list(exc.completed)
+                    confirmed["status"] = "IMPORTED_EXPORT_FAILED"
+            if report_error is not None:
+                messagebox.showwarning(
+                    "공고 DB 저장 성공 · 보고서 일부 실패",
+                    f"공고와 판정은 이미 저장됐습니다. 다시 등록하지 마세요.\n"
+                    f"DB: {plan.db_path}\n백업: {result['backup'] or '없음'}\n"
+                    f"완료 보고서: {len(completed_reports)}건\n"
+                    f"보고서 오류: {type(report_error.cause).__name__}: {report_error}\n"
+                    "기존 파일을 덮어쓰지 말고 새 폴더에 저장된 판정만 재출력하세요.",
+                    parent=root,
+                )
             show = (
                 f"새 판정 {result['assessments_saved']:,}건 · 기존 판정 재사용 {result['assessments_reused']:,}건\n"
                 f"PASS {counts['PASS']} / FAIL {counts['FAIL']} / UNKNOWN {counts['UNKNOWN']}\n"
-                f"백업: {result['backup'] or '기존 DB 없음'}\n\n"
-                "공고 화면을 바로 열겠습니까? (이 창 이후 종료는 콘솔 Ctrl+C)"
+                f"백업: {result['backup'] or '기존 DB 없음'}\n"
+                f"생성된 보고서: {len(completed_reports)}건"
+                + (f" · 폴더: {report_folder}" if report_folder is not None else "")
+                + "\n\n공고 화면을 바로 열겠습니까? (이 창 이후 종료는 콘솔 Ctrl+C)"
             )
             confirmed["open"] = messagebox.askyesno("로컬 가져오기 완료", show, parent=root)
             root.destroy()
@@ -532,25 +618,16 @@ def main(argv: list[str] | None = None) -> int:
         if args.export_dir:
             # Registration is ALREADY committed; a later report error cannot
             # truthfully be called an import failure or silently rolled back.
-            completed_reports = []
             try:
-                for assessment in outcome["assessments"]:
-                    report = export_existing(
-                        db_path=plan.db_path,
-                        assessment_id=assessment["assessment_id"],
-                        output_dir=export_dir, format=args.report_format,
-                    )
-                    completed_reports.append({
-                        "bid_no": assessment["bid_no"],
-                        "assessment_id": assessment["assessment_id"],
-                        "files": report["files"],
-                    })
-            except (OSError, ValueError, LookupError, KeyError,
-                    RuntimeError, sqlite3.Error) as exc:
+                completed_reports = export_saved_assessments(
+                    outcome, db_path=plan.db_path, output_dir=export_dir,
+                    report_format=args.report_format,
+                )
+            except ReportExportError as exc:
                 outcome.update({
                     "status": "IMPORTED_EXPORT_FAILED",
-                    "reports": completed_reports,
-                    "export_error_type": type(exc).__name__,
+                    "reports": list(exc.completed),
+                    "export_error_type": type(exc.cause).__name__,
                     "export_error": str(exc),
                     "notice": "Database import succeeded. Report export failed; saved "
                               "assessments and backups remain unchanged. Inspect "
