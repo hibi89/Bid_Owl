@@ -418,8 +418,8 @@ def import_completion_notice(
         if missing_ids:
             numbers = ",".join(str(ident) for ident in missing_ids)
             summary += (
-                "\\n\\n후속 출력 명령 (backend 폴더에서 실행):"
-                f'\\npython report_batch.py --db "{result["database"]}" '
+                "\n\n후속 출력 명령 (backend 폴더에서 실행):"
+                f'\npython report_batch.py --db "{result["database"]}" '
                 f'--assessment-ids {numbers} --output "NEW_REPORT_FOLDER" '
                 f'--format {report_format} --apply'
             )
