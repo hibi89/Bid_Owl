@@ -1,3 +1,13 @@
+# P2-27 DONE IN SOURCE / NEXT P2-28 — actual BASIC runtime acceptance (2026-10-27 KST)
+
+**User priority:** accelerate Bid_Owl so its validated core can eventually inform the separate KIC Disclosure Lightning. BASIC MVP first → compare original requirements and fill gaps → security/stability/commercial hardening; do not put overseas filings into Bid_Owl.
+
+**P2-27 code committed to private feature branch:** Tkinter first-run importer can now save selected XLSX/PDF/both reports after committing the user-confirmed CSV and company evaluation. PDF/font preflight is before any DB write; user chooses a report folder before consent and can opt out. GUI and CLI now share `export_saved_assessments`; no assessment IDs are reconstructed, no report overwrites, no reimport on report failure. GUI warning distinguishes saved DB from failed report; previous successful files are accounted for. Added 3 test methods; declared test total **266 across 17 modules**, not execution PASS. Isolated stand-in Python helper 3/3 PASS only.
+
+**P2-28 highest priority:** obtain real project runtime test on a permitted free private-checkout environment and run `cd backend && python qa_runner.py` plus `python mvp_smoke.py`. If test execution unavailable, perform specific source bug fixes only when supported; do not claim all tests passed. Full Windows GUI/report opening, Korean PDF, legacy WinError32, 10k benchmark, installer need verification. Keep protected `main`/Vercel untouched, no costly CI, no customer data; frontend aesthetics deferred.
+
+---
+
 # P2-26 — BASIC MVP one-command importer + report export (2026-10-27 KST)
 
 **Next ㄱ: P2-27 BASIC MVP execution/functional completeness first.** User confirmed planned reuse as KIC hackathon Disclosure Lightning (foreign regulatory filings) but instructed to keep BID OWL on its existing schedule. **Do not expand foreign filings into current MVP**, and keep the normalized evidence/history/export boundary portable. No frontend appearance/CSS or PRO/PREMIUM before BASIC MVP. Only private `hibi89/Bid_Owl` branch `feature/bid-owl-v1-basic-mvp`; protect main/Vercel, no paid CI, customer data or deployment without approval. No routine ZIP/PowerShell tasks for user.
