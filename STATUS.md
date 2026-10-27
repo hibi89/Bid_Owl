@@ -1,3 +1,15 @@
+# BID OWL STATUS — P2-28 partial GUI report error UX correction (2026-10-27 KST)
+
+**Feature commits:** `a4c1254e33f637e008f0698df6b3d269eb5ce0bc` (source), `663d61d407289b4222c0c046f258b48f6b7a5402` (tests), on private `feature/bid-owl-v1-basic-mvp`, based on prior P2-27 `ce5e59d7c64c260322049d51ef5a38f7d7fadce4`. Legacy `main` and Vercel untouched.
+
+**Bug corrected:** after CSV/profile/SQLite commit succeeds but GUI saved-report export fails, GUI previously showed a warning then a second misleading success-titled confirmation. Now `import_completion_notice` creates ONE truthful post-commit message, with DB, backup, finished report count/folder and distinct failed-output guidance; actual GUI uses this helper and preserves optional opening of read-only local viewer. No repeated import, file overwrite, changed evaluation, new external service, or visual redesign. Added 3 regression tests for success, partial failure, and rejecting preview/uncommitted results.
+
+**Verification:** GitHub tree enumerated **269 defined test methods across 17 files** (previous 266 + 3), not 269 passing. An isolated faithful copy of the narrow `import_completion_notice` helper ran three Python 3.13 cases with **3 passed, 0 failed** in a disposable sandbox; this is *not* executing the actual full private checkout. The current environment `git ls-remote https://github.com/hibi89/Bid_Owl.git` failed DNS; GitHub Actions branch reports **0 runs**. Genuine `python backend/qa_runner.py`, `python backend/mvp_smoke.py`, native Windows GUI/Excel/PDF, Korean font, 10k performance and prior Windows WinError32 18 errors/137 tests remain **unverified**. No BASIC launch-ready claim, previous all-tier 42% subjective estimate not rescaled.
+
+**Next P2-29:** prioritize authorized no-fee full source execution + actual MVP acceptance; fix observed runtime failure. If runtime access remains blocked, improve demonstrable BASIC functionality rather than paper-only progress, and document hard blockers. Once runnable BASIC is proven, compare original REQUIREMENTS.md and fill gaps, then security/stability/install and PRO/PREMIUM. KIC Disclosure Lightning must remain a **separate foreign-disclosure adapter/reuse project**, not current Bid_Owl scope.
+
+---
+
 # BID OWL STATUS — P2-27 BASIC desktop report export (2026-10-27 KST)
 
 **Working source:** private `hibi89/Bid_Owl`, `feature/bid-owl-v1-basic-mvp`; base commit `6154604f9faa5b7b78c67060ab33771ba5129bdc`; P2-27 source/test commit `868d9d34be4d59298f9e752f436a15bc07028858`. Main is protected. No Vercel change.
