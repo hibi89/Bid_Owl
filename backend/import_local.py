@@ -388,6 +388,7 @@ def export_saved_assessments(
 def import_completion_notice(
     result: dict, report_folder: Path | None,
     completed_reports: list[dict], report_error: ReportExportError | None,
+    report_format: str = "xlsx",
 ) -> tuple[str, str]:
     """An accurate single post-commit message even when report export failed."""
     if result.get("status") != "IMPORTED":
@@ -409,6 +410,19 @@ def import_completion_notice(
             f"\n출력 오류: {type(report_error.cause).__name__}: {report_error}"
             "\n새 출력 폴더에서 저장된 평가 ID로 나머지 보고서를 재출력하세요."
         )
+        completed_ids = {report["assessment_id"] for report in completed_reports}
+        missing_ids = [
+            item["assessment_id"] for item in result["assessments"]
+            if item["assessment_id"] not in completed_ids
+        ]
+        if missing_ids:
+            numbers = ",".join(str(ident) for ident in missing_ids)
+            summary += (
+                "\\n\\n후속 출력 명령 (backend 폴더에서 실행):"
+                f'\\npython report_batch.py --db "{result["database"]}" '
+                f'--assessment-ids {numbers} --output "NEW_REPORT_FOLDER" '
+                f'--format {report_format} --apply'
+            )
         title = "공고 저장됨 · 보고서 미완료"
     else:
         title = "로컬 가져오기 완료"
@@ -571,7 +585,8 @@ def run_gui() -> int:
                     completed_reports = list(exc.completed)
                     confirmed["status"] = "IMPORTED_EXPORT_FAILED"
             title, message = import_completion_notice(
-                result, report_folder, completed_reports, report_error
+                result, report_folder, completed_reports, report_error,
+                report_format=report_format.get(),
             )
             confirmed["open"] = messagebox.askyesno(title, message, parent=root)
             root.destroy()
