@@ -14,7 +14,7 @@ from bidowl import BidOwlStore, CompanyProfile, CSVImportError
 from import_local import (
     RESERVED_DEMO_SOURCE, _profile_from_fields,
     ReportExportError, apply_import, export_saved_assessments,
-    main, plan_summary, prepare_import,
+    import_completion_notice, main, plan_summary, prepare_import,
 )
 
 BACKEND = Path(__file__).resolve().parents[1]
@@ -683,6 +683,38 @@ class LocalImportTests(unittest.TestCase):
                 )
             exporter.assert_not_called()
         self.assertFalse(self.db.exists())
+
+    def test_gui_completion_reports_success_after_saved_assessments(self):
+        result = apply_import(self.prepare())
+        title, message = import_completion_notice(
+            result, self.root / "reports",
+            [{"files": ["one.xlsx"]}, {"files": ["two.xlsx"]}], None,
+        )
+        self.assertEqual(title, "로컬 가져오기 완료")
+        self.assertIn("생성된 보고서: 2건", message)
+        self.assertIn(str(self.db), message)
+        self.assertIn("공고 조회 화면", message)
+        self.assertNotIn("보고서 생성이 미완료", message)
+
+    def test_gui_completion_never_calls_partial_export_success(self):
+        result = apply_import(self.prepare())
+        previous = [{"files": [str(self.root / "saved.xlsx")]}]
+        error = ReportExportError(FileExistsError("existing report"), previous)
+        title, message = import_completion_notice(
+            result, self.root / "reports", list(error.completed), error,
+        )
+        self.assertEqual(title, "공고 저장됨 · 보고서 미완료")
+        self.assertIn("생성된 보고서: 1건", message)
+        self.assertIn("DB에 저장", message)
+        self.assertIn("CSV를 다시 등록하지 마세요", message)
+        self.assertIn("FileExistsError", message)
+        self.assertIn("기존 보고서는 덮어쓰지 않습니다", message)
+
+    def test_gui_completion_rejects_uncommitted_import_result(self):
+        with self.assertRaisesRegex(ValueError, "successfully committed"):
+            import_completion_notice(
+                {"status": "PREVIEW_NO_WRITE"}, None, [], None,
+            )
 
     def test_desktop_launcher_paths_and_no_http_write(self):
         root_cmd = (BACKEND.parent / "START_BID_OWL_IMPORT.cmd").read_text(encoding="utf-8")
