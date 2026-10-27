@@ -1,3 +1,15 @@
+# BID OWL P2-29 — saved report batch recovery implemented (2026-10-27 KST)
+
+**Actual code:** NEW `backend/report_batch.py`: safe explicit batch replay of 1~200 saved assessment IDs, default PREVIEW_NO_WRITE, SQLite read-only presence validation, prior output collision preflight, `--apply` to export selected XLSX/PDF via existing `report_existing.export_existing` without reimport, and honest partial-success result. NEW `backend/tests/test_report_batch.py` 8 regression methods. `backend/import_local.py` GUI now presents an exact read-only retry command containing only missing assessment IDs after failed report generation; `backend/tests/test_import_local.py` validates this.
+
+**Verification:** Independent local Python 3.13 execution of the **new report_batch.py module** with stubbed viewer/export implementations and real temp SQLite: **7 passed, 0 failed** (preview no write, IDs, collision, missing ID, partial output, CLI and parser). This is module-level logic under test doubles, NOT the full BID OWL integration test. GitHub has **277 Python test method declarations in 18 modules**, compared to 269/17 prior; newly added 8 were **not** executed on full private checkout. Full qa_runner/MVP smoke, actual import/viewer/report integration, GUI/Windows, PDF font, 10k and installer **not verified**. Existing user Windows 137 cases / 18 WinError32 historical errors remain unresolved until actual retest. No claim that BASIC MVP is release-ready.
+
+**Scope/priority:** User requested acceleration for KIC Disclosure Lightning. Finish BASIC tested first, then use normalized evidence/immutable snapshots/report replay as separate KIC foreign regulatory disclosure adapter. Do not insert foreign filing API into BID OWL. Keep private `feature/bid-owl-v1-basic-mvp`; existing `main` and Vercel unchanged. No paid CI, key/customer data transport or visual CSS redesign.
+
+**Next P2-30:** obtain authorized no-cost complete checkout test execution, repair concrete failures, verify Windows GUI/XLSX/PDF. If blocked, implement only high-value BASIC missing requirements with clear test boundaries, then compare `REQUIREMENTS.md` and close BASIC before PRO/PREMIUM.
+
+---
+
 # BID OWL STATUS — P2-28 partial GUI report error UX correction (2026-10-27 KST)
 
 **Feature commits:** `a4c1254e33f637e008f0698df6b3d269eb5ce0bc` (source), `663d61d407289b4222c0c046f258b48f6b7a5402` (tests), on private `feature/bid-owl-v1-basic-mvp`, based on prior P2-27 `ce5e59d7c64c260322049d51ef5a38f7d7fadce4`. Legacy `main` and Vercel untouched.
