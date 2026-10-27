@@ -518,8 +518,8 @@ def run_gui() -> int:
                 f"공고 {summary['bid_count']:,}건\n회사: {summary['company_id']}\n"
                 f"출처: {summary['source_id']}\nDB: {summary['database']}\n"
                 f"기존 DB 백업: {'필수·자동 생성' if summary['backup_required'] else '신규 DB라 불필요'}\n\n"
-                (f"보고서: {report_format.get()} → {report_folder}\n\n"
-                 if report_folder is not None else "보고서 생성: 하지 않음\n\n")
+                + (f"보고서: {report_format.get()} → {report_folder}\n\n"
+                   if report_folder is not None else "보고서 생성: 하지 않음\n\n")
                 + "지금 가져오기를 실행하시겠습니까?"
             )
             if not messagebox.askyesno("검증 완료 — 적용 확인", confirmation, parent=root):
