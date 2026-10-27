@@ -1,3 +1,26 @@
+## P2-29 — 저장된 판정 여러 건 다시 보고서 출력 (실제 구현)
+
+GUI 또는 원클릭 CSV 가져오기 도중 일부 보고서 생성이 실패한 경우 **CSV/회사 정보를 재등록하지 않고** 기존 평가 ID만 사용해 일괄 재출력할 수 있습니다. 구현 파일은 `backend/report_batch.py`입니다. 기존 `report_existing.py`의 읽기 전용 출력 코어를 그대로 사용합니다.
+
+```powershell
+cd backend
+# 기본 미리보기: 기존 SQLite도 보고서 파일도 수정하지 않음
+python report_batch.py --db "C:\data\bidowl.sqlite3" --assessment-ids 1,2 --output "C:\data\new-reports"
+# 미리보기/출력 충돌 확인 후 실제 Excel 저장
+python report_batch.py --db "C:\data\bidowl.sqlite3" --assessment-ids 1,2 --output "C:\data\new-reports" --format xlsx --apply
+# 환경에 한국어 TTF/ReportLab 준비된 경우
+python report_batch.py --db "C:\data\bidowl.sqlite3" --assessment-ids 3,4 --output "C:\data\other-reports" --format both --apply
+```
+
+- 평가 ID는 `import_local.py` 성공 JSON의 `assessments[].assessment_id`와 GUI의 부분 실패 시 안내되는 명령을 사용합니다. 출력이 완료된 평가 ID는 제외하고 **실패한 것만** 재출력하면 기존 파일 충돌을 피할 수 있습니다.
+- 기본은 `PREVIEW_NO_WRITE`: 읽기 전용 SQLite로 최대 200개 저장된 ID 존재 여부와 출력 파일 경로 충돌을 확인합니다. `--apply` 없이는 폴더도 생성하지 않습니다. 존재하지 않는 ID, 중복·음수·숫자 이외 식별자는 거부합니다.
+- `--apply`는 선택한 기존 `assessment_id`의 불변 스냅샷에서 새 XLSX/PDF를 기록합니다. **기존 SQLite를 변경하거나 재평가하지 않습니다.** 기존 출력 파일이 있으면 전체 일괄 작업 시작 전에 거부하고, 실행 도중 파일이 생겨도 개별 `xb` 안전 생성으로 덮어쓰지 않습니다.
+- 두 번째 등 일부 보고서에서 실패하면 `REPORT_BATCH_PARTIAL` 및 성공한 평가 ID/파일 경로, 실패 ID를 반환하며 종료코드 2. 성공한 파일은 보존합니다. 재시도 시 **다른 새 폴더**와 실패한 ID만 사용하세요.
+- `pdf/both` 형식은 한글 TTF와 ReportLab 필요조건을 모든 출력 전에 검사합니다. 데이터는 PC 밖으로 전송하지 않습니다.
+- `backend/tests/test_report_batch.py`에 SQLite 합성 보고서 8개 통합 회귀 테스트를 작성했지만 사설 전체 저장소의 실제 테스트 통과는 아직 확보되지 않았습니다. 독립 환경에서 실제 `report_batch.py`와 SQLite mock export를 연결한 축소 검사 7/7 PASS만 확보했습니다. 이는 실제 전체 코드의 수용 합격이 아닙니다.
+
+---
+
 # P2-05 Saved report re-export and local synthetic verification
 
 Use only on a local copy of BID OWL with an existing schema-v1 SQLite database.
