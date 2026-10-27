@@ -1,3 +1,13 @@
+# P2-28 SOURCE FIX DONE → P2-29 actual BASIC acceptance (2026-10-27 KST)
+
+**Immediate next work:** Genuine test execution for private `hibi89/Bid_Owl` feature branch. Local model container cannot resolve `github.com` (git ls-remote DNS), GitHub Actions has **zero branch runs**. Do not reattempt identical blocked clone; do not assert full suite PASS. No new paid CI, infrastructure, secrets, customer files, main/Vercel writes or repeated user ZIP/PowerShell chores. User explicitly wants MVP first and fast, then original-spec gap closure and hardening; frontend aesthetic redesign on hold. KIC overseas Disclosure Lightning remains separate future derivative.
+
+**P2-28 source fix:** `backend/import_local.py` refactors post-commit GUI notice via `import_completion_notice`; a failed report no longer yields warning followed by falsely success-titled modal. The single choice explicitly says SQLite import succeeded, XLSX/PDF failed, lists saved report count, DB/backup path, and tells operator **do not reimport**. Three regression definitions appended. GitHub verified `269` test methods in 17 files, not executed PASS. Exact notice logic tested in a separate miniature Python 3.13 copy (3/3), **not authentic repo E2E**.
+
+**P2-29 target:** 1) full private code execution with `python qa_runner.py`, `python mvp_smoke.py` in a permitted free source environment if one exists, otherwise explicit blocker; 2) repair only confirmed defects, keep source snapshots and user data protected; 3) Windows and Korean PDF/Excel gates; 4) compare all BASIC features vs `REQUIREMENTS.md` and finish missing functionality. Avoid iterating on documentation alone.
+
+---
+
 # P2-27 DONE IN SOURCE / NEXT P2-28 — actual BASIC runtime acceptance (2026-10-27 KST)
 
 **User priority:** accelerate Bid_Owl so its validated core can eventually inform the separate KIC Disclosure Lightning. BASIC MVP first → compare original requirements and fill gaps → security/stability/commercial hardening; do not put overseas filings into Bid_Owl.
