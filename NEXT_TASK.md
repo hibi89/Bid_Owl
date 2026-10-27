@@ -1,3 +1,13 @@
+# P2-29 done in code — NEXT P2-30 actual BASIC QA and first-run acceptance (2026-10-27 KST)
+
+**P2-29 deliverable:** `backend/report_batch.py` read-only multi-assessment report recovery CLI. Supports 1–200 positive unique assessment IDs, default nonwriting preview with SQLite saved-ID checks and output collision list. `--apply` writes new XLSX/PDF via `report_existing.export_existing` only; preserves completed files and status `REPORT_BATCH_PARTIAL` on later failure; no reimport, DB writes or overwrite. Tkinter post-import partial-export notice now provides a precise recovery command with **only pending IDs**; three-state import/export status kept. Added `backend/tests/test_report_batch.py` with 8 real integrated fixture test methods and adjusted `test_import_local.py` expectations.
+
+**Execution truth:** Isolated `report_batch.py` module was run with stub viewer/export and real temp sqlite3; **7/7 PASS**, not repository-wide QA. GitHub test definitions **277 in 18 files**; true test suite `python backend/qa_runner.py` and `python backend/mvp_smoke.py` NOT RUN in full private checkout due container GitHub DNS restriction and no consent for paid private Actions. Previous Windows file locking errors require rerun. Do not conflate code merged to feature branch with shipping product.
+
+**Next P2-30 priorities:** get actual authorized no-fee private checkout execution or find fail-fast source bugs; test BASIC CSV→profile→rule→SQLite→viewer→XLSX/PDF and frontend on Windows. Check partial replay recovered files; then compare original BASIC spec (search/favorites/7 themes/reports) and close gaps before release-grade hardening. KIC foreign Disclosure Lightning must be separate refactor of validated core, not a feature in this repo now.
+
+---
+
 # P2-28 SOURCE FIX DONE → P2-29 actual BASIC acceptance (2026-10-27 KST)
 
 **Immediate next work:** Genuine test execution for private `hibi89/Bid_Owl` feature branch. Local model container cannot resolve `github.com` (git ls-remote DNS), GitHub Actions has **zero branch runs**. Do not reattempt identical blocked clone; do not assert full suite PASS. No new paid CI, infrastructure, secrets, customer files, main/Vercel writes or repeated user ZIP/PowerShell chores. User explicitly wants MVP first and fast, then original-spec gap closure and hardening; frontend aesthetic redesign on hold. KIC overseas Disclosure Lightning remains separate future derivative.
