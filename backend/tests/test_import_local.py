@@ -698,7 +698,8 @@ class LocalImportTests(unittest.TestCase):
 
     def test_gui_completion_never_calls_partial_export_success(self):
         result = apply_import(self.prepare())
-        previous = [{"files": [str(self.root / "saved.xlsx")]}]
+        previous = [{"assessment_id": result["assessments"][0]["assessment_id"],
+                     "files": [str(self.root / "saved.xlsx")]}]
         error = ReportExportError(FileExistsError("existing report"), previous)
         title, message = import_completion_notice(
             result, self.root / "reports", list(error.completed), error,
@@ -709,6 +710,9 @@ class LocalImportTests(unittest.TestCase):
         self.assertIn("CSV를 다시 등록하지 마세요", message)
         self.assertIn("FileExistsError", message)
         self.assertIn("기존 보고서는 덮어쓰지 않습니다", message)
+        self.assertIn("python report_batch.py", message)
+        self.assertIn("--assessment-ids " + str(result["assessments"][1]["assessment_id"]), message)
+        self.assertNotIn("--assessment-ids " + str(result["assessments"][0]["assessment_id"]) + ",", message)
 
     def test_gui_completion_rejects_uncommitted_import_result(self):
         with self.assertRaisesRegex(ValueError, "successfully committed"):
