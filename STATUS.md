@@ -1,3 +1,15 @@
+# BID OWL STATUS — P2-27 BASIC desktop report export (2026-10-27 KST)
+
+**Working source:** private `hibi89/Bid_Owl`, `feature/bid-owl-v1-basic-mvp`; base commit `6154604f9faa5b7b78c67060ab33771ba5129bdc`; P2-27 source/test commit `868d9d34be4d59298f9e752f436a15bc07028858`. Main is protected. No Vercel change.
+
+**Implemented:** In `backend/import_local.py`, existing Windows Tkinter importer now offers optional report generation after successful CSV/profile/assessment persistence. Select an output folder and `xlsx/pdf/both` before confirming DB writes; PDF dependencies are checked before any DB mutation. GUI and CLI share `export_saved_assessments` with exact saved/reused assessment IDs and read-only `report_existing.export_existing`; existing files are never intentionally overwritten. Post-commit export errors retain the DB/backup/any successful report files, show an explicit saved-data warning rather than asking the user to reimport, and yield distinct `IMPORTED_EXPORT_FAILED` status. No aesthetic redesign, API or foreign-disclosure code.
+
+**Tests:** Three new synthetic regression tests were added to `backend/tests/test_import_local.py` (saved IDs, partial second-file failure, preview/unsupported-format no-write); prior declared 263 + 3 = **266 declared tests / 17 modules**, NOT suite PASS. Separately, an isolated Python helper prototype ran **3/3 checks PASS** but was not the repository's actual imported module. Private repository checkout is unavailable from this execution environment (`git ls-remote` failed DNS resolution for github.com), so actual 266-suite/real MVP smoke/Windows GUI/PDF/Excel/browser remain **unverified**. Historical Windows 137 tests with 18 WinError32 cleanup errors still require rerun. No release-ready claim; previous subjective all-tier 42% remains unmeasured.
+
+**Next P2-28:** run authoritative full-repo `python backend/qa_runner.py` and `python backend/mvp_smoke.py` in an approved no-fee checkout, diagnose actual failures; test functional GUI new-report flow on Windows 11; ensure optional Korean PDF font and real Excel opening; then compare complete BASIC acceptance to `REQUIREMENTS.md` before PRO/PREMIUM/security hardening. Do not request repetitive user ZIP/PowerShell work, do not enable paid CI or alter main/Vercel automatically. KIC Disclosure Lightning is a future separate adapter/product, not present in current MVP.
+
+---
+
 # BID OWL STATUS — P2-26 BASIC MVP report integration (2026-10-27)
 
 User's explicit priority: finish BASIC MVP before full spec expansion/hardening, then derivative KIC hackathon Disclosure Lightning for **overseas public filings** MAY reuse verified infrastructure later. No overseas filing code added to BID OWL.
