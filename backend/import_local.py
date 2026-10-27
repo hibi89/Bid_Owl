@@ -385,6 +385,37 @@ def export_saved_assessments(
     return completed
 
 
+def import_completion_notice(
+    result: dict, report_folder: Path | None,
+    completed_reports: list[dict], report_error: ReportExportError | None,
+) -> tuple[str, str]:
+    """An accurate single post-commit message even when report export failed."""
+    if result.get("status") != "IMPORTED":
+        raise ValueError("Expected a successfully committed import result")
+    counts = result["eligibility_counts"]
+    summary = (
+        f"새 판정 {result['assessments_saved']:,}건 · 기존 판정 재사용 {result['assessments_reused']:,}건\n"
+        f"PASS {counts['PASS']} / FAIL {counts['FAIL']} / UNKNOWN {counts['UNKNOWN']}\n"
+        f"로컬 DB: {result['database']}\n"
+        f"백업: {result['backup'] or '기존 DB 없음'}\n"
+        f"생성된 보고서: {len(completed_reports)}건"
+    )
+    if report_folder is not None:
+        summary += f" · 폴더: {report_folder}"
+    if report_error is not None:
+        summary += (
+            "\n\n공고와 판정은 DB에 저장됐지만 보고서 생성이 미완료됐습니다."
+            "\nCSV를 다시 등록하지 마세요. 기존 보고서는 덮어쓰지 않습니다."
+            f"\n출력 오류: {type(report_error.cause).__name__}: {report_error}"
+            "\n새 출력 폴더에서 저장된 평가 ID로 나머지 보고서를 재출력하세요."
+        )
+        title = "공고 저장됨 · 보고서 미완료"
+    else:
+        title = "로컬 가져오기 완료"
+    summary += "\n\n공고 조회 화면을 지금 열겠습니까? (종료: 콘솔 Ctrl+C)"
+    return title, summary
+
+
 def _number(text: str, name: str) -> int | None:
     value = text.strip()
     if not value:
@@ -525,7 +556,6 @@ def run_gui() -> int:
             if not messagebox.askyesno("검증 완료 — 적용 확인", confirmation, parent=root):
                 return
             result = apply_import(plan, force_reassess=force_var.get())
-            counts = result["eligibility_counts"]
             confirmed["status"] = "IMPORTED"
             confirmed["db"] = plan.db_path
             completed_reports = []
@@ -540,25 +570,10 @@ def run_gui() -> int:
                     report_error = exc
                     completed_reports = list(exc.completed)
                     confirmed["status"] = "IMPORTED_EXPORT_FAILED"
-            if report_error is not None:
-                messagebox.showwarning(
-                    "공고 DB 저장 성공 · 보고서 일부 실패",
-                    f"공고와 판정은 이미 저장됐습니다. 다시 등록하지 마세요.\n"
-                    f"DB: {plan.db_path}\n백업: {result['backup'] or '없음'}\n"
-                    f"완료 보고서: {len(completed_reports)}건\n"
-                    f"보고서 오류: {type(report_error.cause).__name__}: {report_error}\n"
-                    "기존 파일을 덮어쓰지 말고 새 폴더에 저장된 판정만 재출력하세요.",
-                    parent=root,
-                )
-            show = (
-                f"새 판정 {result['assessments_saved']:,}건 · 기존 판정 재사용 {result['assessments_reused']:,}건\n"
-                f"PASS {counts['PASS']} / FAIL {counts['FAIL']} / UNKNOWN {counts['UNKNOWN']}\n"
-                f"백업: {result['backup'] or '기존 DB 없음'}\n"
-                f"생성된 보고서: {len(completed_reports)}건"
-                + (f" · 폴더: {report_folder}" if report_folder is not None else "")
-                + "\n\n공고 화면을 바로 열겠습니까? (이 창 이후 종료는 콘솔 Ctrl+C)"
+            title, message = import_completion_notice(
+                result, report_folder, completed_reports, report_error
             )
-            confirmed["open"] = messagebox.askyesno("로컬 가져오기 완료", show, parent=root)
+            confirmed["open"] = messagebox.askyesno(title, message, parent=root)
             root.destroy()
         except (OSError, ValueError, TypeError, CSVImportError, sqlite3.Error, RuntimeError) as exc:
             messagebox.showerror("검증 또는 저장 실패", str(exc)[:1000], parent=root)
