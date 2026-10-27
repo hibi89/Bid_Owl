@@ -13,7 +13,8 @@ from unittest.mock import patch
 from bidowl import BidOwlStore, CompanyProfile, CSVImportError
 from import_local import (
     RESERVED_DEMO_SOURCE, _profile_from_fields,
-    apply_import, main, plan_summary, prepare_import,
+    ReportExportError, apply_import, export_saved_assessments,
+    main, plan_summary, prepare_import,
 )
 
 BACKEND = Path(__file__).resolve().parents[1]
@@ -625,6 +626,63 @@ class LocalImportTests(unittest.TestCase):
         self.assertEqual(result["status"], "IMPORT_FAILED")
         self.assertFalse(self.db.exists())
         self.assertFalse(target.exists())
+
+    def test_shared_report_export_uses_saved_assessment_ids(self):
+        from zipfile import ZipFile
+        outcome = apply_import(self.prepare())
+        reports = export_saved_assessments(
+            outcome, db_path=self.db, output_dir=self.root / "reports",
+        )
+        self.assertEqual(len(reports), 2)
+        self.assertEqual(
+            {item["assessment_id"] for item in reports},
+            {item["assessment_id"] for item in outcome["assessments"]},
+        )
+        for item in reports:
+            self.assertEqual(len(item["files"]), 1)
+            with ZipFile(item["files"][0]) as archive:
+                self.assertIsNone(archive.testzip())
+
+    def test_shared_report_export_second_failure_preserves_first_and_db(self):
+        from report_existing import export_existing as original_export
+        outcome = apply_import(self.prepare())
+        calls = {"n": 0}
+
+        def failing_second(**kwargs):
+            calls["n"] += 1
+            if calls["n"] == 2:
+                raise RuntimeError("SYNTHETIC_GUI_EXPORT_ERROR")
+            return original_export(**kwargs)
+
+        with patch("import_local.export_existing", side_effect=failing_second):
+            with self.assertRaises(ReportExportError) as caught:
+                export_saved_assessments(
+                    outcome, db_path=self.db, output_dir=self.root / "reports",
+                )
+        error = caught.exception
+        self.assertEqual(len(error.completed), 1)
+        self.assertIn("SYNTHETIC_GUI_EXPORT_ERROR", str(error))
+        self.assertTrue(Path(error.completed[0]["files"][0]).is_file())
+        with BidOwlStore(self.db, must_exist=True) as store:
+            self.assertEqual(
+                store.db.execute("SELECT COUNT(*) FROM assessments").fetchone()[0], 2
+            )
+
+    def test_shared_report_export_refuses_preview_and_bad_format(self):
+        with patch("import_local.export_existing") as exporter:
+            with self.assertRaisesRegex(ValueError, "Only committed imports"):
+                export_saved_assessments(
+                    {"status": "PREVIEW_NO_WRITE", "assessments": []},
+                    db_path=self.db, output_dir=self.root / "reports",
+                )
+            with self.assertRaisesRegex(ValueError, "Unsupported report format"):
+                export_saved_assessments(
+                    {"status": "IMPORTED", "assessments": []},
+                    db_path=self.db, output_dir=self.root / "reports",
+                    report_format="unsafe",
+                )
+            exporter.assert_not_called()
+        self.assertFalse(self.db.exists())
 
     def test_desktop_launcher_paths_and_no_http_write(self):
         root_cmd = (BACKEND.parent / "START_BID_OWL_IMPORT.cmd").read_text(encoding="utf-8")
