@@ -1,3 +1,18 @@
+# BID OWL — P2-27 HANDOFF / 2026-10-27 KST
+
+1. **목표·확정 기술:** 로컬 Windows BASIC MVP (CSV→회사 정보→PASS/FAIL/UNKNOWN/근거→SQLite→읽기 전용 조회→Excel/PDF). Python 3.11+, Tkinter, SQLite, 선택 ReportLab. KIC 공시라이트닝은 해외 공시 어댑터를 별도 개발하며 **현재 제품에 병합하지 않음**.
+2. **완료·변경:** `backend/import_local.py` GUI 보고서 폴더·형식 선택, 사전 PDF 검사, DB 저장 후 읽기 전용 보고서 내보내기. GUI/CLI 공용 `export_saved_assessments`, 부분 실패시 이미 저장된 DB·백업과 기존 보고서 보존·확실한 성공/실패 구분. UI 시각 재디자인 없음. 고객 유료 API/PRO/PREMIUM 미착수.
+3. **테스트:** 독립 Python helper prototype 3/3 PASS (실제 repo 실행 아님). `backend/tests/test_import_local.py` 회귀 3개 추가; **266개 테스트 정의, 실제 프로젝트 테스트 전체 0건 실행**. 종합 명령 `cd backend && python qa_runner.py`; 빠른 필수 `python mvp_smoke.py`, 옵션 `python mvp_smoke.py --require-pdf`. 출력 경로 `backend/qa_results/` (로컬, GitHub에 원본 데이터 업로드 금지). GUI/브라우저/Excel/PDF Windows 실기기 **미검증**.
+4. **단계:** 실제 BASIC 구성요소 코드 연결 및 GUI 보고서 사용 흐름 구현; 실행·진짜 E2E 수용 **대기**, Windows/상용 출시는 차단, PRO/PREMIUM 미구현, 기존 프론트 디자인 보류.
+5. **실패·원인·재시도 정책:** 사설 저장소 `git ls-remote`는 github.com DNS 해석 불가로 실패; 같은 환경에서 재시도하지 않음. 과거 Windows 실행은 137건 중 18건 WinError32 임시파일 정리 문제, 수정 확인 전. 대안은 승인된 무료 실행 환경에서 실제 checkout+QA, 결과부터 검토; 통과 추정 금지.
+6. **Repo/branch/SHA:** `hibi89/Bid_Owl` (private) / `feature/bid-owl-v1-basic-mvp`; 작업 시작 `6154604f9faa5b7b78c67060ab33771ba5129bdc`; 최신 코드·테스트 커밋 `868d9d34be4d59298f9e752f436a15bc07028858`. 중요: `backend/import_local.py`, `backend/tests/test_import_local.py`, `backend/mvp_smoke.py`, `backend/qa_runner.py`, `backend/MVP_ACCEPTANCE.md`. 최종 문서 HEAD는 다음 GitHub 재조회로 확인.
+7. **Production/Vercel:** 레거시 Vercel `project08-bid-insight` (`prj_YcrN7OdOjKl6M457HelGIItLeeXZ`); 이번 브랜치의 Python GUI는 **배포 비대상**. Production URL, 최신 SHA 일치, 웹 실제 동작은 미검증. 코드는 로컬 `python import_local.py` 또는 `START_BID_OWL_IMPORT.cmd`.
+8. **원본/백업·보안:** 학원 레거시 main 복구 SHA `2807a93a3e0deba98840712401fdd6025e6f5610`. 기존 SQLite는 수정 전 별도 백업, 보고서 기존 파일 덮어쓰기 금지. 고객 DB/API 키/회사정보/보고서는 커밋·외부 전송 금지. GitHub 연결 `hibi89` 계정 push 확인, 원본 main과 Vercel 설정 변경 금지.
+9. **다음 작업:** P2-28 전체 QA 실제 실행 환경 확보 → 실제 실패만 수정 → GUI 저장/보고서 이중 실행/파일 충돌 검증 → PDF 한글/Excel/WinError32 실기기 → `REQUIREMENTS.md` 대비 BASIC 잔여 기능 → 출시형 보안·패키징 → PRO/PREMIUM. 유료 CI·배포·실데이터 전송·권한 변경은 사전 승인.
+10. **갱신·검증 경계:** 2026-10-27 KST, GitHub 커밋 소스 직접 조회 및 코드 변경 반영 확인, 독립 3-test prototype 실행, 실제 사설 프로젝트 런타임 미실행. 본 문서 기준 **코드 커밋 `868d9d34be4d59298f9e752f436a15bc07028858`**, 문서 최종 HEAD는 조회 필요.
+
+---
+
 # BID OWL HANDOFF — P2-26 BASIC one-shot real importer + reports (2026-10-27)
 
 ## User directive
