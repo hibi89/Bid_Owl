@@ -1,3 +1,5 @@
+> **P2-28 2026-10-27:** BASIC import/report GUI no longer displays a misleading success confirmation after XLSX/PDF failure; one post-commit message distinguishes saved SQLite from failed output. +3 test methods, current GitHub **269 tests defined in 17 files; full suite and Windows native E2E not executed**. Narrow function-copy checks 3/3 succeeded, but private repository clone blocked by github.com DNS. Continue P2-29 actual full-repo BASIC smoke/test acceptance or objectively verifiable functional fixes. Keep `feature/bid-owl-v1-basic-mvp` only, main/Vercel unchanged, PRO/PREMIUM/CSS and KIC foreign filing code out of current MVP scope.
+
 > **최신 P2-26:** BASIC MVP부터 완성한다. 실제 CSV 등록 명령에서 `--apply --export-dir 보고서폴더`를 지정하면 등록된 평가 ID로 XLSX/PDF를 내보내는 기능을 추가했다. 보고서 실패는 DB 저장 성공과 구분해 알린다. `backend/mvp_smoke.py`도 단일 명령 경로를 합성 데이터로 검사하도록 확장했다. Python 테스트는 263개 **정의**됐지만 전체 실행 통과는 미확인. KIC 공시 라이트닝은 검증된 코어를 나중에 해외 공시용으로 변형할 계획이며 지금은 BID OWL에 범위를 추가하지 않는다. UI 시각 디자인 계속 보류. 다음 P2-27은 실제 BASIC E2E 실행 검증과 오류 수정.
 
 # 현재 개발 우선순위 — BASIC MVP 실제 동작 완성
