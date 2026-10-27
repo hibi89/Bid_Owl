@@ -1,3 +1,18 @@
+# BID OWL P2-28 HANDOFF — 2026-10-27 KST
+
+1. **목표·용도·확정 요구·기술:** Windows 11 로컬 BID OWL BASIC (입찰 CSV·회사 프로필→PASS/FAIL/UNKNOWN 근거→SQLite 버전/판정 이력→읽기 전용 조회→Excel/PDF). Python/Tkinter/SQLite, PDF 선택형 ReportLab+한글 TTF. 이후 최초 설계 비교 → 품질/보안/설치 → PRO/PREMIUM. KIC 해외 공시라이트닝은 향후 독립 파생.
+2. **이번 변경·근거:** `backend/import_local.py` GUI는 보고서 실패 이후 경고+성공 표시를 동시에 하던 혼동을 `import_completion_notice` 단일 메시지로 교정했다. SQLite 쓰기 성공과 XLSX/PDF 후속 실패 구분, 백업/완료 파일/평가 ID 보존 및 열람 선택 유지. `backend/tests/test_import_local.py`에 3개 회귀 테스트 작성. 주요 코드 커밋 `a4c1254e33f637e008f0698df6b3d269eb5ce0bc`, 테스트 커밋 `663d61d407289b4222c0c046f258b48f6b7a5402`.
+3. **실행·검증:** GitHub API에서 `backend/tests/test_*.py` 17개 파일을 직접 읽고 `def test_*` **269개 정의** 확인. 독립적으로 기능 복사해 Python 3.13에서 3/3 PASS; 실제 레포 전체 테스트는 **0건 실행**, 소스 전체/Windows GUI/PDF/Excel/브라우저/성능 **미검증**. 실행 명령: `cd backend && python qa_runner.py`, `python mvp_smoke.py`; PDF 옵션 `python mvp_smoke.py --require-pdf`.
+4. **작업 상태:** GUI 실패 표현 오류 수정·GitHub 반영 완료. BASIC 구성 코드 존재, 실제 E2E 수용 대기. 판매/설치/PRO API/PREMIUM AI 미검증 또는 미구현. KIC 파생 작업 미적용.
+5. **차단·실패·대안:** 컨테이너에서 `git ls-remote` DNS 실패(`github.com` 호스트 확인 불가); 해당 방법 반복 금지. Branch GitHub Actions run 0건(무료 보장 없이 CI 변경 금지). 이전 사용자 Windows 137개 실행 중 WinError32 18건, 이후 수정 실기기 재확인 없음. 대안: 승인된 무료 전체 체크아웃 환경에서 직접 QA 실행/결과 확인; 접근 불가 시 코드 단위 수정으로 전환하고 통과 주장 금지.
+6. **저장소·브랜치·SHA·경로:** private `hibi89/Bid_Owl`; `feature/bid-owl-v1-basic-mvp`. 시작 HEAD `ce5e59d7c64c260322049d51ef5a38f7d7fadce4`, 코드+테스트 후 `663d61d407289b4222c0c046f258b48f6b7a5402`; **이 문서 포함 최신 HEAD는 최종 조회**. `backend/import_local.py`, `backend/tests/test_import_local.py`, `backend/mvp_smoke.py`, `backend/qa_runner.py`, `backend/MVP_ACCEPTANCE.md`.
+7. **Production/Vercel:** 레거시 프로젝트 `project08-bid-insight`, ID `prj_YcrN7OdOjKl6M457HelGIItLeeXZ`; Windows Python GUI는 Vercel **배포 비대상**. Production SHA/익명 브라우저/실제 URL 기능 검증 미확인, 설정 변경 없음. 실행은 `START_BID_OWL_IMPORT.cmd` / `python backend/import_local.py`.
+8. **원본·백업·인증·금지:** 교육용 `main` 복원 SHA `2807a93a3e0deba98840712401fdd6025e6f5610`, 현재 main 보존. 기존 SQLite 수정 전 백업, CSV/원본 공고·회사 문서·키·개인 DB는 외부/API/GitHub 업로드 금지. GitHub 연결 계정 `hibi89`, 원본 main/Vercel/권한 무단 변경 금지.
+9. **다음 우선순위·승인:** P2-29 실제 무과금 QA→실패 수정→Windows GUI/한글 PDF/Excel/WinError32 검증→MVP 요구사항 대조 → 품질·설치 → PRO/PREMIUM. 유료 CI, 공개 배포, 민감 파일 전송, 원본 수정은 승인 필요. 사용자 `ㄱ` 즉시 이어가기.
+10. **갱신/검증 범위:** 2026-10-27 KST. GitHub 인증 연결로 소스·테스트·트리/커밋 확인, 환경 DNS 실패, 좁은 독립 함수 실행 3/3만 성공. 본 인수인계 기준 커밋 `663d61d407289b4222c0c046f258b48f6b7a5402` 이후 문서 커밋은 GitHub HEAD 조회. 실 데이터/Windows/Production 미확인.
+
+---
+
 # BID OWL — P2-27 HANDOFF / 2026-10-27 KST
 
 1. **목표·확정 기술:** 로컬 Windows BASIC MVP (CSV→회사 정보→PASS/FAIL/UNKNOWN/근거→SQLite→읽기 전용 조회→Excel/PDF). Python 3.11+, Tkinter, SQLite, 선택 ReportLab. KIC 공시라이트닝은 해외 공시 어댑터를 별도 개발하며 **현재 제품에 병합하지 않음**.
